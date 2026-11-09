@@ -2190,7 +2190,7 @@ impl OptionsDialog {
             "opt-rar-tool",
         );
         // i18n: Options → Archives: group box title
-        group(ui, o, 16.0, 300.0, 392.0, 100.0, "Link grabber");
+        group(ui, o, 16.0, 300.0, 392.0, 124.0, "Link grabber");
         winui::checkbox_light(
             ui,
             o + vec2(30.0, 318.0),
@@ -2206,10 +2206,18 @@ impl OptionsDialog {
             "Hide web pages",
             true,
         );
+        winui::checkbox_light(
+            ui,
+            o + vec2(30.0, 366.0),
+            &mut s.cnl_on,
+            // i18n: Options → Archives → Link grabber check box: Click'n'Load, a link site's button that sends its links to a program on this computer (port 9666, as JDownloader)
+            "Accept Click'n'Load from web pages (port 9666)",
+            true,
+        );
         winui::paragraph(
             &p,
             o.x + 30.0,
-            o.y + 380.0,
+            o.y + 404.0,
             crate::i18n::t(
                 "Tasks → Link grabber, or the browser's \"Download all links\": a split\narchive's volumes are one package, the other links of a page another.",
             ),

@@ -4446,6 +4446,7 @@ dependencies = [
  "image",
  "libc",
  "mdm-cli",
+ "mdm-containers",
  "mdm-crash",
  "mdm-debrid",
  "mdm-engine",
@@ -4503,6 +4504,21 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-util",
+ "url",
+]
+
+[[package]]
+name = "mdm-containers"
+version = "0.5.2"
+dependencies = [
+ "aes",
+ "axum",
+ "base64 0.23.1",
+ "reqwest 0.13.5",
+ "roxmltree",
+ "serde",
+ "tokio",
+ "tracing",
  "url",
 ]
 

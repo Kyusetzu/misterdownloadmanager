@@ -282,7 +282,7 @@ right-to-left window.
   the sound alone), **image galleries** with gallery-dl, and **torrents and magnet links**
   (sequential order, RSS feeds, sharing limits).
 - **Many links at once**: the Link grabber sorts them into packages and extracts the archives
-  (zip, 7z, rar) when they're in. Debrid accounts (Real-Debrid, AllDebrid, Premiumize; experimental) download
+  (zip, 7z, rar) when they're in. It reads DLC containers and takes Click'n'Load from link sites. Debrid accounts (Real-Debrid, AllDebrid, Premiumize; experimental) download
   file-host links through your own account.
 - **Downloads overnight** with queues and a scheduler that can wake the computer, then shuts it
   down if you like.

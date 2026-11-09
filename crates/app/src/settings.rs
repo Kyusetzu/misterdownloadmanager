@@ -310,6 +310,9 @@ pub struct Settings {
     pub grabber_check: bool,
     /// Link grabber: web pages hidden (IDM's "Hide HTML files"). On.
     pub grabber_hide_pages: bool,
+    /// Click'n'Load (#37): a page's button posts its links to 127.0.0.1:9666, shown in Link
+    /// grabber. Off by default: any page may post there.
+    pub cnl_on: bool,
 }
 
 /// Options → File types defaults (IDM 6.42), shared with the browser host (mdm_ipc::capture).
@@ -464,6 +467,7 @@ impl Default for Settings {
             extract_subfolder: 0,
             grabber_check: true,
             grabber_hide_pages: true,
+            cnl_on: false,
         }
     }
 }

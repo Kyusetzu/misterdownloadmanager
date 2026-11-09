@@ -185,6 +185,9 @@
 #. text in whereis.rs
 #. a download's server's round trip: {ms} a number of milliseconds, {reach} near, medium or far
 	about {ms} ms ({reach})	about {ms} ms ({reach})
+#. text in the Options window
+#. Options → Archives → Link grabber check box: Click'n'Load, a link site's button that sends its links to a program on this computer (port 9666, as JDownloader)
+	Accept Click'n'Load from web pages (port 9666)	Accept Click'n'Load from web pages (port 9666)
 #. checkbox in the Add torrent window
 #. Torrent settings: other peers may connect to this computer
 	Accept incoming connections	Accept incoming connections
@@ -680,6 +683,16 @@
 #. button in the download list
 #. verb: clears this filter
 	Clear	Clear
+#. message or event log entry in the main window
+#. title of the notice when Click'n'Load couldn't start
+	Click'n'Load	Click'n'Load
+#. text in containers.rs
+#. notice: Click'n'Load couldn't start; {port} is 9666; JDownloader is another download manager that uses the same port
+	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.
+#. text in containers.rs
+#. notice: Click'n'Load couldn't start; {error} the system's reason
+#. {error} = an error message (keep the braces as they are)
+	Click'n'Load can't start: {error}	Click'n'Load can't start: {error}
 #. text in a download's progress window
 #. column title: the peer's torrent program
 	Client	Client
@@ -1564,6 +1577,9 @@
 #. Options → Remote → Status: it could not start; {error} = the system's reason
 #. {error} = an error message (keep the braces as they are)
 	It could not start: {error}	It could not start: {error}
+#. text in containers.rs
+#. a DLC container held no links
+	it holds no links	it holds no links
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it holds too many files or folders	it holds too many files or folders
@@ -1573,6 +1589,9 @@
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it is not an archive MDM extracts	it is not an archive MDM extracts
+#. text in containers.rs
+#. a DLC container couldn't be read: not one, or damaged
+	it isn't a DLC container, or it is damaged	it isn't a DLC container, or it is damaged
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it needs a password	it needs a password
@@ -1605,6 +1624,10 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Japan	Japan
+#. text in containers.rs
+#. a DLC container's key couldn't be had from JDownloader's key service; {error} why (in English, from the service or the network)
+#. {error} = an error message (keep the braces as they are)
+	JDownloader's key service didn't give its key ({error})	JDownloader's key service didn't give its key ({error})
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Jersey	Jersey
@@ -2208,7 +2231,7 @@
 #. text in the Options window
 	Note: These settings don't relate to queue processing	Note: These settings don't relate to queue processing
 #. message or event log entry in the main window
-	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).
+	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).
 #. text in the Scheduler window
 	November	November
 #. text in the Options window
@@ -3968,6 +3991,9 @@
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 	{ext} File	{ext} File
+#. message or event log entry in the main window
+#. notice: a DLC container couldn't be read; {file} its name, {why} the reason
+	{file} can't be read: {why}.	{file} can't be read: {why}.
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 	{file} could not be deleted from the disk: {error}	{file} could not be deleted from the disk: {error}

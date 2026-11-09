@@ -180,6 +180,10 @@
 #. text in whereis.rs
 #. a download's server's round trip: {ms} a number of milliseconds, {reach} near, medium or far
 	about {ms} ms ({reach})	حوالي {ms} مللي ثانية ({reach})
+#. text in the Options window
+#. Options → Archives → Link grabber check box: Click'n'Load, a link site's button that sends its links to a program on this computer (port 9666, as JDownloader)
+#, machine
+	Accept Click'n'Load from web pages (port 9666)	قبول Click'n'Load من صفحات الويب (المنفذ 9666)
 #. checkbox in the Add torrent window
 #. Torrent settings: other peers may connect to this computer
 	Accept incoming connections	قبول الاتصالات الواردة
@@ -687,6 +691,15 @@
 #. button in the download list
 #. verb: clears this filter
 	Clear	مسح
+#. text in containers.rs
+#. notice: Click'n'Load couldn't start; {port} is 9666; JDownloader is another download manager that uses the same port
+#, machine
+	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.	لا يمكن تشغيل Click'n'Load: برنامج آخر (JDownloader؟) يستخدم المنفذ {port}. أغلقه، ثم أوقف Click'n'Load وشغله مرة أخرى في الخيارات.
+#. text in containers.rs
+#. notice: Click'n'Load couldn't start; {error} the system's reason
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	Click'n'Load can't start: {error}	لا يمكن تشغيل Click'n'Load: {error}
 #. text in a download's progress window
 #. column title: the peer's torrent program
 	Client	العميل
@@ -1574,6 +1587,10 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	It could not start: {error}	تعذر بدء التشغيل: {error}
+#. text in containers.rs
+#. a DLC container held no links
+#, machine
+	it holds no links	لا يحتوي على روابط
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it holds too many files or folders	يحتوي على عدد كبير جدا من الملفات أو المجلدات
@@ -1583,6 +1600,10 @@
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it is not an archive MDM extracts	ليس أرشيفا يستخرجه MDM
+#. text in containers.rs
+#. a DLC container couldn't be read: not one, or damaged
+#, machine
+	it isn't a DLC container, or it is damaged	ليس حاوية DLC أو أنه تالف
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it needs a password	يحتاج إلى كلمة مرور
@@ -1615,6 +1636,11 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Japan	اليابان
+#. text in containers.rs
+#. a DLC container's key couldn't be had from JDownloader's key service; {error} why (in English, from the service or the network)
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	JDownloader's key service didn't give its key ({error})	لم تعط خدمة مفاتيح JDownloader مفتاحها ({error})
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Jersey	جيرزي
@@ -2237,7 +2263,8 @@
 #. text in the Options window
 	Note: These settings don't relate to queue processing	ملاحظة: لا تتعلق هذه الإعدادات بمعالجة قائمة الانتظار
 #. message or event log entry in the main window
-	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).	لا يوجد شيء لتنزيله في {item}: أسقط الروابط أو ملف .torrent أو قائمة عناوين (.txt، .ef2).
+#, machine
+	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).	لا شيء للتنزيل في {item}: أفلت روابط أو ملف .torrent أو .dlc أو قائمة عناوين (.txt، .ef2).
 #. text in the Scheduler window
 	November	نوفمبر
 #. text in the Options window
@@ -4038,6 +4065,10 @@
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 	{ext} File	ملف {ext}
+#. message or event log entry in the main window
+#. notice: a DLC container couldn't be read; {file} its name, {why} the reason
+#, machine
+	{file} can't be read: {why}.	لا يمكن قراءة {file}: {why}.
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 	{file} could not be deleted from the disk: {error}	تعذر حذف {file} من القرص: {error}

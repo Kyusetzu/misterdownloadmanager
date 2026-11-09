@@ -6,6 +6,7 @@ mod categories;
 mod checksum;
 mod chrome;
 mod clock;
+mod containers;
 mod countries;
 mod crash;
 mod crashui;

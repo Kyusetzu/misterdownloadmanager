@@ -231,6 +231,10 @@
 #. a download's server's round trip: {ms} a number of milliseconds, {reach} near, medium or far
 #, machine
 	about {ms} ms ({reach})	ca. {ms} ms ({reach})
+#. text in the Options window
+#. Options → Archives → Link grabber check box: Click'n'Load, a link site's button that sends its links to a program on this computer (port 9666, as JDownloader)
+#, machine
+	Accept Click'n'Load from web pages (port 9666)	Click'n'Load von Webseiten annehmen (Port 9666)
 #. checkbox in the Add torrent window
 #. Torrent settings: other peers may connect to this computer
 #, machine
@@ -899,6 +903,19 @@
 #. verb: clears this filter
 #, machine
 	Clear	Löschen
+#. message or event log entry in the main window
+#. title of the notice when Click'n'Load couldn't start
+#, machine
+	Click'n'Load	Click'n'Load
+#. text in containers.rs
+#. notice: Click'n'Load couldn't start; {port} is 9666; JDownloader is another download manager that uses the same port
+#, machine
+	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.	Click'n'Load kann nicht starten: Ein anderes Programm (JDownloader?) verwendet Port {port}. Schließen Sie es und schalten Sie Click'n'Load in den Optionen aus und wieder ein.
+#. text in containers.rs
+#. notice: Click'n'Load couldn't start; {error} the system's reason
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	Click'n'Load can't start: {error}	Click'n'Load kann nicht starten: {error}
 #. text in a download's progress window
 #. column title: the peer's torrent program
 #, machine
@@ -2090,6 +2107,10 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	It could not start: {error}	Es konnte nicht gestartet werden: {error}
+#. text in containers.rs
+#. a DLC container held no links
+#, machine
+	it holds no links	er enthält keine Links
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
@@ -2102,6 +2123,10 @@
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
 	it is not an archive MDM extracts	es ist kein Archiv, das MDM extrahiert
+#. text in containers.rs
+#. a DLC container couldn't be read: not one, or damaged
+#, machine
+	it isn't a DLC container, or it is damaged	es ist kein DLC-Container oder er ist beschädigt
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
@@ -2145,6 +2170,11 @@
 #. a country's name (where a download's server is)
 #, machine
 	Japan	Japan
+#. text in containers.rs
+#. a DLC container's key couldn't be had from JDownloader's key service; {error} why (in English, from the service or the network)
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	JDownloader's key service didn't give its key ({error})	Der Schlüsseldienst von JDownloader hat keinen Schlüssel geliefert ({error})
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -2965,7 +2995,7 @@
 	Note: These settings don't relate to queue processing	Hinweis: Diese Einstellungen beziehen sich nicht auf die Warteschlangenverarbeitung
 #. message or event log entry in the main window
 #, machine
-	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).	Nichts zum Herunterladen in {item}: Legen Sie Links, eine .torrent-Datei oder eine Adressliste (.txt, .ef2) ab.
+	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).	Nichts zum Herunterladen in {item}: Ziehen Sie Links, eine .torrent- oder .dlc-Datei oder eine Adressliste (.txt, .ef2) hierher.
 #. text in the Scheduler window
 #, machine
 	November	November
@@ -5334,6 +5364,10 @@
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 #, machine
 	{ext} File	{ext}-Datei
+#. message or event log entry in the main window
+#. notice: a DLC container couldn't be read; {file} its name, {why} the reason
+#, machine
+	{file} can't be read: {why}.	{file} kann nicht gelesen werden: {why}.
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 #, machine

@@ -60,6 +60,8 @@ pub enum Origin {
     Various,
     /// In the download list already.
     Known,
+    /// Packed by its site (a DLC container, Click'n'Load): the site's package name.
+    Site(String),
 }
 
 impl Origin {
@@ -96,6 +98,7 @@ impl Origin {
             Origin::Various => crate::i18n::t("Various files").to_owned(),
             // i18n: Link grabber: the package of links the download list has already
             Origin::Known => crate::i18n::t("Already in the list").to_owned(),
+            Origin::Site(name) => name.clone(),
         }
     }
 }
@@ -209,10 +212,18 @@ impl Grabber {
             let known = known(&url);
             let origin = if known {
                 Origin::Known
+            } else if let Some(site) = d.package.as_deref().filter(|p| !p.trim().is_empty()) {
+                Origin::Site(site.trim().to_owned())
             } else {
                 Origin::of(&url, &name, d.referer.as_deref())
             };
             let pkg = self.package_for(origin);
+            // The site's archive password, unless one is typed already.
+            if let Some(pw) = d.password.as_deref().filter(|p| !p.is_empty())
+                && self.packages[pkg].password.is_empty()
+            {
+                self.packages[pkg].password = pw.to_owned();
+            }
             self.links.push(Link {
                 found: d,
                 url,
@@ -1072,6 +1083,41 @@ mod tests {
 
     fn grabber() -> Grabber {
         Grabber::new(PathBuf::from("D:\\dl"), Vec::new(), true, false)
+    }
+
+    #[test]
+    fn a_sites_packages_keep_its_names_and_password() {
+        let site = |url: &str, pkg: &str, pw: Option<&str>| Imported {
+            url: url.into(),
+            package: Some(pkg.into()),
+            password: pw.map(str::to_owned),
+            ..Default::default()
+        };
+        let mut g = grabber();
+        g.add(
+            vec![
+                // Volumes, but the site packed them: its package, not the volumes'.
+                site("https://h.org/v.part1.rar", "Holiday", Some("secret")),
+                site("https://h.org/v.part2.rar", "Holiday", Some("other")),
+                site("https://h.org/notes.txt", "Notes", None),
+            ],
+            "list.dlc".into(),
+            |_| false,
+        );
+        let got: Vec<(&str, &str, usize)> = g
+            .packages
+            .iter()
+            .enumerate()
+            .map(|(k, p)| {
+                (
+                    p.name.as_str(),
+                    p.password.as_str(),
+                    g.links.iter().filter(|l| l.pkg == k).count(),
+                )
+            })
+            .collect();
+        assert_eq!(got, vec![("Holiday", "secret", 2), ("Notes", "", 1)]);
+        assert!(g.packages[0].extract);
     }
 
     #[test]

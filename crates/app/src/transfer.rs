@@ -15,6 +15,10 @@ pub struct Imported {
     pub user_agent: Option<String>,
     /// From a private window's page: kept out of the saved list.
     pub private: bool,
+    /// The package a site packed it in (a DLC container, Click'n'Load): Link grabber's package.
+    pub package: Option<String>,
+    /// That package's archive password.
+    pub password: Option<String>,
 }
 
 /// One address per line.
@@ -151,6 +155,7 @@ mod tests {
                     cookies: Some("sid=1".into()),
                     user_agent: None,
                     private: false,
+                    ..Default::default()
                 },
                 Imported {
                     url: "https://y.org/b.iso".into(),
