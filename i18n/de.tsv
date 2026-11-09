@@ -91,6 +91,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	{n} peer|{n} peers	{n} Peer|{n} Peers
+#. count in the Options window
+#. Options → Archives: beside the Archive passwords button: how many are saved
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	{n} saved|{n} saved	{n} gespeichert|{n} gespeichert
 #. count in the main window
 #. {n} = a number (keep the braces as they are)
 #, machine
@@ -501,6 +506,19 @@
 #. what a screen reader calls Link grabber's password box
 #, machine
 	Archive password	Archivkennwort
+#. window title in the Options window
+#. window title: the passwords tried on encrypted archives
+#, machine
+	Archive passwords	Archivkennwörter
+#. text in the settings
+#. the list of archive passwords in the system's keychain (Credential Manager, the keyring): its name there
+#, machine
+	archive passwords	Archivkennwörter
+#. button in the Options window
+#. Options → Archives: button: edit the list of passwords tried on encrypted archives
+#. the trailing ... means it opens a window: keep it
+#, machine
+	Archive passwords...	Archivkennwörter...
 #. group box title in the Options window; text in the Options window
 #. Options → Archives: group box title
 #. tab title: extracting downloaded archives, and Link grabber
@@ -2045,6 +2063,10 @@
 #. Linux, after a missing library's name, on a distribution MDM doesn't know
 #, machine
 	Install what's missing from your distribution's packages.	Installieren Sie die fehlenden Pakete Ihrer Distribution.
+#. text in extracting archives (a download's log, the Archive password window)
+#. in the "7-Zip needed" window, under why (Linux: 7-Zip comes from the distribution's packages, named 7zip or p7zip)
+#, machine
+	Install your system's 7zip (or p7zip) package, then right-click the download and choose Extract.	Installieren Sie das Paket 7zip (oder p7zip) Ihres Systems, klicken Sie dann mit der rechten Maustaste auf den Download und wählen Sie Extrahieren.
 #. text in the Download video window
 #. button: download and install the yt-dlp program
 #, machine
@@ -3042,6 +3064,10 @@
 #. text in the Options window
 #, machine
 	One address per line; * stands for any text: example.com/private/*	Eine Adresse pro Zeile; * steht für beliebigen Text: example.com/private/*
+#. text in the Options window
+#. Archive passwords window: how the list is used
+#, machine
+	One password per line, tried in this order on an encrypted archive before MDM asks. The one that fits moves to the top.	Ein Passwort pro Zeile, in dieser Reihenfolge an einem verschlüsselten Archiv versucht, bevor MDM fragt. Das passende rückt nach oben.
 #. option (radio button) in the Scheduler window
 #, machine
 	One-time downloading	Einmaliger Download
@@ -3438,6 +3464,10 @@
 #. RSS feeds window, Download rules: the two boxes above hold regular expressions
 #, machine
 	Regular expressions	Reguläre Ausdrücke
+#. text in extracting archives (a download's log, the Archive password window)
+#. in Archive password: check box: keep the password typed in Options → Archives → Archive passwords, to try it on the next encrypted archives
+#, machine
+	Remember it for other archives	Für andere Archive merken
 #. text in a download's progress window
 #, machine
 	Remember Speed Limiter settings for this file	Speed Limiter-Einstellungen für diese Datei merken
@@ -4746,6 +4776,10 @@
 #. button in helpers.rs
 #, machine
 	Try again	Erneut versuchen
+#. text in extracting archives (a download's log, the Archive password window)
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Trying the saved archive passwords...	Gespeicherte Archivkennwörter werden versucht...
 #. text in the Scheduler window
 #. Tuesday, as short as a calendar's column head (two letters in English)
 #, machine

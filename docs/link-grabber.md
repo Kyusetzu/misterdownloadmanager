@@ -42,7 +42,7 @@ The box under the list edits the package you selected:
 
 - **Name**: the package's name, kept with its downloads.
 - **Save to**: the folder its files go to. When a package holds several kinds of files, the box says **Each file's category folder**: each file goes to its category's folder (**Options → Save to**), as Import always did.
-- **Password**: the archives' password, if they have one. It is kept in memory only, never written to disk.
+- **Password**: the archives' password, if they have one. It is kept in memory only; once it opens the archive, it joins your [archive passwords](#archive-passwords), which the system's keychain keeps.
 - **Extract when done**: ticked by itself when the package holds an archive.
 - **Delete archives after extracting**: once extracted, the archives go to the Recycle Bin (the Trash on macOS and Linux).
 
@@ -58,7 +58,7 @@ MDM itself extracts zip archives (AES-encrypted and Deflate64 ones too), tar, ta
 
 **7z and RAR archives need 7-Zip**, a free program ([7-zip.org](https://www.7-zip.org/)). MDM runs it when it is installed, for split and encrypted archives too. RAR's own extraction code can't be part of a free program like MDM, and 7-Zip extracts 7z best.
 
-**Options → Archives** says whether 7-Zip was found. Without it, a 7z or RAR archive isn't extracted, and the **7-Zip needed** window says so, with a **Get 7-Zip** button.
+**Options → Archives** says whether 7-Zip was found. Without it, a 7z or RAR archive isn't extracted, and the **7-Zip needed** window says so, with a **Get 7-Zip** button. On Linux, install your distribution's `7zip` (or `p7zip`) package: MDM finds `7zz`, `7z` or `7za` on its own.
 
 An archive is extracted:
 
@@ -75,7 +75,13 @@ Extracted files are marked as coming from the internet, as the archive is, so Wi
 
 MDM extracts safely. A name that would lead outside the folder is left out, and so is a link to somewhere else on the disk. An archive that would write far more than its size, or more than the disk has room for, stops before it fills it. When something goes wrong, nothing but the archive is left behind.
 
-The download's log (hover over it in the list) says what happened: **Extracted 12 files to …**, or why not, for example **Couldn't extract movie.7z.001: volume 3 of it is missing**. An encrypted archive without its password opens the **Archive password** window. Type the password and click **Extract**, or **Cancel** to leave the archive as it is.
+The download's log (hover over it in the list) says what happened: **Extracted 12 files to …**, or why not, for example **Couldn't extract movie.7z.001: volume 3 of it is missing**. An encrypted archive is tried with its package's password first, then with each of your saved passwords (**Options → Archives → Archive passwords...**), in their order. Only when none fits does the **Archive password** window open. Type the password and click **Extract**, or **Cancel** to leave the archive as it is. **Remember it for other archives** (ticked) adds it to the saved passwords.
+
+### Archive passwords
+
+**Options → Archives → Archive passwords...** keeps the passwords you use again and again (a site's own, say), one per line. The download's log says **Trying the saved archive passwords...** while MDM tries them. The one that opens an archive moves to the top of the list, so the passwords you need most are tried first. A package's password that opens its archive is added too: one you typed in Link grabber, or one the site sent with its links (Click'n'Load, a DLC container), so the next package from that site needs none. A password typed in the **Archive password** window is added only with **Remember it for other archives** ticked, and only once it fits. The list is kept in the system's keychain, as the other passwords are (see [Where the sign-in is kept](debrid.md#where-the-sign-in-is-kept)).
+
+Each try starts the extraction again: with a long list and a large archive whose file names aren't encrypted, it can take a moment before the right one is found.
 
 ## Next steps
 

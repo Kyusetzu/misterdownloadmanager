@@ -73,6 +73,10 @@
 #. a number of peers (computers sharing a torrent), after where they came from
 #. {n} = a number (keep the braces as they are)
 @plural	{n} peer|{n} peers	{n} peer|{n} peers
+#. count in the Options window
+#. Options → Archives: beside the Archive passwords button: how many are saved
+#. {n} = a number (keep the braces as they are)
+@plural	{n} saved|{n} saved	{n} saved|{n} saved
 #. count in the main window
 #. {n} = a number (keep the braces as they are)
 @plural	{n} selected|{n} selected	{n} selected|{n} selected
@@ -385,6 +389,16 @@
 #. what a screen reader calls the Archive password window's box
 #. what a screen reader calls Link grabber's password box
 	Archive password	Archive password
+#. window title in the Options window
+#. window title: the passwords tried on encrypted archives
+	Archive passwords	Archive passwords
+#. text in the settings
+#. the list of archive passwords in the system's keychain (Credential Manager, the keyring): its name there
+	archive passwords	archive passwords
+#. button in the Options window
+#. Options → Archives: button: edit the list of passwords tried on encrypted archives
+#. the trailing ... means it opens a window: keep it
+	Archive passwords...	Archive passwords...
 #. group box title in the Options window; text in the Options window
 #. Options → Archives: group box title
 #. tab title: extracting downloaded archives, and Link grabber
@@ -1530,6 +1544,9 @@
 #. text in unix.rs
 #. Linux, after a missing library's name, on a distribution MDM doesn't know
 	Install what's missing from your distribution's packages.	Install what's missing from your distribution's packages.
+#. text in extracting archives (a download's log, the Archive password window)
+#. in the "7-Zip needed" window, under why (Linux: 7-Zip comes from the distribution's packages, named 7zip or p7zip)
+	Install your system's 7zip (or p7zip) package, then right-click the download and choose Extract.	Install your system's 7zip (or p7zip) package, then right-click the download and choose Extract.
 #. text in the Download video window
 #. button: download and install the yt-dlp program
 	Install yt-dlp	Install yt-dlp
@@ -2263,6 +2280,9 @@
 	Once it is added, this window says so. Chrome may also ask by itself at its next start.	Once it is added, this window says so. Chrome may also ask by itself at its next start.
 #. text in the Options window
 	One address per line; * stands for any text: example.com/private/*	One address per line; * stands for any text: example.com/private/*
+#. text in the Options window
+#. Archive passwords window: how the list is used
+	One password per line, tried in this order on an encrypted archive before MDM asks. The one that fits moves to the top.	One password per line, tried in this order on an encrypted archive before MDM asks. The one that fits moves to the top.
 #. option (radio button) in the Scheduler window
 	One-time downloading	One-time downloading
 #. text in the Link grabber window
@@ -2557,6 +2577,9 @@
 #. text in rssdlg.rs
 #. RSS feeds window, Download rules: the two boxes above hold regular expressions
 	Regular expressions	Regular expressions
+#. text in extracting archives (a download's log, the Archive password window)
+#. in Archive password: check box: keep the password typed in Options → Archives → Archive passwords, to try it on the next encrypted archives
+	Remember it for other archives	Remember it for other archives
 #. text in a download's progress window
 	Remember Speed Limiter settings for this file	Remember Speed Limiter settings for this file
 #. text in a dialog box
@@ -3531,6 +3554,9 @@
 	Trinidad and Tobago	Trinidad and Tobago
 #. button in helpers.rs
 	Try again	Try again
+#. text in extracting archives (a download's log, the Archive password window)
+#. the trailing ... means it is still going on: keep it
+	Trying the saved archive passwords...	Trying the saved archive passwords...
 #. text in the Scheduler window
 #. Tuesday, as short as a calendar's column head (two letters in English)
 	Tu	Tu

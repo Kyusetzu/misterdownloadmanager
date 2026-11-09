@@ -5545,6 +5545,12 @@ impl App {
         if self.extracts.poll(&mut self.items, ctx) {
             self.dirty = true;
         }
+        // A password opened an archive (the package's, a saved one, or one typed with "Remember
+        // it"): first in Options → Archives' list.
+        if let Some(pw) = self.extracts.take_vault() {
+            self.settings.remember_archive_password(&pw);
+            self.dirty = true;
+        }
         self.tick_queues();
         // A download started early behind Download File Info stays quiet until the dialog's
         // answer (Start shows its box then; Cancel drops it).

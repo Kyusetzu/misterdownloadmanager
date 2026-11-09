@@ -52,6 +52,8 @@ enum Sub {
     Account(AccountEdit),
     /// Remote → Pair a device...: the code shown, until a device pairs or it is closed.
     Pair,
+    /// Archives → Archive passwords...: one password per line (#37).
+    Passwords(String),
 }
 
 /// Options → Remote's page number (the tabs' numbers).
@@ -2102,7 +2104,7 @@ impl OptionsDialog {
         );
         let s = &mut self.s;
         // i18n: Options → Archives: group box title
-        group(ui, o, 16.0, 92.0, 392.0, 196.0, "Archives");
+        group(ui, o, 16.0, 92.0, 392.0, 228.0, "Archives");
         winui::checkbox_light(
             ui,
             o + vec2(30.0, 110.0),
@@ -2189,11 +2191,42 @@ impl OptionsDialog {
             o.x + 400.0,
             "opt-rar-tool",
         );
+        // The passwords tried on an encrypted archive before it is asked (#37).
+        let (pw_x, pw_w) = winui::button_row_from_left(
+            &p,
+            &[("Archive passwords...", 30.0, 150.0)],
+            0.0,
+            389.0,
+            300.0,
+        )[0];
+        // i18n: Options → Archives: button: edit the list of passwords tried on encrypted archives
+        if winui::button_light(
+            ui,
+            r(o, pw_x, 286.0, pw_w, 21.0),
+            "Archive passwords...",
+            ButtonKind::Normal,
+            false,
+        )
+        .clicked()
+        {
+            self.sub = Some(Sub::Passwords(s.archive_passwords.clone()));
+        }
+        let saved = s.archive_password_list().len() as u64;
+        if saved > 0 {
+            text(
+                &p,
+                o.x + pw_x + pw_w + 10.0,
+                o.y + 302.0,
+                // i18n: Options → Archives: beside the Archive passwords button: how many are saved
+                &crate::i18n::tn(saved, "{n} saved", "{n} saved"),
+                LIGHT_DISABLED(),
+            );
+        }
         // i18n: Options → Archives: group box title
-        group(ui, o, 16.0, 300.0, 392.0, 100.0, "Link grabber");
+        group(ui, o, 16.0, 332.0, 392.0, 100.0, "Link grabber");
         winui::checkbox_light(
             ui,
-            o + vec2(30.0, 318.0),
+            o + vec2(30.0, 350.0),
             &mut s.grabber_check,
             // i18n: Options → Archives → Link grabber check box (IDM's Download all links looks every link up)
             "Look links up when they arrive (name, size, online)",
@@ -2201,7 +2234,7 @@ impl OptionsDialog {
         );
         winui::checkbox_light(
             ui,
-            o + vec2(30.0, 342.0),
+            o + vec2(30.0, 374.0),
             &mut s.grabber_hide_pages,
             "Hide web pages",
             true,
@@ -2209,7 +2242,7 @@ impl OptionsDialog {
         winui::paragraph(
             &p,
             o.x + 30.0,
-            o.y + 380.0,
+            o.y + 412.0,
             crate::i18n::t(
                 "Tasks → Link grabber, or the browser's \"Download all links\": a split\narchive's volumes are one package, the other links of a page another.",
             ),
@@ -3332,6 +3365,47 @@ impl OptionsDialog {
                         .signin
                         .stop
                         .store(true, std::sync::atomic::Ordering::Relaxed),
+                }
+            }
+            Sub::Passwords(mut list) => {
+                let out = window(
+                    ctx,
+                    "opt-archive-passwords",
+                    // i18n: window title: the passwords tried on encrypted archives
+                    "Archive passwords",
+                    [420.0, 230.0],
+                    false,
+                    LIGHT_BG(),
+                    |ui, o| {
+                        let p = ui.painter().clone();
+                        winui::paragraph(
+                            &p,
+                            o.x + 14.0,
+                            o.y + 20.0,
+                            // i18n: Archive passwords window: how the list is used
+                            crate::i18n::t(
+                                "One password per line, tried in this order on an encrypted archive before MDM asks. The one that fits moves to the top.",
+                            ),
+                            LIGHT_TEXT(),
+                            o.x + 406.0,
+                            14.0,
+                        );
+                        multiline(
+                            ui,
+                            r(o, 14.0, 52.0, 392.0, 122.0),
+                            &mut list,
+                            "archive-passwords",
+                            true,
+                        );
+                        ok_cancel(ui, o, 252.0, 192.0, true)
+                    },
+                );
+                match out {
+                    Outcome::Open => self.sub = Some(Sub::Passwords(list)),
+                    Outcome::Done(()) => {
+                        self.s.archive_passwords = settings::password_lines(&list).join("\n");
+                    }
+                    Outcome::Closed => {}
                 }
             }
             Sub::Addresses(mut list) => {

@@ -73,6 +73,11 @@
 #. a number of peers (computers sharing a torrent), after where they came from
 #. {n} = a number (keep the braces as they are)
 @plural	{n} peer|{n} peers	{n} قرين|{n} قرين|{n} قرينان|{n} قرناء|{n} قرينا|{n} قرين
+#. count in the Options window
+#. Options → Archives: beside the Archive passwords button: how many are saved
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	{n} saved|{n} saved	{n} محفوظة|{n} محفوظة|{n} محفوظتان|{n} محفوظة|{n} محفوظة|{n} محفوظة
 #. count in the main window
 #. {n} = a number (keep the braces as they are)
 @plural	{n} selected|{n} selected	{n} محدد|{n} محدد|{n} محدد|{n} محدد|{n} محدد|{n} محدد
@@ -387,6 +392,19 @@
 #. what a screen reader calls the Archive password window's box
 #. what a screen reader calls Link grabber's password box
 	Archive password	كلمة مرور الأرشيف
+#. window title in the Options window
+#. window title: the passwords tried on encrypted archives
+#, machine
+	Archive passwords	كلمات مرور الأرشيفات
+#. text in the settings
+#. the list of archive passwords in the system's keychain (Credential Manager, the keyring): its name there
+#, machine
+	archive passwords	كلمات مرور الأرشيفات
+#. button in the Options window
+#. Options → Archives: button: edit the list of passwords tried on encrypted archives
+#. the trailing ... means it opens a window: keep it
+#, machine
+	Archive passwords...	كلمات مرور الأرشيفات...
 #. group box title in the Options window; text in the Options window
 #. Options → Archives: group box title
 #. tab title: extracting downloaded archives, and Link grabber
@@ -1539,6 +1557,10 @@
 #. Linux, after a missing library's name, on a distribution MDM doesn't know
 #, machine
 	Install what's missing from your distribution's packages.	ثبت ما هو مفقود من حزم توزيعك.
+#. text in extracting archives (a download's log, the Archive password window)
+#. in the "7-Zip needed" window, under why (Linux: 7-Zip comes from the distribution's packages, named 7zip or p7zip)
+#, machine
+	Install your system's 7zip (or p7zip) package, then right-click the download and choose Extract.	ثبت حزمة 7zip (أو p7zip) الخاصة بنظامك، ثم انقر بزر الماوس الأيمن على التنزيل واختر استخراج.
 #. text in the Download video window
 #. button: download and install the yt-dlp program
 	Install yt-dlp	تثبيت yt-dlp
@@ -2296,6 +2318,10 @@
 	Once it is added, this window says so. Chrome may also ask by itself at its next start.	بمجرد إضافته، ستخبرك هذه النافذة بذلك. قد يطلب Chrome أيضا من تلقاء نفسه عند بدء تشغيله التالي.
 #. text in the Options window
 	One address per line; * stands for any text: example.com/private/*	عنوان واحد لكل سطر؛ * تعني أي نص: example.com/private/*
+#. text in the Options window
+#. Archive passwords window: how the list is used
+#, machine
+	One password per line, tried in this order on an encrypted archive before MDM asks. The one that fits moves to the top.	كلمة مرور واحدة في كل سطر، تجرب بهذا الترتيب على الأرشيف المشفر قبل أن يسأل MDM. التي تنجح تنتقل إلى الأعلى.
 #. option (radio button) in the Scheduler window
 	One-time downloading	تنزيل لمرة واحدة
 #. text in the Link grabber window
@@ -2601,6 +2627,10 @@
 #. text in rssdlg.rs
 #. RSS feeds window, Download rules: the two boxes above hold regular expressions
 	Regular expressions	تعبيرات نمطية
+#. text in extracting archives (a download's log, the Archive password window)
+#. in Archive password: check box: keep the password typed in Options → Archives → Archive passwords, to try it on the next encrypted archives
+#, machine
+	Remember it for other archives	تذكرها للأرشيفات الأخرى
 #. text in a download's progress window
 	Remember Speed Limiter settings for this file	تذكر إعدادات محدد السرعة لهذا الملف
 #. text in a dialog box
@@ -3586,6 +3616,10 @@
 	Trinidad and Tobago	ترينيداد وتوباغو
 #. button in helpers.rs
 	Try again	حاول مرة أخرى
+#. text in extracting archives (a download's log, the Archive password window)
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Trying the saved archive passwords...	جار تجربة كلمات مرور الأرشيفات المحفوظة...
 #. text in the Scheduler window
 #. Tuesday, as short as a calendar's column head (two letters in English)
 	Tu	الثلاثاء
