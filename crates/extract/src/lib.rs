@@ -12,6 +12,7 @@
 //! Portable, no unsafe, no UI and no words: errors are an enum the app words.
 
 mod external;
+pub mod hatchzip;
 pub mod safe;
 mod single;
 mod tar_fmt;
@@ -22,6 +23,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
 pub use external::find_7zip;
+pub use hatchzip::find_hatchzip;
 pub use safe::Limits;
 pub use volumes::{Volume, VolumeKind, volume_key};
 
@@ -112,6 +114,12 @@ pub struct Policy<'a> {
     /// 7-Zip's program, for 7z and RAR ([`find_7zip`] finds it). None: not installed, and those
     /// archives fail with [`Error::NoTool`].
     pub tool: Option<PathBuf>,
+    /// HatchZip's program ([`find_hatchzip`]), optional: 7z and RAR go to it when 7-Zip isn't
+    /// installed, and every archive it reads when `in_place` is set.
+    pub hatchzip: Option<PathBuf>,
+    /// Extract in place with HatchZip (when it is installed): the archive is removed while its
+    /// files come out, so only they need room. Without HatchZip, a normal extraction.
+    pub in_place: bool,
     /// Told every file put in place: the app marks it as downloaded from the internet, as the
     /// archive is.
     pub on_file: &'a mut dyn FnMut(&Path),
@@ -130,6 +138,8 @@ pub struct Report {
     pub skipped: Vec<(String, &'static str)>,
     /// Files put in place under another name, one of that name being there already.
     pub renamed: u64,
+    /// Extracted in place by HatchZip: the archive (every volume) is gone.
+    pub in_place: bool,
 }
 
 /// Why an archive wasn't extracted.
@@ -151,6 +161,11 @@ pub enum Error {
     TooMany,
     /// 7z or RAR, and no 7-Zip was found.
     NoTool,
+    /// Not enough free space, HatchZip says (its words); nothing was changed.
+    NoRoom(String),
+    /// An extraction in place stopped partway: what came out is in this folder, the rest is
+    /// still in the archive. Extracting again continues.
+    Partial(PathBuf),
     /// Not an archive MDM extracts.
     Unsupported,
     Cancelled,
@@ -170,6 +185,10 @@ impl std::fmt::Display for Error {
             }
             Error::TooMany => write!(f, "too many entries or folders too deep"),
             Error::NoTool => write!(f, "7z and RAR archives need 7-Zip, and none was found"),
+            Error::NoRoom(s) => write!(f, "not enough free space: {s}"),
+            Error::Partial(dir) => {
+                write!(f, "stopped partway; extracted so far: {}", dir.display())
+            }
             Error::Unsupported => write!(f, "not an archive MDM extracts"),
             Error::Cancelled => write!(f, "cancelled"),
             Error::Io(e) => write!(f, "{e}"),
@@ -209,6 +228,15 @@ pub fn base_name(archive: &Path) -> String {
 /// Extract `archive` (a split archive's first volume) as `policy` says.
 pub fn extract(archive: &Path, policy: &mut Policy<'_>) -> Result<Report, Error> {
     let format = Format::detect(archive)?.ok_or(Error::Unsupported)?;
+    // In place: every archive HatchZip reads (a single .gz or .xz file isn't one to it). An
+    // extraction in place that stopped partway is always finished by HatchZip: part of the
+    // archive is already gone, and only it knows where it was.
+    if (policy.in_place || hatchzip::unfinished(archive))
+        && let Some(tool) = policy.hatchzip.clone()
+        && !matches!(format, Format::Gz | Format::Xz)
+    {
+        return in_place(&tool, archive, policy);
+    }
     let staging = safe::Staging::new(&policy.dest)?;
     let mut w = safe::Writer::new(staging.path(), policy.limits, policy.cancel);
     let run = match format {
@@ -216,7 +244,6 @@ pub fn extract(archive: &Path, policy: &mut Policy<'_>) -> Result<Report, Error>
         Format::Tar | Format::TarGz | Format::TarXz => tar_fmt::extract(archive, format, &mut w),
         Format::Gz | Format::Xz => single::extract(archive, format, &mut w),
         Format::SevenZip | Format::Rar => {
-            let tool = policy.tool.clone().ok_or(Error::NoTool)?;
             // A split 7z's volumes are all there before 7-Zip is asked (it would only say
             // "unexpected end"): the first one missing is named.
             let name = archive
@@ -226,7 +253,21 @@ pub fn extract(archive: &Path, policy: &mut Policy<'_>) -> Result<Report, Error>
             if volume_key(&name).is_some_and(|v| v.kind == VolumeKind::Split) {
                 volumes::MultiFile::open(archive)?.map_err(Error::MissingVolume)?;
             }
-            external::extract(&tool, archive, &mut w, policy.password.as_deref())
+            let password = policy.password.as_deref();
+            match (&policy.tool, &policy.hatchzip) {
+                (Some(tool), _) => external::extract(tool, archive, &mut w, password),
+                // No 7-Zip: HatchZip, leaving the archive as it is.
+                (None, Some(hz)) => {
+                    let root = w.root().to_path_buf();
+                    let skipped =
+                        hatchzip::extract(hz, archive, &root, password, true, policy.cancel)?;
+                    for (name, why) in skipped {
+                        w.skip(&name, why);
+                    }
+                    Ok(())
+                }
+                (None, None) => Err(Error::NoTool),
+            }
         }
     };
     run?;
@@ -236,6 +277,52 @@ pub fn extract(archive: &Path, policy: &mut Policy<'_>) -> Result<Report, Error>
     report.skipped = skipped;
     report.files = placed;
     report.bytes = w.bytes();
+    Ok(report)
+}
+
+/// HatchZip extracts `archive` in place into its own folder beside it ([`hatchzip::work_folder`]),
+/// then what came out is put where `policy` says, as our own extractions are. A failure leaves
+/// that folder alone once something is in it: those files are no longer in the archive.
+fn in_place(tool: &Path, archive: &Path, policy: &mut Policy<'_>) -> Result<Report, Error> {
+    let name = archive
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    if volume_key(&name).is_some_and(|v| v.kind == VolumeKind::Split) {
+        volumes::MultiFile::open(archive)?.map_err(Error::MissingVolume)?;
+    }
+    let base = base_name(archive);
+    let out = hatchzip::work_folder(&policy.dest, &base);
+    let run = hatchzip::extract(
+        tool,
+        archive,
+        &out,
+        policy.password.as_deref(),
+        false,
+        policy.cancel,
+    );
+    let skipped = match run {
+        Ok(s) => s,
+        Err(e) => {
+            let started = std::fs::read_dir(&out).is_ok_and(|mut d| d.next().is_some());
+            // A wrong password or too little room changes nothing, HatchZip promises.
+            let untouched = matches!(
+                e,
+                Error::NeedsPassword | Error::WrongPassword | Error::NoRoom(_)
+            );
+            if started && !untouched {
+                return Err(Error::Partial(out));
+            }
+            // Removed only when empty: never anything it wrote.
+            let _ = std::fs::remove_dir(&out);
+            return Err(e);
+        }
+    };
+    let (mut report, placed) =
+        safe::Staging::adopt(&policy.dest, out).place(&base, policy.subfolder, policy.on_file)?;
+    report.skipped = skipped;
+    report.files = placed;
+    report.in_place = true;
     Ok(report)
 }
 

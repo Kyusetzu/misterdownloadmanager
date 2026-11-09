@@ -302,6 +302,9 @@ pub struct Settings {
     pub extract_auto: bool,
     /// Then move the archive (every volume of it) to the Recycle Bin (the Trash). Off.
     pub extract_delete: bool,
+    /// Extract in place with HatchZip when it is installed: the archive is removed while its
+    /// files come out, so only they need room (large downloads on a nearly full disk). Off.
+    pub extract_in_place: bool,
     /// Into a folder named after the archive: 0 when it holds several things at its top (smart),
     /// 1 always, 2 never.
     pub extract_subfolder: u8,
@@ -461,6 +464,7 @@ impl Default for Settings {
             video_cookies_profile: String::new(),
             extract_auto: false,
             extract_delete: false,
+            extract_in_place: false,
             extract_subfolder: 0,
             grabber_check: true,
             grabber_hide_pages: true,

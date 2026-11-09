@@ -60,6 +60,17 @@ MDM itself extracts zip archives (AES-encrypted and Deflate64 ones too), tar, ta
 
 **Options → Archives** says whether 7-Zip was found. Without it, a 7z or RAR archive isn't extracted, and the **7-Zip needed** window says so, with a **Get 7-Zip** button.
 
+### In place, with HatchZip
+
+[HatchZip](https://hatchzip.dev) is another free extractor (MIT or Apache-2.0), optional. MDM uses its command line program, `hatchzip`, when it is on the PATH (its installers and packages put it there; the desktop app alone isn't enough):
+
+- **Options → Archives → Extract in place with HatchZip** (off by default): HatchZip removes the archive while its files come out, so a 180 GB download that unpacks to 200 GB needs a little over 200 GB, not 380 GB. It reads zip, 7z, RAR and tar archives, split ones too; single `.gz` and `.xz` files are still extracted by MDM.
+- Before it changes anything, HatchZip checks that the files fit and proves the password. A missing or wrong password, or too little room, changes nothing: the log says so, and the **Archive password** window asks as usual. The password goes to HatchZip through its environment, never on its command line.
+- The files go where **What an archive holds goes** says, as with any other extraction. On the way they are in a folder named `<archive>.hatchzip-out` beside the archive.
+- If it stops partway (MDM closed, the download deleted, the disk filled by something else), the files extracted so far stay in that folder and the rest is still in the archive. **Extract** continues where it stopped, even with the option off: only HatchZip can finish such an archive.
+- **Then move the archives to the Recycle Bin** has nothing to move afterwards: the archive is already gone.
+- Without 7-Zip, 7z and RAR archives are extracted by HatchZip, and the archive is kept.
+
 An archive is extracted:
 
 - when its package says **Extract when done**,

@@ -309,6 +309,15 @@ impl Staging {
         &self.path
     }
 
+    /// A folder another program extracted into (HatchZip in place), to be put in place as ours
+    /// are; whatever is left in it goes with it, as with ours.
+    pub fn adopt(dest: &Path, path: PathBuf) -> Staging {
+        Staging {
+            dest: dest.to_path_buf(),
+            path,
+        }
+    }
+
     /// Move what was extracted into place, as `subfolder` says; every file put there is told
     /// to `on_file`. Returns the report's folder and renamed count, and the files placed.
     pub fn place(
