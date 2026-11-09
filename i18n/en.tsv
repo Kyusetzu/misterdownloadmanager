@@ -297,6 +297,9 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Afghanistan	Afghanistan
+#. text in the Options window
+#. Options → Add an account: a note under the user name and password fields (Mega-Debrid bans the address for some minutes after a few wrong passwords)
+	After a few wrong passwords the service blocks this connection for some minutes.	After a few wrong passwords the service blocks this connection for some minutes.
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Aland Islands	Aland Islands
@@ -2333,6 +2336,9 @@
 #. tab title: what happens when the download finishes
 	Options on completion	Options on completion
 #. text in the Options window
+#. Options → Add an account: label before the field for an API key the user made at the service (Mega-Debrid: My Account → API Key; the other way to sign in)
+	Or paste an application's API key:	Or paste an application's API key:
+#. text in the Options window
 #. Options → Add an account: label before the field for the service's API token (the other way to sign in)
 	Or paste your API token:	Or paste your API token:
 #. text in the Link grabber window
@@ -2381,6 +2387,7 @@
 	Password	Password
 #. text in the Link grabber window; text in the Options window
 #. Link grabber: the package's archives' password (a label before its box)
+#. Options → Add an account: label before the field for the password at the debrid service
 	Password:	Password:
 #. text in the Add torrent window
 	Paste a magnet link or choose a .torrent file, then Look up.	Paste a magnet link or choose a .torrent file, then Look up.
@@ -2837,6 +2844,9 @@
 #. a country's name (where a download's server is)
 	Sierra Leone	Sierra Leone
 #. button in the Options window
+#. button: sign in to the debrid service with the user name and password typed in
+	Sign in	Sign in
+#. button in the Options window
 #. button: sign in to the debrid service in the browser, by typing a code there
 	Sign in in the browser	Sign in in the browser
 #. text in the Options window
@@ -2848,6 +2858,9 @@
 #. text in the Options window
 #. Options → Accounts: where the debrid accounts' sign-ins and the other passwords are kept (Windows' own Credential Manager, in Control Panel)
 	Sign-ins and passwords are kept in Windows Credential Manager.	Sign-ins and passwords are kept in Windows Credential Manager.
+#. text in the Options window
+#. Options → Add an account: signed in, the service gives no account name; {state} premium or not
+	Signed in ({state})	Signed in ({state})
 #. text in the Options window
 #. Options → Add an account: signed in; {user} the account's name, {state} premium or not
 	Signed in as {user} ({state})	Signed in as {user} ({state})
@@ -3706,6 +3719,9 @@
 #. text in the Options window
 #. column title: the user name
 	User	User
+#. text in the Options window
+#. Options → Add an account: label before the field for the user name at the debrid service
+	User name:	User name:
 #. page title in the Options window
 	User names and passwords for servers/sites	User names and passwords for servers/sites
 #. text in the Options window

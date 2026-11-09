@@ -225,6 +225,22 @@ impl SignIn {
         });
     }
 
+    /// Sign in with the user name and password (Mega-Debrid's other way to its API key).
+    pub fn by_password(
+        &self,
+        service: ServiceKind,
+        user: String,
+        password: String,
+        ctx: &egui::Context,
+    ) {
+        let (me, ctx) = (self.clone(), ctx.clone());
+        me.set(SignInState::Checking, &ctx);
+        std::thread::spawn(move || {
+            let run = async { Ok((http()?, Credential::Login { user, password })) };
+            me.finish(service, run, &ctx);
+        });
+    }
+
     /// Run `run` (a credential), check the account it signs in to, and say how it went.
     fn finish(
         &self,

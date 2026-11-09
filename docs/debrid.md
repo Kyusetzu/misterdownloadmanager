@@ -1,12 +1,12 @@
 # Debrid service accounts
 
-A debrid service, such as Real-Debrid, AllDebrid or Premiumize, is a paid account that downloads files from file hosts
+A debrid service, such as Real-Debrid, AllDebrid, Premiumize or Mega-Debrid, is a paid account that downloads files from file hosts
 on its own servers. It hands back a plain direct link, without the host's waits, speed caps
 and captchas. With your account in MDM, a link from a host your service supports is unlocked
 through the service, then downloaded by MDM like any file: all its connections, pause and
 resume.
 
-MDM supports three services: **Real-Debrid**, **AllDebrid** and **Premiumize**.
+MDM supports four services: **Real-Debrid**, **AllDebrid**, **Premiumize** and **Mega-Debrid**.
 
 > **Experimental:** built from each service's public API documentation, not yet confirmed with a
 > real paid account. AllDebrid's answers were also checked against its real API with the public
@@ -22,9 +22,14 @@ MDM supports three services: **Real-Debrid**, **AllDebrid** and **Premiumize**.
    - **Sign in in the browser** (Real-Debrid and AllDebrid): MDM shows a code and opens the
      service's page. Type the code there (AllDebrid's page already has it) and allow MDM. The
      dialog notices on its own.
+   - **User name** and **Password**, then **Sign in** (Mega-Debrid). Mega-Debrid blocks your
+     connection for some minutes after a few wrong passwords. Each sign-in replaces the
+     account's last one at Mega-Debrid, so another program signed in to the same account (or
+     MDM's own check) makes MDM sign in again on its next link, on its own.
    - or paste your **API token** (**Find my token** opens the service's page that shows it),
      then **Use the token**. Premiumize signs in this way only: paste the API key from its
-     Account page.
+     Account page. On Mega-Debrid, make an application under **My Account → API Key** and paste
+     its key; MDM then never needs your password.
 3. MDM checks the account and shows its name and whether it is premium. **OK** keeps it.
 
 The list's order is the order accounts are asked: a link goes through the first account
@@ -37,7 +42,7 @@ whose service supports its host. **Up** and **Down** change it.
 Tick **Send torrents and magnet links to the first account instead of to peers** in
 **Options → Accounts**. A magnet link (Add URL, the browser, the clipboard, a drop) or a
 `.torrent` file (Add torrent's **Download Now** or **Later**) then goes to the first account in
-the list:
+the list whose service takes torrents (Mega-Debrid doesn't, yet):
 
 1. The service downloads the torrent on its own servers. The list shows how far it is, such as
    **45% at Real-Debrid**. A torrent the service already has is ready at once.
@@ -72,7 +77,8 @@ the list:
 - AllDebrid sometimes needs a while to prepare a link. MDM waits for it, up to 10 minutes,
   and the list says so.
 - MDM asks each service well under its request limit: Real-Debrid at most 120 times a minute
-  (it allows 250), AllDebrid 300 (it allows 600), Premiumize 60 (it publishes no limit). When
+  (it allows 250), AllDebrid 300 (it allows 600), Premiumize 60 (it publishes no limit),
+  Mega-Debrid 60 (it allows 50 a second). When
   a service says it's asked too often, MDM waits.
 
 ## Download one link directly instead
@@ -91,7 +97,9 @@ the list:
 - Use only your own account. Sharing an account or its links breaks the services' terms and
   can get the account suspended.
 - MDM sends the service only the links you download through it, and your account's token or
-  key. Nothing else.
+  key (on Mega-Debrid, or its user name and password). Nothing else. Mega-Debrid's
+  documentation puts them in the address; MDM sends them in the request's body instead, where
+  no proxy or server log keeps them.
 - MDM ships no list of hosts or links; the service says which hosts it supports.
 
 ## Where the sign-in is kept

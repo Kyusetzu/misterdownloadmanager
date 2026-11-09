@@ -1,4 +1,4 @@
-//! AllDebrid and Premiumize against the lab server's fakes (labserver `debrid`), end to end
+//! AllDebrid, Premiumize and Mega-Debrid against the lab server's fakes (labserver `debrid`), end to end
 //! through MDM's engine, as `realdebrid.rs` does for Real-Debrid. The fake host `hoster.test`
 //! resolves nowhere: a download that completes came through the service's direct link.
 
@@ -203,6 +203,121 @@ async fn premiumize_links_come_through_the_account() {
     ));
     // Premiumize signs in by its API key only.
     assert!(signin::start(&http, ServiceKind::Premiumize).await.is_err());
+}
+
+#[tokio::test]
+async fn megadebrid_links_come_through_the_account_by_key_or_password() {
+    let (lab, http) = lab().await;
+    // An application's key: the API answers premium accounts only.
+    let info = check(
+        &http,
+        ServiceKind::MegaDebrid,
+        Credential::Token {
+            token: "good".into(),
+        },
+    )
+    .await
+    .unwrap();
+    assert!(info.premium);
+    let d = account(&http, ServiceKind::MegaDebrid, "good").await;
+    let p = download(&d, "http://hoster.test/file/2M/m.bin")
+        .await
+        .unwrap();
+    assert!(same(&p, "/file/2M/m.bin"));
+    // The token went in the form, never in an address.
+    assert!(
+        lab.log()
+            .iter()
+            .all(|e| !e.path.contains("token") && !e.path.contains("password"))
+    );
+    let (svc, f) = fault(
+        download(&d, "http://hoster.test/file/1M/g.bin?gone=1")
+            .await
+            .unwrap_err(),
+    );
+    assert_eq!(
+        (svc.as_str(), f),
+        (
+            "Mega-Debrid",
+            ServiceFault::Other("lab: file not found".into())
+        )
+    );
+
+    // The user name and password: premium's end from the sign-in, the e-mail as the name.
+    let login = Credential::Login {
+        user: "labuser".into(),
+        password: "labpass".into(),
+    };
+    let info = check(&http, ServiceKind::MegaDebrid, login.clone())
+        .await
+        .unwrap();
+    assert_eq!(
+        (info.user.as_str(), info.premium),
+        ("labuser@lab.test", true)
+    );
+    assert!(info.premium_left.is_some());
+    let d = Debrid::default();
+    d.set_accounts(
+        vec![Account {
+            id: 5,
+            service: ServiceKind::MegaDebrid,
+            credential: login.clone(),
+        }],
+        http.clone(),
+    );
+    d.refresh_hosts().await.unwrap();
+    assert!(
+        download(&d, "http://hoster.test/file/1M/a.bin")
+            .await
+            .is_ok()
+    );
+    // Another sign-in to the account (another program, Options' check) replaces the token the
+    // downloads had: the next one signs in again by itself.
+    check(&http, ServiceKind::MegaDebrid, login).await.unwrap();
+    assert!(
+        download(&d, "http://hoster.test/file/1M/b.bin")
+            .await
+            .is_ok()
+    );
+
+    // A free account signs in, says so, and its links are refused.
+    let free = check(
+        &http,
+        ServiceKind::MegaDebrid,
+        Credential::Login {
+            user: "freeuser".into(),
+            password: "labpass".into(),
+        },
+    )
+    .await
+    .unwrap();
+    assert!(!free.premium);
+    assert!(matches!(
+        check(
+            &http,
+            ServiceKind::MegaDebrid,
+            Credential::Login {
+                user: "labuser".into(),
+                password: "wrong".into()
+            }
+        )
+        .await,
+        Err(mdm_debrid::Fault::Service(ServiceFault::SignIn))
+    ));
+    assert!(matches!(
+        check(
+            &http,
+            ServiceKind::MegaDebrid,
+            Credential::Token {
+                token: "bad".into()
+            }
+        )
+        .await,
+        Err(mdm_debrid::Fault::Service(ServiceFault::SignIn))
+    ));
+    // No torrents through Mega-Debrid yet: they go to an account that takes them.
+    assert_eq!(d.torrent_account(), None);
+    assert!(signin::start(&http, ServiceKind::MegaDebrid).await.is_err());
 }
 
 #[tokio::test]

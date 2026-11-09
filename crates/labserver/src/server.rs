@@ -382,6 +382,8 @@ impl LabServer {
             .route("/pm/api/account/info", get(debrid::pm_account))
             .route("/pm/api/services/list", get(debrid::pm_services))
             .route("/pm/api/transfer/directdl", post(debrid::pm_directdl))
+            // A fake Mega-Debrid.
+            .route("/md/api.php", post(debrid::md_api))
             // Torrents through the fake services (#44, `debrid_torrents`).
             .route(
                 "/rd/rest/1.0/torrents/addMagnet",
@@ -554,6 +556,7 @@ GET /redirect?to=URL[&ttl_ms=N][&uses=N][&code=3xx]   302 (or code) to URL (not 
                                               a fake Real-Debrid (#44): tokens good (premium), free; links http://hoster.test/file/SIZE/NAME[?gone=1&down=1&chunks=N&ttl_ms=N&rate=SIZE]
 /ad/v4/{user,hosts/domains,link/unlock,link/delayed,pin/check}, /ad/v4.1/pin/get      a fake AllDebrid: the same tokens and links, plus delayed=N
 /pm/api/{account/info,services/list,transfer/directdl}      a fake Premiumize: the same tokens and links
+POST /md/api.php?action={connectUser,getUserHistory,getHostersList,getLink}   a fake Mega-Debrid: the same keys and links, the form's token; users labuser (premium) and freeuser, password labpass
 GET /hop?to=URL&how=meta|header[&wait=S][&cookie=N=V]   a page that sends the browser on to URL (meta refresh or Refresh header)
 
 RSS    made-up feeds for the RSS feeds window (#39); never real ones

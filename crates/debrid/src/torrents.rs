@@ -13,6 +13,7 @@
 //! - Premiumize: `transfer/create` (`src`), `transfer/list`, `folder/list` (walked) or
 //!   `item/details` for a single file, `transfer/delete`; its files' links are direct links to
 //!   the user's own cloud.
+//! - Mega-Debrid: not yet (`ServiceKind::takes_magnets`).
 
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -67,6 +68,8 @@ impl Session {
             ServiceKind::AllDebrid => {
                 alldebrid::add_magnet(&self.http, &self.token(false).await?, magnet).await
             }
+            // Never asked: `torrent_account` skips it.
+            ServiceKind::MegaDebrid => Err(Fault::Unsupported),
             ServiceKind::Premiumize => {
                 premiumize::create(&self.http, &self.token(false).await?, magnet).await
             }
@@ -84,6 +87,8 @@ impl Session {
             ServiceKind::AllDebrid => {
                 alldebrid::magnet_status(&self.http, &self.token(false).await?, id).await
             }
+            // Never asked: `torrent_account` skips it.
+            ServiceKind::MegaDebrid => Err(Fault::Unsupported),
             ServiceKind::Premiumize => {
                 premiumize::transfer_status(&self.http, &self.token(false).await?, id).await
             }
@@ -101,6 +106,8 @@ impl Session {
             ServiceKind::AllDebrid => {
                 alldebrid::magnet_delete(&self.http, &self.token(false).await?, id).await
             }
+            // Never asked: `torrent_account` skips it.
+            ServiceKind::MegaDebrid => Err(Fault::Unsupported),
             ServiceKind::Premiumize => {
                 premiumize::transfer_delete(&self.http, &self.token(false).await?, id).await
             }
@@ -109,12 +116,13 @@ impl Session {
 }
 
 impl Debrid {
-    /// The account torrents go to: the first one (every service takes magnets).
+    /// The account torrents go to: the first one whose service takes magnets.
     pub fn torrent_account(&self) -> Option<(u64, ServiceKind)> {
         self.sessions
             .read()
             .unwrap()
-            .first()
+            .iter()
+            .find(|s| s.account.service.takes_magnets())
             .map(|s| (s.account.id, s.account.service))
     }
 
