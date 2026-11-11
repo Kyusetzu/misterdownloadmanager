@@ -33,8 +33,8 @@ MDM supports five services: **Real-Debrid**, **AllDebrid**, **Premiumize**, **To
      Account page. On Mega-Debrid, make an application under **My Account → API Key** and paste
      its key; MDM then never needs your password, and doesn't keep it: the key is all it stores,
      and you can delete the key on that page at any time. Mega-Debrid doesn't say whether a
-     key's account is premium, so MDM shows **signed in** only; a free account's links are
-     refused when you download them.
+     key's account is premium, so the Accounts list says **the service doesn't say whether it
+     is premium** for it; a free account's links are refused when you download them.
 3. MDM checks the account and shows its name and whether it is premium. **OK** keeps it.
 
 The list's order is the order accounts are asked: a link goes through the first account

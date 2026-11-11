@@ -380,8 +380,8 @@ async fn megadebrid_links_come_through_the_account_by_key_or_password() {
             .await
             .is_ok()
     );
-    // Checking the account (Options does, now and then) keeps the token the downloads use: a
-    // sign-in would end it.
+    // Checking the account again (the app checks one when it is added) keeps the token the
+    // downloads use: a sign-in would end it.
     let signins = || {
         lab.log()
             .iter()
