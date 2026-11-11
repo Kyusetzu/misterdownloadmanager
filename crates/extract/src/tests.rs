@@ -592,6 +592,33 @@ fn without_7zip_hatchzip_is_used_only_when_asked() {
 
 #[cfg(unix)]
 #[test]
+fn an_archive_hatchzip_cant_extract_in_place_is_extracted_as_usual() {
+    // A solid RAR: HatchZip refuses before it touches anything, asking for --keep-archive (its
+    // own words, 0.1.10). Here a ZIP stands in for it, which MDM then extracts itself.
+    let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
+    let a = t.path().join("solid.zip");
+    zip_of(&a, &[("one.txt", b"1")], None);
+    let refuses = "echo 'error: a solid RAR archive can only be extracted while it is kept. Run the command again with --keep-archive to extract it and keep the archive, or extract it with another program' >&2";
+    let (r, seen) = run_hz(
+        &a,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 1, refuses)),
+        true,
+        runs.path(),
+    );
+    let r = r.unwrap();
+    assert!(!r.in_place);
+    assert_eq!(seen, 1);
+    assert_eq!(std::fs::read(t.path().join("one.txt")).unwrap(), b"1");
+    assert!(a.exists(), "the archive is kept");
+    no_work_folder(t.path());
+    assert_eq!(std::fs::read_dir(runs.path()).unwrap().count(), 0);
+}
+
+#[cfg(unix)]
+#[test]
 fn a_stop_partway_in_place_keeps_what_came_out() {
     let t = tempfile::tempdir().unwrap();
     let runs = tempfile::tempdir().unwrap();

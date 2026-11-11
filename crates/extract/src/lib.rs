@@ -258,7 +258,19 @@ pub fn extract(archive: &Path, policy: &mut Policy<'_>) -> Result<Report, Error>
         let unfinished = hatchzip::progress(archive);
         let resume = unfinished.then(|| runs.find(&full)).flatten();
         if resume.is_some() || (policy.in_place && !unfinished) {
-            return in_place(&tool, &full, &runs, resume, policy);
+            let fresh = resume.is_none();
+            match in_place(&tool, &full, &runs, resume, policy) {
+                // HatchZip can't extract this one in place (a solid RAR: it says so before it
+                // touches anything, and asks for --keep-archive): extracted as usual below, by
+                // 7-Zip, and the archive kept.
+                Err(Error::Damaged(why)) if fresh && hatchzip::not_in_place(&why) => {
+                    tracing::info!(
+                        "extract: {} can't be extracted in place ({why}): extracted as usual",
+                        archive.display()
+                    );
+                }
+                r => return r,
+            }
         }
         if unfinished {
             tracing::warn!(

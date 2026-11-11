@@ -56,6 +56,13 @@ pub fn work_folder(dest: &Path, base: &str) -> PathBuf {
     }
 }
 
+/// Whether HatchZip's error says it can't extract this archive in place, only while keeping it
+/// (a solid RAR), which it says before it touches anything: "… Run the command again with
+/// --keep-archive …" (HatchZip 0.1.10's own words).
+pub fn not_in_place(error: &str) -> bool {
+    error.contains("--keep-archive")
+}
+
 /// Whether HatchZip's progress file is beside `archive` (an unfinished extraction, whoever
 /// started it).
 pub fn progress(archive: &Path) -> bool {
