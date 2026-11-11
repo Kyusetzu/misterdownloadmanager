@@ -2,14 +2,14 @@
 # context	source	translation; a catalog for another language has the same rows.
 # A '#.' line is the translator note for the row under it.
 @id	language.name	English
-#. count in cnl.rs
-#. Click'n'Load window: a page that doesn't say which site it is on
-#. {n} = a number (keep the braces as they are)
-@plural	A web page wants to send {n} link to Link grabber.|A web page wants to send {n} links to Link grabber.	A web page wants to send {n} link to Link grabber.|A web page wants to send {n} links to Link grabber.
 #. count in a dialog box
 #. never shown for a single file
 #. {n} = a number (keep the braces as they are)
 @plural	Also delete the {n} file from disk|Also delete the {n} files from disk	Also delete the {n} file from disk|Also delete the {n} files from disk
+#. count in cnl.rs
+#. Click'n'Load window: a page whose web site the browser doesn't name, so MDM can't tell which site it is
+#. {n} = a number (keep the braces as they are)
+@plural	An unknown site wants to send {n} link to Link grabber.|An unknown site wants to send {n} links to Link grabber.	An unknown site wants to send {n} link to Link grabber.|An unknown site wants to send {n} links to Link grabber.
 #. count in a dialog box
 #. never shown for a single download
 #. {n} = a number (keep the braces as they are)

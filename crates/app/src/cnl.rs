@@ -8,13 +8,18 @@
 //!   its archive password, and is marked as sent by a page: Link grabber doesn't look it up (no
 //!   request leaves for it, with or without the user's site logins or debrid accounts) and
 //!   nothing is downloaded until the user adds it to the queue;
-//! - the listener takes at most `mdm_cnl::POSTS_PER_MINUTE` posts a minute, and at most
-//!   [`WAITING`] wait here for an answer; the window asks one site at a time.
+//! - the listener takes at most `mdm_cnl::POSTS_PER_MINUTE` posts a minute from each site, and
+//!   at most [`WAITING`] wait here for an answer; the window asks one site at a time, and a
+//!   site brings MDM's window up at most once a minute ([`RAISE_EVERY`]);
+//! - the site is the one the browser names; a page it names none for is an unknown site, asked
+//!   about every time, and links to this computer or its network never arrive (`mdm_cnl`).
 //!
 //! The listener runs off the window's thread; what arrives waits in an inbox the window empties
 //! each frame (`App::poll_cnl`).
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use mdm_cnl::{Found, Package};
 
@@ -24,6 +29,9 @@ use crate::winui::{self, ButtonKind, LIGHT_BG, LIGHT_TEXT};
 
 /// The most posts waiting for the window: the inbox and those waiting for the site's answer.
 pub const WAITING: usize = 20;
+/// How often one site's posts bring MDM's window up: its links still arrive in between, in
+/// Link grabber, without the window coming to the front again.
+pub const RAISE_EVERY: Duration = Duration::from_secs(60);
 
 /// The listener, while on, the inbox, and the posts waiting for their site's answer.
 pub struct Cnl {
@@ -32,6 +40,8 @@ pub struct Cnl {
     inbox: Arc<Mutex<Vec<Found>>>,
     listener: Option<mdm_cnl::Listener>,
     waiting: Vec<Found>,
+    /// When each site last brought the window up (None: the pages that name no site).
+    raised: HashMap<Option<String>, Instant>,
     /// The site being asked about.
     pub ask: Option<SiteDialog>,
 }
@@ -52,6 +62,7 @@ impl Cnl {
             inbox: Arc::default(),
             listener: None,
             waiting: Vec::new(),
+            raised: HashMap::new(),
             ask: None,
         }
     }
@@ -107,9 +118,16 @@ impl Cnl {
 
     /// What arrived since the last frame, sorted by `sites` (Options' answers, site → allowed):
     /// an allowed site's links for Link grabber now; a blocked site's dropped; the others wait,
-    /// and the first of them is asked about.
-    pub fn take(&mut self, sites: &[(String, bool)]) -> Vec<Imported> {
+    /// and the first of them is asked about. With them, whether MDM's window comes up for it:
+    /// for an allowed site's links or a new question, once every [`RAISE_EVERY`] for each site.
+    pub fn take(&mut self, sites: &[(String, bool)]) -> (Vec<Imported>, bool) {
+        self.take_at(sites, Instant::now())
+    }
+
+    fn take_at(&mut self, sites: &[(String, bool)], at: Instant) -> (Vec<Imported>, bool) {
         let arrived = std::mem::take(&mut *self.inbox.lock().unwrap());
+        let asking = self.ask.is_some();
+        let mut raise = false;
         let mut now = Vec::new();
         for found in arrived {
             let said = found
@@ -118,7 +136,10 @@ impl Cnl {
                 .and_then(|s| sites.iter().find(|(k, _)| k == s))
                 .map(|(_, allowed)| *allowed);
             match said {
-                Some(true) => now.extend(links(found.package)),
+                Some(true) => {
+                    raise |= self.may_raise(&found.site, at);
+                    now.extend(links(found.package));
+                }
                 Some(false) => {
                     tracing::info!("Click'n'Load: a post from a blocked site, dropped");
                 }
@@ -127,7 +148,21 @@ impl Cnl {
             }
         }
         self.ask_next();
-        now
+        if !asking && let Some(site) = self.ask.as_ref().map(|a| a.site.clone()) {
+            raise |= self.may_raise(&site, at);
+        }
+        (now, raise)
+    }
+
+    /// Whether `site` may bring the window up now: it hasn't within [`RAISE_EVERY`].
+    fn may_raise(&mut self, site: &Option<String>, at: Instant) -> bool {
+        self.raised
+            .retain(|_, t| at.duration_since(*t) < RAISE_EVERY);
+        if self.raised.contains_key(site) {
+            return false;
+        }
+        self.raised.insert(site.clone(), at);
+        true
     }
 
     /// The window's answer about the site asked: its waiting links (on Allow), and the answer
@@ -193,7 +228,7 @@ fn links(p: Package) -> Vec<Imported> {
 
 /// "Click'n'Load from {site}": may this site send links to Link grabber?
 pub struct SiteDialog {
-    /// None: the page didn't say which site it is on.
+    /// None: the browser named no site for the page (an unknown site).
     pub site: Option<String>,
     /// The links it sent.
     count: usize,
@@ -222,11 +257,11 @@ impl SiteDialog {
                         ),
                         &[("site", &crate::i18n::isolate(site))],
                     ),
-                    // i18n: Click'n'Load window: a page that doesn't say which site it is on
+                    // i18n: Click'n'Load window: a page whose web site the browser doesn't name, so MDM can't tell which site it is
                     None => crate::i18n::tn(
                         n,
-                        "A web page wants to send {n} link to Link grabber.",
-                        "A web page wants to send {n} links to Link grabber.",
+                        "An unknown site wants to send {n} link to Link grabber.",
+                        "An unknown site wants to send {n} links to Link grabber.",
                     ),
                 };
                 winui::paragraph(
@@ -317,7 +352,8 @@ mod tests {
             post(Some("new.example"), "", &["https://n.example/3"]),
         ]);
         // Allowed: now, with its package and password, marked as sent by a page, no referrer.
-        let now = c.take(&sites);
+        let (now, raise) = c.take(&sites);
+        assert!(raise);
         assert_eq!(now.len(), 1);
         assert_eq!(now[0].package.as_deref(), Some("Holiday"));
         assert_eq!(now[0].password.as_deref(), Some("pw"));
@@ -336,8 +372,37 @@ mod tests {
             .lock()
             .unwrap()
             .push(post(Some("new.example"), "", &["https://n.example/4"]));
-        assert_eq!(c.take(&sites).len(), 1);
+        assert_eq!(c.take(&sites).0.len(), 1);
         assert!(c.ask.is_none());
+    }
+
+    #[test]
+    fn a_site_brings_the_window_up_once_a_minute() {
+        let (_rt, mut c) = cnl();
+        let sites = vec![("ok.example".to_owned(), true)];
+        let t = Instant::now();
+        let send = |c: &mut Cnl, site: Option<&str>, at: Instant| {
+            c.inbox
+                .lock()
+                .unwrap()
+                .push(post(site, "", &["https://h.example/a.rar"]));
+            c.take_at(&sites, at)
+        };
+        // An allowed site: its links arrive every time, the window comes up once.
+        let (links, raise) = send(&mut c, Some("ok.example"), t);
+        assert_eq!((links.len(), raise), (1, true));
+        for s in [1, 20, 59] {
+            let (links, raise) = send(&mut c, Some("ok.example"), t + Duration::from_secs(s));
+            assert_eq!((links.len(), raise), (1, false), "after {s} s");
+        }
+        let (_, raise) = send(&mut c, Some("ok.example"), t + Duration::from_secs(61));
+        assert!(raise);
+        // A site answered "Not now" that posts again is asked again, without the window.
+        let (_, raise) = send(&mut c, Some("new.example"), t);
+        assert!(raise && c.ask.is_some());
+        c.answer(Answer::NotNow);
+        let (_, raise) = send(&mut c, Some("new.example"), t + Duration::from_secs(5));
+        assert!(!raise && c.ask.is_some());
     }
 
     #[test]
@@ -347,10 +412,10 @@ mod tests {
             post(Some("a.example"), "", &["https://a.example/1"]),
             post(None, "", &["https://b.example/1"]),
         ]);
-        assert!(c.take(&[]).is_empty());
+        assert!(c.take(&[]).0.is_empty());
         let (links, keep) = c.answer(Answer::NotNow);
         assert!(links.is_empty() && keep.is_none());
-        // The next site waiting is asked: a page that named none.
+        // The next one waiting is asked: an unknown site, never remembered.
         assert_eq!(c.ask.as_ref().unwrap().site, None);
         let (links, keep) = c.answer(Answer::Allow);
         assert_eq!((links.len(), keep), (1, None));

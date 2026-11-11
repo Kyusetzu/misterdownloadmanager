@@ -3,18 +3,23 @@
 //! (<https://jdownloader.org/knowledge/wiki/glossary/cnl2>, read 2026-11-09):
 //!
 //! - The server listens on `127.0.0.1:9666`, this computer only.
-//! - `GET /jdcheck.js` answers `jdownloader=true;`: the page's script sees a program is there.
-//!   `GET /flash/` answers a page with "JDownloader" in it, the documented check by hand.
 //! - `POST /flash/addcrypted2` (form): `crypted`, the links (one a line) encrypted with
 //!   AES-128-CBC, the key as IV too, in Base64; `jk`, a JavaScript function returning that key in
 //!   hexadecimal (only its `return '…'` is read, no script is run); `passwords`, the archive
 //!   passwords; `source`, the page; `package`, its name.
 //! - `POST /flash/add`: `urls`, the links as they are ("plain CNL2"), with the same fields.
 //!
+//! The two checks that page documents aren't answered: `GET /jdcheck.js` is a script that sets a
+//! variable named after JDownloader, and `GET /flash/` a page with its name in it. MDM doesn't
+//! say it is another program, so a page that asks first sees no program here; one that posts
+//! its form is taken (#486).
+//!
 //! Any web page can post to it, so what it takes is limited ([`MAX_BODY`], [`MAX_LINKS`],
-//! [`POSTS_PER_MINUTE`]) and only ever shown: the app asks once per site before a package goes to
-//! Link grabber, where nothing is looked up or downloaded until the user acts on it. Off unless
-//! the user turns it on. (`/flash/addcrypted`, a DLC container, isn't taken: reading one needs a
+//! [`POSTS_PER_MINUTE`] for each site) and only ever shown: the app asks once per site before a
+//! package goes to Link grabber, where nothing is looked up or downloaded until the user acts on
+//! it. The site is the one the browser names (`Origin`, else `Referer`), never one the page
+//! names itself; links to this computer or its network are left out. Off unless the user turns
+//! it on. (`/flash/addcrypted`, a DLC container, isn't taken: reading one needs a
 //! key MDM can't use, #486.)
 
 mod crypto;
@@ -29,7 +34,7 @@ use axum::body::Bytes;
 use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{any, get, post};
+use axum::routing::{any, post};
 
 use crypto::{aes_cbc_decrypt, base64};
 
@@ -42,8 +47,12 @@ pub const MAX_LINKS: usize = 500;
 /// The most passwords kept from a post, and the longest password or package name.
 pub const MAX_PASSWORDS: usize = 10;
 pub const MAX_TEXT: usize = 200;
-/// Posts taken a minute, from all pages together; more are refused until the minute is over.
+/// Posts taken a minute from one site (pages that name none count as one); more are refused
+/// until the minute is over, so a page that floods uses up only its own.
 pub const POSTS_PER_MINUTE: usize = 10;
+/// The most sites counted at once: a post from one more is refused until a counted site's
+/// minute is over.
+pub const SITES_COUNTED: usize = 100;
 
 /// A set of links as a site packed them.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -55,9 +64,10 @@ pub struct Package {
     pub links: Vec<String>,
 }
 
-/// What a page posted, and the site it came from: the host of the browser's `Origin` (else its
-/// `Referer`, else the form's `source`), None when none says. Only the browser's own headers
-/// name the site a page is on; the form's fields are the page's to choose.
+/// What a page posted, and the site it came from: the host of the browser's `Origin` (without
+/// that header, of its `Referer`), None when the browser names none. Only the browser's own
+/// headers name the site a page is on; the form's fields (`source`) are the page's to choose,
+/// and are never used for it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Found {
     pub package: Package,
@@ -121,17 +131,15 @@ fn host(address: &str) -> Option<String> {
         .and_then(|u| u.host_str().map(str::to_ascii_lowercase))
 }
 
-/// The site a post came from (see [`Found`]).
-fn site(headers: &HeaderMap, form: &HashMap<String, String>) -> Option<String> {
-    let header = |name| {
-        headers
-            .get(name)
-            .and_then(|v| v.to_str().ok())
-            .and_then(host)
-    };
-    header(header::ORIGIN)
-        .or_else(|| header(header::REFERER))
-        .or_else(|| form.get("source").and_then(|s| host(s)))
+/// The site a post came from (see [`Found`]). An `Origin` that names no web site (`null`: a
+/// sandboxed frame, a page that hides where it is) means no site, whatever the `Referer` says:
+/// such a post is asked about every time.
+fn site(headers: &HeaderMap) -> Option<String> {
+    let header = |name| headers.get(name).map(|v| v.to_str().ok().and_then(host));
+    match header(header::ORIGIN) {
+        Some(origin) => origin,
+        None => header(header::REFERER).flatten(),
+    }
 }
 
 /// What a post is: its package, or why not (the answer's text).
@@ -162,20 +170,29 @@ fn read(path: &str, form: &HashMap<String, String>) -> Result<Package, &'static 
     })
 }
 
-/// The posts of the last minute, to keep them under [`POSTS_PER_MINUTE`].
+/// Each site's posts of the last minute, to keep them under [`POSTS_PER_MINUTE`] (None: the
+/// pages that name no site, together).
 #[derive(Default)]
-struct Rate(Mutex<VecDeque<Instant>>);
+struct Rate(Mutex<HashMap<Option<String>, VecDeque<Instant>>>);
 
 impl Rate {
-    /// One more post now, if the minute has room.
-    fn take(&self, now: Instant) -> bool {
-        let mut sent = self.0.lock().unwrap();
-        while sent
-            .front()
-            .is_some_and(|t| now.duration_since(*t) >= Duration::from_secs(60))
-        {
-            sent.pop_front();
+    /// One more post from `site` now, if its minute has room.
+    fn take(&self, site: &Option<String>, now: Instant) -> bool {
+        let mut sites = self.0.lock().unwrap();
+        // What is older than a minute is forgotten, and a site with nothing left with it.
+        sites.retain(|_, sent| {
+            while sent
+                .front()
+                .is_some_and(|t| now.duration_since(*t) >= Duration::from_secs(60))
+            {
+                sent.pop_front();
+            }
+            !sent.is_empty()
+        });
+        if !sites.contains_key(site) && sites.len() >= SITES_COUNTED {
+            return false;
         }
+        let sent = sites.entry(site.clone()).or_default();
         if sent.len() >= POSTS_PER_MINUTE {
             return false;
         }
@@ -232,7 +249,8 @@ fn router(on_found: OnFound) -> Router {
                     Ok(p) => p,
                     Err(why) => return text(why),
                 };
-                if !rate.take(Instant::now()) {
+                let site = site(&headers);
+                if !rate.take(&site, Instant::now()) {
                     tracing::info!("Click'n'Load: a post refused, too many this minute");
                     return (
                         StatusCode::TOO_MANY_REQUESTS,
@@ -240,10 +258,7 @@ fn router(on_found: OnFound) -> Router {
                     )
                         .into_response();
                 }
-                let found = Found {
-                    package,
-                    site: site(&headers, &form),
-                };
+                let found = Found { package, site };
                 let took = tokio::task::spawn_blocking(move || on_found(found))
                     .await
                     .unwrap_or(false);
@@ -252,9 +267,6 @@ fn router(on_found: OnFound) -> Router {
         }
     };
     Router::new()
-        .route("/jdcheck.js", get(jdcheck))
-        .route("/flash", get(flash))
-        .route("/flash/", get(flash))
         .route("/flash/add", post(posted("add")))
         .route("/flash/addcrypted2", post(posted("addcrypted2")))
         .fallback(any(other))
@@ -268,18 +280,6 @@ fn text(s: &str) -> Response {
         format!("{s}\r\n"),
     )
         .into_response()
-}
-
-async fn jdcheck() -> Response {
-    (
-        [(header::CONTENT_TYPE, "text/javascript")],
-        "jdownloader=true;\n",
-    )
-        .into_response()
-}
-
-async fn flash() -> Response {
-    text("JDownloader (Click'n'Load by Mister Download Manager)")
 }
 
 /// A browser's preflight (CORS, Private Network Access) is allowed; anything else isn't here.
@@ -376,15 +376,19 @@ mod tests {
         .unwrap();
         let base = format!("http://{}", l.addr);
         let c = reqwest::Client::new();
-        let check = c.get(format!("{base}/jdcheck.js")).send().await.unwrap();
-        assert_eq!(
-            check
-                .headers()
-                .get("access-control-allow-private-network")
-                .unwrap(),
-            "true"
-        );
-        assert_eq!(check.text().await.unwrap(), "jdownloader=true;\n");
+        // The checks that would say "JDownloader is here" aren't answered (#486).
+        for path in ["jdcheck.js", "flash/", "flash"] {
+            let check = c.get(format!("{base}/{path}")).send().await.unwrap();
+            assert_eq!(check.status(), StatusCode::NOT_FOUND, "{path}");
+            assert_eq!(
+                check
+                    .headers()
+                    .get("access-control-allow-private-network")
+                    .unwrap(),
+                "true"
+            );
+            assert!(!check.text().await.unwrap().contains("ownloader"));
+        }
         let post = |path: &str, form: Vec<(&str, String)>| {
             let req = c.post(format!("{base}/flash/{path}")).body(
                 url::form_urlencoded::Serializer::new(String::new())
@@ -442,8 +446,8 @@ mod tests {
                         "http://rapidshare.com/files/285622259/jDownloader2.dmg".into(),
                     ],
                 },
-                // No browser headers here: the form's source names the site.
-                site: Some("jdownloader.org".into()),
+                // No browser headers here: no site, whatever the form's source says.
+                site: None,
             }
         );
         assert_eq!(got.len(), 2);
@@ -465,21 +469,59 @@ mod tests {
     }
 
     #[test]
-    fn the_browsers_origin_names_the_site_not_the_form() {
+    fn only_the_browser_names_the_site() {
+        // No header: no site (the form's `source` is the page's to write, and isn't read).
         let mut h = HeaderMap::new();
-        let f: HashMap<String, String> =
-            [("source".to_owned(), "https://claimed.example/p".to_owned())].into();
-        assert_eq!(site(&h, &f).as_deref(), Some("claimed.example"));
+        assert_eq!(site(&h), None);
         h.insert(
             header::REFERER,
             "https://Page.Example/list".parse().unwrap(),
         );
-        assert_eq!(site(&h, &f).as_deref(), Some("page.example"));
+        assert_eq!(site(&h).as_deref(), Some("page.example"));
         h.insert(header::ORIGIN, "https://links.example".parse().unwrap());
-        assert_eq!(site(&h, &f).as_deref(), Some("links.example"));
-        // A sandboxed page's "null" origin names none: the next one says.
+        assert_eq!(site(&h).as_deref(), Some("links.example"));
+        // A sandboxed frame's, or a no-referrer post's, "null" origin: no site, even with a
+        // Referer beside it.
         h.insert(header::ORIGIN, "null".parse().unwrap());
-        assert_eq!(site(&h, &f).as_deref(), Some("page.example"));
+        assert_eq!(site(&h), None);
+        h.remove(header::REFERER);
+        assert_eq!(site(&h), None);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_page_cant_pose_as_a_site_through_the_form() {
+        let got = Arc::new(Mutex::new(Vec::new()));
+        let seen = got.clone();
+        let l = Listener::start(
+            &tokio::runtime::Handle::current(),
+            "127.0.0.1:0".parse().unwrap(),
+            Arc::new(move |f: Found| {
+                seen.lock().unwrap().push(f.site);
+                true
+            }),
+        )
+        .unwrap();
+        let c = reqwest::Client::new();
+        let body = "urls=https%3A%2F%2Fa.example%2F1&source=https%3A%2F%2Fallowed.example%2F";
+        let send = |origin: Option<&str>| {
+            let mut r = c
+                .post(format!("http://{}/flash/add", l.addr))
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(body);
+            if let Some(o) = origin {
+                r = r.header(header::ORIGIN, o);
+            }
+            r.send()
+        };
+        // As a no-cors post with no referrer, or a sandboxed frame, sends it; then with no
+        // header at all; then as the site itself.
+        send(Some("null")).await.unwrap();
+        send(None).await.unwrap();
+        send(Some("https://allowed.example")).await.unwrap();
+        assert_eq!(
+            *got.lock().unwrap(),
+            vec![None, None, Some("allowed.example".to_owned())]
+        );
     }
 
     #[test]
@@ -514,14 +556,33 @@ mod tests {
     }
 
     #[test]
-    fn ten_posts_a_minute() {
+    fn ten_posts_a_minute_for_each_site() {
         let rate = Rate::default();
         let t = Instant::now();
+        let (a, b, none) = (
+            Some("a.example".to_owned()),
+            Some("b.example".to_owned()),
+            None,
+        );
         for _ in 0..POSTS_PER_MINUTE {
-            assert!(rate.take(t));
+            assert!(rate.take(&a, t));
         }
-        assert!(!rate.take(t + Duration::from_secs(30)));
-        assert!(rate.take(t + Duration::from_secs(61)));
+        // a's minute is full; b's, and the unnamed pages', aren't.
+        assert!(!rate.take(&a, t + Duration::from_secs(30)));
+        assert!(rate.take(&b, t + Duration::from_secs(30)));
+        assert!(rate.take(&none, t + Duration::from_secs(30)));
+        assert!(rate.take(&a, t + Duration::from_secs(61)));
+        // No more sites counted than SITES_COUNTED: one more waits for a minute to pass.
+        let rate = Rate::default();
+        for i in 0..SITES_COUNTED {
+            assert!(rate.take(&Some(format!("s{i}.example")), t));
+        }
+        assert!(!rate.take(&Some("one-more.example".to_owned()), t));
+        assert!(rate.take(&Some("s0.example".to_owned()), t));
+        assert!(rate.take(
+            &Some("one-more.example".to_owned()),
+            t + Duration::from_secs(61)
+        ));
     }
 
     #[tokio::test(flavor = "multi_thread")]

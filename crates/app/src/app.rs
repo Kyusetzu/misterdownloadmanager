@@ -8640,12 +8640,12 @@ impl App {
         self.show_import(found, file);
     }
 
-    /// What Click'n'Load pages posted: an allowed site's links into Link grabber (the window
-    /// comes up); the others wait for their site's answer (`cnl.ask`).
+    /// What Click'n'Load pages posted: an allowed site's links into Link grabber; the others
+    /// wait for their site's answer (`cnl.ask`). The window comes up for either, once a minute
+    /// for one site.
     fn poll_cnl(&mut self, ctx: &egui::Context) {
-        let asking = self.cnl.ask.is_some();
-        let links = self.cnl.take(&self.settings.cnl_sites);
-        if !links.is_empty() || (!asking && self.cnl.ask.is_some()) {
+        let (links, raise) = self.cnl.take(&self.settings.cnl_sites);
+        if raise {
             self.show_window(ctx);
         }
         if !links.is_empty() {
