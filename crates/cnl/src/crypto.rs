@@ -1,49 +1,7 @@
-//! Link containers and Click'n'Load: the ways link sites hand JDownloader a set of links, read
-//! into packages (a name, archive passwords, the links) for Link grabber (#37), where they are
-//! ticked before anything is downloaded.
-//!
-//! - [`dlc`]: DLC container files (`.dlc`), whose key comes from JDownloader's key service.
-//! - [`cnl`]: Click'n'Load 2, a page's button that posts its links to a small web server on
-//!   127.0.0.1:9666, as JDownloader's documentation for web sites describes it.
-//!
-//! Nothing here downloads anything or touches the download list: the app shows what was found.
+//! What Click'n'Load 2 posts is opened with: AES-128-CBC, Base64, a link a line.
 
-pub mod cnl;
-pub mod dlc;
-
-/// A set of links as a site packed them.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Package {
-    /// The site's name for it; empty when it gave none.
-    pub name: String,
-    /// The archive passwords that came with it (Link grabber's "Archive password").
-    pub passwords: Vec<String>,
-    pub links: Vec<String>,
-}
-
-/// Why a container couldn't be read.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Error {
-    /// Not a container this reads, or a damaged one.
-    Damaged,
-    /// The key service didn't answer, or refused this container.
-    Service(String),
-    /// It holds no links.
-    Empty,
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Damaged => f.write_str("not a container MDM can read, or a damaged one"),
-            Error::Service(why) => write!(f, "the key service: {why}"),
-            Error::Empty => f.write_str("it holds no links"),
-        }
-    }
-}
-
-/// AES-128 in CBC mode, the padding left to the caller (Click'n'Load pads with zeros, DLC with
-/// zeros and a PKCS#7 block): `data`'s length a multiple of 16, else None.
+/// AES-128 in CBC mode, the padding left to the caller (Click'n'Load pads with zeros): `data`'s
+/// length a multiple of 16, else None.
 pub(crate) fn aes_cbc_decrypt(key: &[u8; 16], iv: &[u8; 16], data: &[u8]) -> Option<Vec<u8>> {
     use aes::cipher::{BlockCipherDecrypt, KeyInit};
     if data.is_empty() || !data.len().is_multiple_of(16) {
@@ -61,7 +19,7 @@ pub(crate) fn aes_cbc_decrypt(key: &[u8; 16], iv: &[u8; 16], data: &[u8]) -> Opt
     Some(out)
 }
 
-/// The other way, for the tests' own containers.
+/// The other way, for the tests' own posts.
 #[cfg(test)]
 pub(crate) fn aes_cbc_encrypt(key: &[u8; 16], iv: &[u8; 16], data: &[u8]) -> Vec<u8> {
     use aes::cipher::{BlockCipherEncrypt, KeyInit};

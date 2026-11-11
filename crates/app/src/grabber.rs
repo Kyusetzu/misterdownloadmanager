@@ -60,7 +60,7 @@ pub enum Origin {
     Various,
     /// In the download list already.
     Known,
-    /// Packed by its site (a DLC container, Click'n'Load): the site's package name.
+    /// Packed by its site (Click'n'Load): the site's package name.
     Site(String),
 }
 
@@ -370,8 +370,11 @@ impl Grabber {
                 break;
             }
             let host = l.url.host_str().unwrap_or_default();
+            // A link a web page sent (Click'n'Load) is never looked up: the page chose it, and a
+            // look-up is a request the user didn't ask for.
             if l.state != LinkState::Unchecked
                 || l.known
+                || l.found.from_page
                 || hosts.iter().filter(|h| **h == host).count() >= CHECKS_PER_HOST
             {
                 continue;
@@ -760,7 +763,12 @@ impl Grabber {
                             let glyph = pos2(row.left() + 40.0, top + 2.0);
                             let mut on = l.on;
                             let size = l.size.map(crate::dialogs::dialog_size).unwrap_or_default();
-                            let state = state_text(&l.state);
+                            let state = if l.found.from_page && l.state == LinkState::Unchecked {
+                                // i18n: Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up before it is added
+                                crate::i18n::t("Sent by a page: not looked up").to_owned()
+                            } else {
+                                state_text(&l.state)
+                            };
                             look.name = [l.name.as_str(), &size, &state]
                                 .iter()
                                 .filter(|s| !s.is_empty())
@@ -1091,6 +1099,7 @@ mod tests {
             url: url.into(),
             package: Some(pkg.into()),
             password: pw.map(str::to_owned),
+            from_page: true,
             ..Default::default()
         };
         let mut g = grabber();
@@ -1101,7 +1110,7 @@ mod tests {
                 site("https://h.org/v.part2.rar", "Holiday", Some("other")),
                 site("https://h.org/notes.txt", "Notes", None),
             ],
-            "list.dlc".into(),
+            "Click'n'Load".into(),
             |_| false,
         );
         let got: Vec<(&str, &str, usize)> = g
@@ -1118,6 +1127,15 @@ mod tests {
             .collect();
         assert_eq!(got, vec![("Holiday", "secret", 2), ("Notes", "", 1)]);
         assert!(g.packages[0].extract);
+        // Sent by a page: none is looked up; a link the user brought is.
+        assert!(g.to_check().is_empty());
+        g.add(
+            vec![link("https://h.org/mine.zip", None)],
+            String::new(),
+            |_| false,
+        );
+        let check: Vec<String> = g.to_check().iter().map(|(_, u, _)| u.to_string()).collect();
+        assert_eq!(check, vec!["https://h.org/mine.zip"]);
     }
 
     #[test]

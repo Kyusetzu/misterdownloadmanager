@@ -2,6 +2,11 @@
 # writes the rows marked '#, machine'; a native speaker deletes that line after checking.
 # context	source	translation (craft-i18n format, rows as in en.tsv)
 @id	language.name	Deutsch
+#. count in cnl.rs
+#. Click'n'Load window: a page that doesn't say which site it is on
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	A web page wants to send {n} link to Link grabber.|A web page wants to send {n} links to Link grabber.	Eine Webseite möchte {n} Link an den Link-Grabber senden.|Eine Webseite möchte {n} Links an den Link-Grabber senden.
 #. count in a dialog box
 #. never shown for a single file
 #. {n} = a number (keep the braces as they are)
@@ -105,6 +110,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	{n} tracker: {peers}|{n} trackers: {peers}	{n} Tracker: {peers}|{n} Tracker: {peers}
+#. count in cnl.rs
+#. Click'n'Load window: {site} is a web site's name such as "example.com"
+#. {site} = a web site's name such as "example.com"; {n} = a number (keep the braces as they are)
+#, machine
+@plural	{site} wants to send {n} link to Link grabber.|{site} wants to send {n} links to Link grabber.	{site} möchte {n} Link an den Link-Grabber senden.|{site} möchte {n} Links an den Link-Grabber senden.
 #. count in playlistdlg.rs
 #. in Download video: a playlist title then how many videos it has ({count})
 #. {count} = a number (keep the braces as they are)
@@ -415,11 +425,19 @@
 #. in the Subtitles list of Download video: every language the video's uploader gave
 #, machine
 	All the uploader's	Alle vom Uploader
+#. text in cnl.rs
+#. button in the Click'n'Load window: let this site send links (remembered)
+#, machine
+	Allow	Zulassen
 #. text in the Options window
 #. checkbox under the number of connections per download; {n} is 32
 #. {n} = a number (keep the braces as they are)
 #, machine
 	Allow more than {n} connections	Mehr als {n} Verbindungen zulassen
+#. text in cnl.rs
+#. Click'n'Load window, under the question: nothing happens to the links before the user adds them in Link grabber
+#, machine
+	Allow only sites you use. Nothing is looked up or downloaded before you add it in Link grabber.	Lassen Sie nur Seiten zu, die Sie nutzen. Nichts wird nachgeschlagen oder heruntergeladen, bevor Sie es im Link-Grabber hinzufügen.
 #. text in errors.rs
 #, machine
 	already being downloaded: {path}	wird bereits heruntergeladen: {path}
@@ -638,6 +656,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Bhutan	Bhutan
+#. text in cnl.rs
+#. button in the Click'n'Load window: refuse this site's links (remembered)
+#, machine
+	Block	Blockieren
 #. text in the Add torrent window
 #. Torrent settings: the address of an IP blocklist (empty: none)
 #, machine
@@ -903,15 +925,16 @@
 #. verb: clears this filter
 #, machine
 	Clear	Löschen
-#. message or event log entry in the main window
+#. message or event log entry in the main window; window title in cnl.rs
 #. title of the notice when Click'n'Load couldn't start
+#. window title: a web page used Click'n'Load (a link site's button that sends its links to this program)
 #, machine
 	Click'n'Load	Click'n'Load
-#. text in containers.rs
+#. text in cnl.rs
 #. notice: Click'n'Load couldn't start; {port} is 9666; JDownloader is another download manager that uses the same port
 #, machine
 	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.	Click'n'Load kann nicht starten: Ein anderes Programm (JDownloader?) verwendet Port {port}. Schließen Sie es und schalten Sie Click'n'Load in den Optionen aus und wieder ein.
-#. text in containers.rs
+#. text in cnl.rs
 #. notice: Click'n'Load couldn't start; {error} the system's reason
 #. {error} = an error message (keep the braces as they are)
 #, machine
@@ -1532,7 +1555,7 @@
 #. Options → Accounts: a note that the debrid services' support (Real-Debrid, AllDebrid, Premiumize) is new and not yet tried with real paid accounts
 #, machine
 	Experimental: built from the services' public API documentation, not yet confirmed with real accounts.	Experimentell: Basiert auf der öffentlichen API-Dokumentation der Dienste und wurde noch nicht mit echten Konten getestet.
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Export	Exportieren
 #. text in the Options window
@@ -2009,7 +2032,7 @@
 #. checkbox in the Options window
 #, machine
 	Ignore file modification time changes when resuming a download	Änderungen der Dateimodifikationszeit beim Fortsetzen eines Downloads ignorieren
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Import	Importieren
 #. value in a column's filter list in the download list
@@ -2107,10 +2130,6 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	It could not start: {error}	Es konnte nicht gestartet werden: {error}
-#. text in containers.rs
-#. a DLC container held no links
-#, machine
-	it holds no links	er enthält keine Links
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
@@ -2123,10 +2142,6 @@
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
 	it is not an archive MDM extracts	es ist kein Archiv, das MDM extrahiert
-#. text in containers.rs
-#. a DLC container couldn't be read: not one, or damaged
-#, machine
-	it isn't a DLC container, or it is damaged	es ist kein DLC-Container oder er ist beschädigt
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
@@ -2170,11 +2185,6 @@
 #. a country's name (where a download's server is)
 #, machine
 	Japan	Japan
-#. text in containers.rs
-#. a DLC container's key couldn't be had from JDownloader's key service; {error} why (in English, from the service or the network)
-#. {error} = an error message (keep the braces as they are)
-#, machine
-	JDownloader's key service didn't give its key ({error})	Der Schlüsseldienst von JDownloader hat keinen Schlüssel geliefert ({error})
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -2970,7 +2980,8 @@
 #. Video helpers: no copy of this helper yet
 #, machine
 	Not installed yet	Noch nicht installiert
-#. button in helpers.rs
+#. text in cnl.rs; button in helpers.rs
+#. button in the Click'n'Load window: refuse these links, ask again next time
 #, machine
 	Not now	Nicht jetzt
 #. text in helpers.rs
@@ -2995,7 +3006,7 @@
 	Note: These settings don't relate to queue processing	Hinweis: Diese Einstellungen beziehen sich nicht auf die Warteschlangenverarbeitung
 #. message or event log entry in the main window
 #, machine
-	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).	Nichts zum Herunterladen in {item}: Ziehen Sie Links, eine .torrent- oder .dlc-Datei oder eine Adressliste (.txt, .ef2) hierher.
+	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).	Nichts zum Herunterladen in {item}: Legen Sie Links, eine .torrent-Datei oder eine Adressliste (.txt, .ef2) ab.
 #. text in the Scheduler window
 #, machine
 	November	November
@@ -3714,6 +3725,10 @@
 #. how much was sent to other peers
 #, machine
 	Sent	Gesendet
+#. text in the Link grabber window
+#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up before it is added
+#, machine
+	Sent by a page: not looked up	Von einer Seite gesendet: nicht nachgeschlagen
 #. text in the Scheduler window
 #, machine
 	September	September
@@ -4360,7 +4375,7 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be moved: {error}	Die Datei konnte nicht verschoben werden: {error}
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be read: {error}	Die Datei konnte nicht gelesen werden: {error}
@@ -4409,7 +4424,7 @@
 #. a check of Test browser integration: the browsers are set up, but the small helper program they start (misterdownloadmanager-nmhost) is gone
 #, machine
 	The helper program the browsers start is missing	Das Hilfsprogramm, das die Browser starten, fehlt
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The list could not be saved: {error}	Die Liste konnte nicht gespeichert werden: {error}
@@ -5364,10 +5379,6 @@
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 #, machine
 	{ext} File	{ext}-Datei
-#. message or event log entry in the main window
-#. notice: a DLC container couldn't be read; {file} its name, {why} the reason
-#, machine
-	{file} can't be read: {why}.	{file} kann nicht gelesen werden: {why}.
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 #, machine

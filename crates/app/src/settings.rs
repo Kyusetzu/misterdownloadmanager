@@ -313,6 +313,8 @@ pub struct Settings {
     /// Click'n'Load (#37): a page's button posts its links to 127.0.0.1:9666, shown in Link
     /// grabber. Off by default: any page may post there.
     pub cnl_on: bool,
+    /// Click'n'Load: the sites asked about, each allowed (true) or blocked, by host.
+    pub cnl_sites: Vec<(String, bool)>,
 }
 
 /// Options → File types defaults (IDM 6.42), shared with the browser host (mdm_ipc::capture).
@@ -468,6 +470,7 @@ impl Default for Settings {
             grabber_check: true,
             grabber_hide_pages: true,
             cnl_on: false,
+            cnl_sites: Vec::new(),
         }
     }
 }

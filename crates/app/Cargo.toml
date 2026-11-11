@@ -54,7 +54,7 @@ qrcodegen = "1.8.0"
 # Line breaks between characters keep a letter and its marks together (Thai, Khmer, Indic).
 unicode-segmentation = "1.13.3"
 # Crash and freeze reports: the monitor, minidumps, symbolicated stacks, release logs.
-mdm-containers.workspace = true
+mdm-cnl.workspace = true
 mdm-crash.workspace = true
 mdm-debrid.workspace = true
 tracing.workspace = true

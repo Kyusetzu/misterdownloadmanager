@@ -553,8 +553,8 @@ pub struct App {
     pub remote: Option<mdm_remote::Remote>,
     /// Torrents a paired device sent, their files being looked up (`remote::poll_torrents`).
     pub remote_torrents: Vec<crate::remote::Lookup>,
-    /// DLC containers and Click'n'Load (#37): what they found waits here for Link grabber.
-    containers: crate::containers::Containers,
+    /// Click'n'Load (#37): what pages post waits here, for its site's answer and Link grabber.
+    cnl: crate::cnl::Cnl,
     /// Free space where downloads go, and when it was last looked up (`free_space`).
     free_space: std::sync::Arc<std::sync::Mutex<(Option<Instant>, Option<u64>)>>,
     /// Options → Proxy / Socks → Network adapter (#35): the watch, the route seen last frame, and
@@ -941,11 +941,11 @@ impl App {
     /// share), and nothing waits for an answer from someone at the computer.
     pub fn headless(mut self, downloads: Option<PathBuf>) -> Self {
         self.headless = true;
-        // Nobody to tick Link grabber's packages.
-        let _ = self.containers.listen(false);
         if let Some(d) = downloads {
             self.downloads = d;
         }
+        // Nobody to answer Click'n'Load's question or tick Link grabber's packages.
+        let _ = self.cnl.listen(false);
         self
     }
 
@@ -1065,8 +1065,8 @@ impl App {
         // The remote control (#141): off unless Options → Remote turned it on.
         let remote = crate::remote::start(&rt, sink, &settings);
         // Click'n'Load (#37): off unless Options → Archives and Link grabber turned it on.
-        let mut containers = crate::containers::Containers::new(rt.clone(), ctx.clone());
-        let cnl_failed = containers.listen(settings.cnl_on).err();
+        let mut cnl = crate::cnl::Cnl::new(rt.clone(), ctx.clone());
+        let cnl_failed = cnl.listen(settings.cnl_on).err();
         // Started with the session where a window can't be hidden (Wayland, #226): minimized.
         if start == crate::Start::Minimized {
             tracing::info!("started with the session: minimized (a window can't be hidden here)");
@@ -1155,7 +1155,7 @@ impl App {
             torrent_host: crate::torrents::Host::new(),
             remote,
             remote_torrents: Vec::new(),
-            containers,
+            cnl,
             free_space: Default::default(),
             netwatch: Default::default(),
             debrid: Default::default(),
@@ -2372,19 +2372,6 @@ impl App {
         }
         if cmd.start_queue {
             self.start_queue(0);
-        }
-        // A DLC container (command line, file association, a drop): its packages in Link
-        // grabber, once JDownloader's key service gave its key.
-        if let Some(path) = cmd
-            .url
-            .as_deref()
-            .filter(|u| crate::containers::is_dlc(u))
-            .map(|u| std::path::PathBuf::from(u.trim_matches('"')))
-            .filter(|p| p.is_file())
-        {
-            self.show_window(ctx);
-            self.open_dlc(&path);
-            return;
         }
         // A magnet link or a .torrent file (browser, command line, file association): Add
         // torrent shows what it holds.
@@ -4804,11 +4791,12 @@ impl App {
         if let Some(r) = &self.remote {
             r.apply(crate::remote::config(&self.settings));
         }
-        // Options → Archives and Link grabber: Click'n'Load turned on or off.
-        if let Err(why) = self
-            .containers
-            .listen(self.settings.cnl_on && !self.headless)
-        {
+        // Options → Archives and Link grabber: Click'n'Load turned on or off; off forgets the
+        // sites' answers, so a blocked site can be asked again.
+        if !self.settings.cnl_on {
+            self.settings.cnl_sites.clear();
+        }
+        if let Err(why) = self.cnl.listen(self.settings.cnl_on && !self.headless) {
             // i18n: title of the notice when Click'n'Load couldn't start
             self.notice = Some((crate::i18n::mark("Click'n'Load"), why));
         }
@@ -7503,8 +7491,7 @@ impl App {
         }
         for s in other {
             let torrent = mdm_torrent::Source::magnet(&s).is_some()
-                || ((s.to_ascii_lowercase().ends_with(".torrent")
-                    || crate::containers::is_dlc(&s))
+                || (s.to_ascii_lowercase().ends_with(".torrent")
                     && std::path::Path::new(&s).is_file());
             if torrent {
                 self.handle_command(
@@ -7520,7 +7507,7 @@ impl App {
                     crate::i18n::mark("Mister Download Manager"),
                     crate::i18n::fmt(
                         crate::i18n::t(
-                            "Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).",
+                            "Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).",
                         ),
                         &[("item", &crate::i18n::isolate(&s))],
                     ),
@@ -7540,7 +7527,7 @@ impl App {
             let dialog = if ef2 {
                 dialog.add_filter("EF2", &["ef2"])
             } else {
-                dialog.add_filter(lists, &["txt", "htm", "html", "csv", "dlc"])
+                dialog.add_filter(lists, &["txt", "htm", "html", "csv"])
             };
             dialog.add_filter(all, &["*"]).pick_file()
         });
@@ -7601,10 +7588,6 @@ impl App {
 
     /// The addresses in a list file, shown in Import to tick before adding.
     fn import_file(&mut self, path: &std::path::Path) {
-        if crate::containers::is_dlc(&path.to_string_lossy()) {
-            self.open_dlc(path);
-            return;
-        }
         let file = path
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
@@ -7635,48 +7618,16 @@ impl App {
         self.show_import(found, file);
     }
 
-    /// A DLC container's packages, read off this thread (`containers`), for Link grabber.
-    fn open_dlc(&mut self, path: &std::path::Path) {
-        let file = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        match std::fs::read(path) {
-            Ok(bytes) => self
-                .containers
-                .open_dlc(String::from_utf8_lossy(&bytes).into_owned(), file),
-            Err(e) => {
-                self.notice = Some((
-                    crate::i18n::mark("Import"),
-                    crate::i18n::fmt(
-                        crate::i18n::t("The file could not be read: {error}"),
-                        &[("error", &e.to_string())],
-                    ),
-                ));
-            }
+    /// What Click'n'Load pages posted: an allowed site's links into Link grabber (the window
+    /// comes up); the others wait for their site's answer (`cnl.ask`).
+    fn poll_cnl(&mut self, ctx: &egui::Context) {
+        let asking = self.cnl.ask.is_some();
+        let links = self.cnl.take(&self.settings.cnl_sites);
+        if !links.is_empty() || (!asking && self.cnl.ask.is_some()) {
+            self.show_window(ctx);
         }
-    }
-
-    /// What DLC containers and Click'n'Load found: into Link grabber (the window comes up), or
-    /// why a container couldn't be read.
-    fn poll_containers(&mut self, ctx: &egui::Context) {
-        for arrived in self.containers.take() {
-            match arrived {
-                crate::containers::Arrived::Links { found, source } => {
-                    self.show_window(ctx);
-                    self.show_import(found, source);
-                }
-                crate::containers::Arrived::Failed { file, why } => {
-                    self.notice = Some((
-                        crate::i18n::mark("Import"),
-                        crate::i18n::fmt(
-                            // i18n: notice: a DLC container couldn't be read; {file} its name, {why} the reason
-                            crate::i18n::t("{file} can't be read: {why}."),
-                            &[("file", &crate::i18n::isolate(&file)), ("why", &why)],
-                        ),
-                    ));
-                }
-            }
+        if !links.is_empty() {
+            self.show_import(links, "Click'n'Load".into());
         }
     }
 
@@ -8127,6 +8078,23 @@ impl App {
                     self.grabber = None;
                     self.add_grabbed(start, packages);
                 }
+            }
+        }
+        // Click'n'Load's question about a site; closing it is "Not now".
+        let answer = self.cnl.ask.as_mut().and_then(|d| match d.show(ctx) {
+            Outcome::Open => None,
+            Outcome::Closed => Some(crate::cnl::Answer::NotNow),
+            Outcome::Done(a) => Some(a),
+        });
+        if let Some(answer) = answer {
+            let (links, keep) = self.cnl.answer(answer);
+            if let Some((site, allowed)) = keep {
+                self.settings.cnl_sites.retain(|(s, _)| *s != site);
+                self.settings.cnl_sites.push((site, allowed));
+                self.dirty = true;
+            }
+            if !links.is_empty() {
+                self.show_import(links, "Click'n'Load".into());
             }
         }
         if let Some(d) = &mut self.extracts.needs_7zip
@@ -8884,7 +8852,7 @@ impl App {
         // Incoming commands and the clock (downloads, queues, Scheduler, saving…): `logic`, just
         // before, which runs minimized too.
         self.poll_picks(&ctx);
-        self.poll_containers(&ctx);
+        self.poll_cnl(&ctx);
         self.drop_target(&ctx);
         self.main_drops(&ctx);
         self.remember_layout(&ctx);

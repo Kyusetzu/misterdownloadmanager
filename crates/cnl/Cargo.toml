@@ -1,6 +1,6 @@
 [package]
-name = "mdm-containers"
-description = "Link containers and Click'n'Load: JDownloader's DLC files and the Click'n'Load 2 listener on 127.0.0.1:9666, read into packages of links for Link grabber"
+name = "mdm-cnl"
+description = "Click'n'Load 2: the listener on 127.0.0.1:9666 that takes a link site's packages of links for Link grabber, limited and asked for"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,19 +9,16 @@ authors.workspace = true
 publish.workspace = true
 
 [dependencies]
-# AES-128-CBC for DLC and Click'n'Load 2 (the same crate zip's AES already brings in).
+# AES-128-CBC for Click'n'Load 2 (the same crate zip's AES already brings in).
 aes = "0.9.4"
 axum.workspace = true
 base64.workspace = true
-reqwest.workspace = true
-# DLC's inner XML (the app reads RSS with it too).
-roxmltree = "0.20.0"
-serde.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
+reqwest.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 
 [lints]

@@ -15,10 +15,13 @@ pub struct Imported {
     pub user_agent: Option<String>,
     /// From a private window's page: kept out of the saved list.
     pub private: bool,
-    /// The package a site packed it in (a DLC container, Click'n'Load): Link grabber's package.
+    /// The package a site packed it in (Click'n'Load): Link grabber's package.
     pub package: Option<String>,
     /// That package's archive password.
     pub password: Option<String>,
+    /// Sent by a web page (Click'n'Load): Link grabber doesn't look it up; nothing is fetched
+    /// for it before the user adds it to the queue.
+    pub from_page: bool,
 }
 
 /// One address per line.

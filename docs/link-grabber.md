@@ -12,7 +12,6 @@
 - **Tasks → Import → From text file** and **From IDM export file**. An `.ef2` file brings each download's referrer and cookies.
 - Several links, or a `.txt` or `.ef2` list, dropped on the download list.
 - **Pasting.** Choose **Tasks → Link grabber...** and press **Ctrl+V**: every web address in the copied text is added.
-- **DLC containers** (`.dlc` files, from JDownloader and many link sites): open one with MDM, drop it on the download list, or pick it in **Tasks → Import → From text file**. See [DLC containers](#dlc-containers).
 - **Click'n'Load** buttons on link sites, once you turn it on. See [Click'n'Load](#clickn-load).
 
 Links that come while the window is open join the ones already there. A link that is already in the window isn't added twice. A link that is already in your download list goes under **Already in the list**, unticked.
@@ -24,24 +23,21 @@ Each package is a row you can open and close (click its arrow, double-click it, 
 - **The volumes of one archive** (`movie.part1.rar`, `movie.part2.rar`…, or `backup.7z.001`, `backup.7z.002`…) form one package named after the archive, as long as they come from the same site.
 - **The other links of one page** form a package named after the page.
 - **Everything else** goes into **Various files**.
-- **Links a site packed** (a DLC container, Click'n'Load) keep the site's packages and names, with their archive password when the site gave one.
-
-## DLC containers
-
-A DLC file holds a site's links, encrypted. Its key is kept by JDownloader's makers on their key service, so MDM asks that service for it, over HTTPS: the service gets the container's short key part, never its links. Then the packages appear in Link grabber, to tick as any links.
-
-To be plain about it: DLC has no public specification, and JDownloader's makers publish no key for other programs. MDM learned the file's layout by looking at containers and the service's answers by asking it, and it uses the one program key that is public: the one pyLoad, a free download manager, publishes in its source. So MDM asks the service under pyLoad's name (its own name stays in the request's User-Agent). If the service stops answering that name, MDM says it couldn't get the key, and the container can't be opened; the site's Click'n'Load button or plain links still work.
-
-Older containers (`.ccf`, `.rsdf`) aren't read: their keys are not public either, and sites have long stopped making them.
+- **Links a site packed** (Click'n'Load) keep the site's packages and names, with their archive password when the site gave one.
 
 ## Click'n'Load
 
 Many link sites have a **Click'n'Load** button that sends their links straight to a download manager on your computer, as JDownloader's documentation for web sites describes. Turn it on in **Options → Archives and Link grabber → Accept Click'n'Load from web pages** (off by default). MDM then listens on port 9666 of this computer only, and the links a page sends open in Link grabber, with the page's package name and archive password.
 
-- Any page could send links, so nothing is ever downloaded until you tick it in Link grabber.
+Any web page can send links there, not only the link site you are on, so MDM is careful with them:
+
+- **The first time a site sends links, MDM asks**: **Allow** (that site's links go to Link grabber from now on), **Block** (they never do), or **Not now** (these links are dropped, and the site is asked again next time). The site is the one your browser names, not what the page claims. Turning Click'n'Load off forgets the answers.
+- **Links a page sent aren't looked up**: Link grabber shows them as **Sent by a page: not looked up**, and no request leaves for them, with or without your Sites Logins or debrid accounts, until you add them to the queue. Nothing is downloaded before that.
+- **Limits**: at most 10 posts a minute, 500 links and 256 KB a post; more is refused. At most 20 posts wait for an answer.
+- The page's own address isn't sent as the links' referrer: a page could name any.
 - Only one program can listen on port 9666. If JDownloader is running, MDM says so: close it, then turn the option off and on again.
-- A button that sends a DLC container instead of links works too: MDM reads it as a `.dlc` file.
-- Some sites hide the key in a script MDM doesn't run (only the plain form the documentation shows is read): then their button reports a failure, and the site's DLC file or plain links are the way.
+- A button that sends a DLC container instead of links isn't taken: reading one needs a key MDM can't use. The site's plain links, or its Click'n'Load button, are the way.
+- Some sites hide the key in a script MDM doesn't run (only the plain form the documentation shows is read): then their button reports a failure, and the site's plain links are the way.
 
 ## Looking links up
 

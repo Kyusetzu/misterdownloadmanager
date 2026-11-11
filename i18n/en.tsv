@@ -2,6 +2,10 @@
 # context	source	translation; a catalog for another language has the same rows.
 # A '#.' line is the translator note for the row under it.
 @id	language.name	English
+#. count in cnl.rs
+#. Click'n'Load window: a page that doesn't say which site it is on
+#. {n} = a number (keep the braces as they are)
+@plural	A web page wants to send {n} link to Link grabber.|A web page wants to send {n} links to Link grabber.	A web page wants to send {n} link to Link grabber.|A web page wants to send {n} links to Link grabber.
 #. count in a dialog box
 #. never shown for a single file
 #. {n} = a number (keep the braces as they are)
@@ -90,6 +94,10 @@
 #. where a magnet's peers came from: {n} = trackers asked; {peers} = "3 peers"
 #. {n} = a number (keep the braces as they are)
 @plural	{n} tracker: {peers}|{n} trackers: {peers}	{n} tracker: {peers}|{n} trackers: {peers}
+#. count in cnl.rs
+#. Click'n'Load window: {site} is a web site's name such as "example.com"
+#. {site} = a web site's name such as "example.com"; {n} = a number (keep the braces as they are)
+@plural	{site} wants to send {n} link to Link grabber.|{site} wants to send {n} links to Link grabber.	{site} wants to send {n} link to Link grabber.|{site} wants to send {n} links to Link grabber.
 #. count in playlistdlg.rs
 #. in Download video: a playlist title then how many videos it has ({count})
 #. {count} = a number (keep the braces as they are)
@@ -321,10 +329,16 @@
 #. text in the Download video window
 #. in the Subtitles list of Download video: every language the video's uploader gave
 	All the uploader's	All the uploader's
+#. text in cnl.rs
+#. button in the Click'n'Load window: let this site send links (remembered)
+	Allow	Allow
 #. text in the Options window
 #. checkbox under the number of connections per download; {n} is 32
 #. {n} = a number (keep the braces as they are)
 	Allow more than {n} connections	Allow more than {n} connections
+#. text in cnl.rs
+#. Click'n'Load window, under the question: nothing happens to the links before the user adds them in Link grabber
+	Allow only sites you use. Nothing is looked up or downloaded before you add it in Link grabber.	Allow only sites you use. Nothing is looked up or downloaded before you add it in Link grabber.
 #. text in errors.rs
 	already being downloaded: {path}	already being downloaded: {path}
 #. text in the Link grabber window
@@ -487,6 +501,9 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Bhutan	Bhutan
+#. text in cnl.rs
+#. button in the Click'n'Load window: refuse this site's links (remembered)
+	Block	Block
 #. text in the Add torrent window
 #. Torrent settings: the address of an IP blocklist (empty: none)
 	Block the addresses in this list (P2P or eMule format):	Block the addresses in this list (P2P or eMule format):
@@ -683,13 +700,14 @@
 #. button in the download list
 #. verb: clears this filter
 	Clear	Clear
-#. message or event log entry in the main window
+#. message or event log entry in the main window; window title in cnl.rs
 #. title of the notice when Click'n'Load couldn't start
+#. window title: a web page used Click'n'Load (a link site's button that sends its links to this program)
 	Click'n'Load	Click'n'Load
-#. text in containers.rs
+#. text in cnl.rs
 #. notice: Click'n'Load couldn't start; {port} is 9666; JDownloader is another download manager that uses the same port
 	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.
-#. text in containers.rs
+#. text in cnl.rs
 #. notice: Click'n'Load couldn't start; {error} the system's reason
 #. {error} = an error message (keep the braces as they are)
 	Click'n'Load can't start: {error}	Click'n'Load can't start: {error}
@@ -1577,9 +1595,6 @@
 #. Options → Remote → Status: it could not start; {error} = the system's reason
 #. {error} = an error message (keep the braces as they are)
 	It could not start: {error}	It could not start: {error}
-#. text in containers.rs
-#. a DLC container held no links
-	it holds no links	it holds no links
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it holds too many files or folders	it holds too many files or folders
@@ -1589,9 +1604,6 @@
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it is not an archive MDM extracts	it is not an archive MDM extracts
-#. text in containers.rs
-#. a DLC container couldn't be read: not one, or damaged
-	it isn't a DLC container, or it is damaged	it isn't a DLC container, or it is damaged
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it needs a password	it needs a password
@@ -1624,10 +1636,6 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Japan	Japan
-#. text in containers.rs
-#. a DLC container's key couldn't be had from JDownloader's key service; {error} why (in English, from the service or the network)
-#. {error} = an error message (keep the braces as they are)
-	JDownloader's key service didn't give its key ({error})	JDownloader's key service didn't give its key ({error})
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Jersey	Jersey
@@ -2214,7 +2222,8 @@
 #. text in helpers.rs
 #. Video helpers: no copy of this helper yet
 	Not installed yet	Not installed yet
-#. button in helpers.rs
+#. text in cnl.rs; button in helpers.rs
+#. button in the Click'n'Load window: refuse these links, ask again next time
 	Not now	Not now
 #. text in helpers.rs
 	Not now? Get them later from Tasks → Download video from a page.	Not now? Get them later from Tasks → Download video from a page.
@@ -2231,7 +2240,7 @@
 #. text in the Options window
 	Note: These settings don't relate to queue processing	Note: These settings don't relate to queue processing
 #. message or event log entry in the main window
-	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).
+	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).
 #. text in the Scheduler window
 	November	November
 #. text in the Options window
@@ -2762,6 +2771,9 @@
 #. column title: how much went to the peer
 #. how much was sent to other peers
 	Sent	Sent
+#. text in the Link grabber window
+#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up before it is added
+	Sent by a page: not looked up	Sent by a page: not looked up
 #. text in the Scheduler window
 	September	September
 #. text in countries.rs
@@ -3991,9 +4003,6 @@
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 	{ext} File	{ext} File
-#. message or event log entry in the main window
-#. notice: a DLC container couldn't be read; {file} its name, {why} the reason
-	{file} can't be read: {why}.	{file} can't be read: {why}.
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 	{file} could not be deleted from the disk: {error}	{file} could not be deleted from the disk: {error}

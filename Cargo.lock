@@ -4446,7 +4446,7 @@ dependencies = [
  "image",
  "libc",
  "mdm-cli",
- "mdm-containers",
+ "mdm-cnl",
  "mdm-crash",
  "mdm-debrid",
  "mdm-engine",
@@ -4508,15 +4508,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "mdm-containers"
+name = "mdm-cnl"
 version = "0.5.2"
 dependencies = [
  "aes",
  "axum",
  "base64 0.23.1",
  "reqwest 0.13.5",
- "roxmltree",
- "serde",
  "tokio",
  "tracing",
  "url",

@@ -2,6 +2,11 @@
 # writes the rows marked '#, machine'; a native speaker deletes that line after checking.
 # context	source	translation (craft-i18n format, rows as in en.tsv)
 @id	language.name	العربية
+#. count in cnl.rs
+#. Click'n'Load window: a page that doesn't say which site it is on
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	A web page wants to send {n} link to Link grabber.|A web page wants to send {n} links to Link grabber.	تريد صفحة ويب إرسال {n} رابط إلى ملتقط الروابط.|تريد صفحة ويب إرسال {n} رابط إلى ملتقط الروابط.|تريد صفحة ويب إرسال {n} رابطين إلى ملتقط الروابط.|تريد صفحة ويب إرسال {n} روابط إلى ملتقط الروابط.|تريد صفحة ويب إرسال {n} رابطا إلى ملتقط الروابط.|تريد صفحة ويب إرسال {n} رابط إلى ملتقط الروابط.
 #. count in a dialog box
 #. never shown for a single file
 #. {n} = a number (keep the braces as they are)
@@ -84,6 +89,11 @@
 #. where a magnet's peers came from: {n} = trackers asked; {peers} = "3 peers"
 #. {n} = a number (keep the braces as they are)
 @plural	{n} tracker: {peers}|{n} trackers: {peers}	{n} متتبع: {peers}|{n} متتبع: {peers}|{n} متتبعان: {peers}|{n} متتبعات: {peers}|{n} متتبعا: {peers}|{n} متتبع: {peers}
+#. count in cnl.rs
+#. Click'n'Load window: {site} is a web site's name such as "example.com"
+#. {site} = a web site's name such as "example.com"; {n} = a number (keep the braces as they are)
+#, machine
+@plural	{site} wants to send {n} link to Link grabber.|{site} wants to send {n} links to Link grabber.	يريد {site} إرسال {n} رابط إلى ملتقط الروابط.|يريد {site} إرسال {n} رابط إلى ملتقط الروابط.|يريد {site} إرسال {n} رابطين إلى ملتقط الروابط.|يريد {site} إرسال {n} روابط إلى ملتقط الروابط.|يريد {site} إرسال {n} رابطا إلى ملتقط الروابط.|يريد {site} إرسال {n} رابط إلى ملتقط الروابط.
 #. count in playlistdlg.rs
 #. in Download video: a playlist title then how many videos it has ({count})
 #. {count} = a number (keep the braces as they are)
@@ -324,10 +334,18 @@
 #. text in the Download video window
 #. in the Subtitles list of Download video: every language the video's uploader gave
 	All the uploader's	كل ما رفعه الناشر
+#. text in cnl.rs
+#. button in the Click'n'Load window: let this site send links (remembered)
+#, machine
+	Allow	السماح
 #. text in the Options window
 #. checkbox under the number of connections per download; {n} is 32
 #. {n} = a number (keep the braces as they are)
 	Allow more than {n} connections	السماح بأكثر من {n} اتصال
+#. text in cnl.rs
+#. Click'n'Load window, under the question: nothing happens to the links before the user adds them in Link grabber
+#, machine
+	Allow only sites you use. Nothing is looked up or downloaded before you add it in Link grabber.	اسمح فقط بالمواقع التي تستخدمها. لا يبحث عن شيء ولا ينزل شيء قبل أن تضيفه في ملتقط الروابط.
 #. text in errors.rs
 	already being downloaded: {path}	قيد التنزيل بالفعل: {path}
 #. text in the Link grabber window
@@ -491,6 +509,10 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Bhutan	بوتان
+#. text in cnl.rs
+#. button in the Click'n'Load window: refuse this site's links (remembered)
+#, machine
+	Block	حظر
 #. text in the Add torrent window
 #. Torrent settings: the address of an IP blocklist (empty: none)
 	Block the addresses in this list (P2P or eMule format):	حظر العناوين في هذه القائمة (صيغة P2P أو eMule):
@@ -691,11 +713,11 @@
 #. button in the download list
 #. verb: clears this filter
 	Clear	مسح
-#. text in containers.rs
+#. text in cnl.rs
 #. notice: Click'n'Load couldn't start; {port} is 9666; JDownloader is another download manager that uses the same port
 #, machine
 	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.	لا يمكن تشغيل Click'n'Load: برنامج آخر (JDownloader؟) يستخدم المنفذ {port}. أغلقه، ثم أوقف Click'n'Load وشغله مرة أخرى في الخيارات.
-#. text in containers.rs
+#. text in cnl.rs
 #. notice: Click'n'Load couldn't start; {error} the system's reason
 #. {error} = an error message (keep the braces as they are)
 #, machine
@@ -1158,7 +1180,7 @@
 #. text in the Options window
 #. Options → Accounts: a note that the debrid services' support (Real-Debrid, AllDebrid, Premiumize) is new and not yet tried with real paid accounts
 	Experimental: built from the services' public API documentation, not yet confirmed with real accounts.	تجريبي: مبني على وثائق API العامة للخدمات، ولم يتم تأكيده بعد بحسابات حقيقية.
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 	Export	تصدير
 #. text in the Options window
 	Extend the availability of Manifest 2 Chrome extensions	توسيع إتاحة ملحقات Chrome Manifest 2
@@ -1512,7 +1534,7 @@
 	If it can't be reached, use the system's DNS	إذا تعذر الوصول إليه، فاستخدم DNS الخاص بالنظام
 #. checkbox in the Options window
 	Ignore file modification time changes when resuming a download	تجاهل تغييرات وقت تعديل الملف عند متابعة التنزيل
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 	Import	استيراد
 #. value in a column's filter list in the download list
 	In a queue	في قائمة انتظار
@@ -1587,10 +1609,6 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	It could not start: {error}	تعذر بدء التشغيل: {error}
-#. text in containers.rs
-#. a DLC container held no links
-#, machine
-	it holds no links	لا يحتوي على روابط
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it holds too many files or folders	يحتوي على عدد كبير جدا من الملفات أو المجلدات
@@ -1600,10 +1618,6 @@
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it is not an archive MDM extracts	ليس أرشيفا يستخرجه MDM
-#. text in containers.rs
-#. a DLC container couldn't be read: not one, or damaged
-#, machine
-	it isn't a DLC container, or it is damaged	ليس حاوية DLC أو أنه تالف
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 	it needs a password	يحتاج إلى كلمة مرور
@@ -1636,11 +1650,6 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Japan	اليابان
-#. text in containers.rs
-#. a DLC container's key couldn't be had from JDownloader's key service; {error} why (in English, from the service or the network)
-#. {error} = an error message (keep the braces as they are)
-#, machine
-	JDownloader's key service didn't give its key ({error})	لم تعط خدمة مفاتيح JDownloader مفتاحها ({error})
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Jersey	جيرزي
@@ -2246,7 +2255,8 @@
 #. text in helpers.rs
 #. Video helpers: no copy of this helper yet
 	Not installed yet	لم يتم التثبيت بعد
-#. button in helpers.rs
+#. text in cnl.rs; button in helpers.rs
+#. button in the Click'n'Load window: refuse these links, ask again next time
 	Not now	ليس الآن
 #. text in helpers.rs
 	Not now? Get them later from Tasks → Download video from a page.	ليس الآن؟ احصل عليها لاحقا من المهام ← تنزيل فيديو من صفحة.
@@ -2263,8 +2273,7 @@
 #. text in the Options window
 	Note: These settings don't relate to queue processing	ملاحظة: لا تتعلق هذه الإعدادات بمعالجة قائمة الانتظار
 #. message or event log entry in the main window
-#, machine
-	Nothing to download in {item}: drop links, a .torrent or .dlc file, or a list of addresses (.txt, .ef2).	لا شيء للتنزيل في {item}: أفلت روابط أو ملف .torrent أو .dlc أو قائمة عناوين (.txt، .ef2).
+	Nothing to download in {item}: drop links, a .torrent file, or a list of addresses (.txt, .ef2).	لا يوجد شيء لتنزيله في {item}: أسقط الروابط أو ملف .torrent أو قائمة عناوين (.txt، .ef2).
 #. text in the Scheduler window
 	November	نوفمبر
 #. text in the Options window
@@ -2814,6 +2823,10 @@
 #. column title: how much went to the peer
 #. how much was sent to other peers
 	Sent	تم الإرسال
+#. text in the Link grabber window
+#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up before it is added
+#, machine
+	Sent by a page: not looked up	أرسلته صفحة: لم يبحث عنه
 #. text in the Scheduler window
 	September	سبتمبر
 #. text in countries.rs
@@ -3295,7 +3308,7 @@
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 	The file could not be moved: {error}	تعذر نقل الملف: {error}
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 	The file could not be read: {error}	تعذر قراءة الملف: {error}
 #. text in the Checksum window
@@ -3332,7 +3345,7 @@
 #. a check of Test browser integration: the browsers are set up, but the small helper program they start (misterdownloadmanager-nmhost) is gone
 #, machine
 	The helper program the browsers start is missing	برنامج المساعد الذي تبدأه المستعرضات مفقود
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 	The list could not be saved: {error}	تعذر حفظ القائمة: {error}
 #. text in whereis.rs
@@ -4065,10 +4078,6 @@
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 	{ext} File	ملف {ext}
-#. message or event log entry in the main window
-#. notice: a DLC container couldn't be read; {file} its name, {why} the reason
-#, machine
-	{file} can't be read: {why}.	لا يمكن قراءة {file}: {why}.
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 	{file} could not be deleted from the disk: {error}	تعذر حذف {file} من القرص: {error}

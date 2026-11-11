@@ -12,7 +12,7 @@ publish = false
 
 [workspace.dependencies]
 mdm-cli = { path = "crates/cli" }
-mdm-containers = { path = "crates/containers" }
+mdm-cnl = { path = "crates/cnl" }
 mdm-crash = { path = "crates/crash", default-features = false }
 mdm-debrid = { path = "crates/debrid" }
 mdm-engine = { path = "crates/engine" }

@@ -624,12 +624,11 @@ pub fn parse_args(args: &[String]) -> Option<Command> {
             "exit" => cmd.exit = true,
             "startup" => cmd.startup = true,
             "show" => cmd.show = it.next().map(|w| w.to_ascii_lowercase()),
-            // A bare magnet link, .torrent or .dlc file (what Windows passes for an association).
+            // A bare magnet link or .torrent file (what Windows passes for an association).
             _ if a
                 .get(..7)
                 .is_some_and(|s| s.eq_ignore_ascii_case("magnet:"))
-                || a.to_ascii_lowercase().ends_with(".torrent")
-                || a.to_ascii_lowercase().ends_with(".dlc") =>
+                || a.to_ascii_lowercase().ends_with(".torrent") =>
             {
                 cmd.url = Some(a.clone());
             }
