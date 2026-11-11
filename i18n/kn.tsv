@@ -187,6 +187,10 @@
 #. Options → Accounts: what these accounts are, and the services' rule against sharing
 #, machine
 	A debrid service downloads a file host's link with your own paid account and gives MDM a direct link. Use only your own account: sharing an account or its links breaks the services' terms and can get it suspended. Downloads the browser already started stay as they are.	ಡಿಬ್ರಿಡ್ ಸೇವೆ ನಿಮ್ಮ ಸ್ವಂತ ಪಾವತಿಸಿದ ಖಾತೆಯೊಂದಿಗೆ ಫೈಲ್ ಹೋಸ್ಟ್‌ನ ಲಿಂಕ್ ಅನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡುತ್ತದೆ ಮತ್ತು MDM ಗೆ ನೇರ ಲಿಂಕ್ ಅನ್ನು ನೀಡುತ್ತದೆ. ನಿಮ್ಮ ಸ್ವಂತ ಖಾತೆಯನ್ನು ಮಾತ್ರ ಬಳಸಿ: ಖಾತೆಯನ್ನು ಅಥವಾ ಅದರ ಲಿಂಕ್‌ಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳುವುದು ಸೇವೆಗಳ ನಿಯಮಗಳನ್ನು ಉಲ್ಲಂಘಿಸುತ್ತದೆ ಮತ್ತು ಅದನ್ನು ಅಮಾನತುಗೊಳಿಸಬಹುದು. ಬ್ರೌಸರ್ ಈಗಾಗಲೇ ಪ್ರಾರಂಭಿಸಿದ ಡೌನ್‌ಲೋಡ್‌ಗಳು ಹಾಗೆಯೇ ಉಳಿಯುತ್ತವೆ.
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name ends with a period
+#, machine
+	A file name cannot end with a dot	ಫೈಲ್ ಹೆಸರು ಚುಕ್ಕೆಯೊಂದಿಗೆ ಕೊನೆಗೊಳ್ಳುವಂತಿಲ್ಲ
 #. text in errors.rs
 #. a torrent through a debrid service: one of its files has a name that would be written outside its folder; nothing was written. {name} the file's name as the service gave it
 #. {name} = a file name (keep the braces as they are)
@@ -216,6 +220,10 @@
 #. an error: a server on this computer redirected the download to the internet, which would not go through the chosen network adapter; {adapter} its name
 #, machine
 	a server on this computer sent the download elsewhere, which would not go through {adapter}	ಈ ಕಂಪ್ಯೂಟರ್‌ನಲ್ಲಿರುವ ಸರ್ವರ್ ಡೌನ್‌ಲೋಡ್ ಅನ್ನು ಬೇರೆಡೆಗೆ ಕಳುಹಿಸಿದೆ, ಅದು {adapter} ಮೂಲಕ ಹೋಗುವುದಿಲ್ಲ
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box for a single-file torrent
+#, machine
+	A single-file torrent keeps its name	ಏಕ-ಫೈಲ್ ಟೊರೆಂಟ್ ತನ್ನ ಹೆಸರನ್ನು ಉಳಿಸಿಕೊಳ್ಳುತ್ತದೆ
 #. text in the Add torrent window
 #. Add trackers: MDM never contacts a tracker on this computer or the local network
 #, machine
@@ -572,6 +580,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Austria	ಆಸ್ಟ್ರಿಯಾ
+#. checkbox in the Options window; text in the Options window
+#. checkbox: the User-Agent is the default browser's, which MDM finds itself
+#, machine
+	Automatic	ಸ್ವಯಂಚಾಲಿತ
 #. text in remote.rs
 #. remote control page (on a phone): category choice: the category follows the file's type
 #, machine
@@ -951,6 +963,10 @@
 #. Options → DNS settings: NextDNS's own configuration ID (optional)
 #, machine
 	Configuration ID:	ಕಾನ್ಫಿಗರೇಶನ್ ID:
+#. text in a download's progress window
+#. verb: button that saves the deferred rename in the progress window
+#, machine
+	Confirm	ದೃಢೀಕರಿಸಿ
 #. text in the Options window
 #, machine
 	Confirm before deleting downloads	ಡೌನ್‌ಲೋಡ್‌ಗಳನ್ನು ಅಳಿಸುವ ಮೊದಲು ದೃಢೀಕರಿಸಿ
@@ -1515,7 +1531,7 @@
 #. Options → Accounts: a note that the debrid services' support (Real-Debrid, AllDebrid, Premiumize) is new and not yet tried with real paid accounts
 #, machine
 	Experimental: built from the services' public API documentation, not yet confirmed with real accounts.	ಪ್ರಾಯೋಗಿಕ: ಸೇವೆಗಳ ಸಾರ್ವಜನಿಕ API ದಸ್ತಾವೇಜಿನಿಂದ ನಿರ್ಮಿಸಲಾಗಿದೆ, ನೈಜ ಖಾತೆಗಳೊಂದಿಗೆ ಇನ್ನೂ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ.
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Export	ರಫ್ತು
 #. text in the Options window
@@ -1992,7 +2008,7 @@
 #. checkbox in the Options window
 #, machine
 	Ignore file modification time changes when resuming a download	ಡೌನ್‌ಲೋಡ್ ಅನ್ನು ಪುನರಾರಂಭಿಸುವಾಗ ಫೈಲ್ ಮಾರ್ಪಾಡು ಸಮಯದ ಬದಲಾವಣೆಗಳನ್ನು ನಿರ್ಲಕ್ಷಿಸಿ
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Import	ಆಮದು
 #. value in a column's filter list in the download list
@@ -2369,6 +2385,10 @@
 #. crash report window: looking on GitHub for an issue about the same problem
 #, machine
 	Looking for this problem on GitHub…	GitHub ನಲ್ಲಿ ಈ ಸಮಸ್ಯೆಯನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ…
+#. text in the Options window
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Looking for your default browser...	ನಿಮ್ಮ ಡೀಫಾಲ್ಟ್ ಬ್ರೌಸರ್ ಅನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ...
 #. text in the Download video window
 #. the trailing ... means it is still going on: keep it
 #, machine
@@ -3471,6 +3491,10 @@
 #. {name} = a file name (keep the braces as they are)
 #, machine
 	Remove {name} from the list?	ಪಟ್ಟಿಯಿಂದ {name} ಅನ್ನು ತೆಗೆದುಹಾಕುವುದೇ?
+#. text in a download's progress window
+#. noun: label before the deferred new file or folder name in the progress window
+#, machine
+	Rename	ಮರುಹೆಸರಿಸು
 #. text in the Batch download window
 #. group box title: what the * in the address is replaced with (numbers or letters)
 #, machine
@@ -3604,6 +3628,10 @@
 #. RSS feeds window, Download rules: the folder the rule's torrents go to
 #, machine
 	Save to:	ಇಲ್ಲಿಗೆ ಉಳಿಸಿ:
+#. text in a download's progress window
+#. status shown in green beside the Rename box once the new name is saved
+#, machine
+	Saved	ಉಳಿಸಲಾಗಿದೆ
 #. text in a download's progress window
 #. label before the folder the torrent is saved in
 #, machine
@@ -3764,6 +3792,11 @@
 #. event log entry, past tense: a finished torrent stopped being shared to others because its share ratio (sent ÷ received) reached the limit set in Torrent settings; {ratio} = e.g. 2.00
 #, machine
 	Sharing stopped: the share ratio reached {ratio}	ಹಂಚಿಕೆ ನಿಲ್ಲಿಸಲಾಗಿದೆ: ಹಂಚಿಕೆ ಅನುಪಾತವು {ratio} ತಲುಪಿದೆ
+#. message or event log entry in the main window
+#. event log entry on a finished torrent when re-attaching it to keep sharing failed; {error} = why
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	Sharing stopped: {error}	ಹಂಚಿಕೆ ನಿಲ್ಲಿಸಲಾಗಿದೆ: {error}
 #. text in the download list
 #, machine
 	Show	ತೋರಿಸಿ
@@ -3958,6 +3991,10 @@
 #. window title in a dialog box
 #, machine
 	Speed Limiter settings	ವೇಗ ಮಿತಿ ಸೆಟ್ಟಿಂಗ್‌ಗಳು
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the file is one part of a split archive (.part1.rar, .7z.001…)
+#, machine
+	Split archive volumes keep their names for extraction	ವಿಭಜಿತ ಆರ್ಕೈವ್ ಭಾಗಗಳು ಹೊರತೆಗೆಯಲು ತಮ್ಮ ಹೆಸರುಗಳನ್ನು ಉಳಿಸಿಕೊಳ್ಳುತ್ತವೆ
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -4330,7 +4367,7 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be moved: {error}	ಫೈಲ್ ಅನ್ನು ಸರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: {error}
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be read: {error}	ಫೈಲ್ ಅನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: {error}
@@ -4379,13 +4416,17 @@
 #. a check of Test browser integration: the browsers are set up, but the small helper program they start (misterdownloadmanager-nmhost) is gone
 #, machine
 	The helper program the browsers start is missing	ಬ್ರೌಸರ್‌ಗಳು ಪ್ರಾರಂಭಿಸುವ ಸಹಾಯಕ ಪ್ರೋಗ್ರಾಂ ಕಾಣೆಯಾಗಿದೆ
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The list could not be saved: {error}	ಪಟ್ಟಿಯನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: {error}
 #. text in whereis.rs
 #, machine
 	the local network	ಸ್ಥಳೀಯ ನೆಟ್‌ವರ್ಕ್
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name exceeds the length limit
+#, machine
+	The name is too long	ಹೆಸರು ತುಂಬಾ ಉದ್ದವಾಗಿದೆ
 #. text in errors.rs; text in torrent downloads
 #. an error: the network adapter chosen in Options (a VPN's, usually) is off or gone; {adapter} its name
 #, machine
@@ -4526,6 +4567,9 @@
 #. in the empty download list, under its title
 #, machine
 	This category or queue holds no downloads yet.	ಈ ವರ್ಗ ಅಥವಾ ಕ್ಯೂ ಇನ್ನೂ ಯಾವುದೇ ಡೌನ್‌ಲೋಡ್‌ಗಳನ್ನು ಹೊಂದಿಲ್ಲ.
+#. text in a download's progress window
+#, machine
+	This character is not allowed in a file name	ಫೈಲ್ ಹೆಸರಿನಲ್ಲಿ ಈ ಅಕ್ಷರಕ್ಕೆ ಅನುಮತಿಯಿಲ್ಲ
 #. text in the Options window
 #. Options → Remote → Pair a device: the code ran out (10 minutes, or 5 wrong tries)
 #, machine
@@ -4569,6 +4613,14 @@
 #. text in a dialog box
 #, machine
 	This folder does not exist:	ಈ ಫೋಲ್ಡರ್ ಅಸ್ತಿತ್ವದಲ್ಲಿಲ್ಲ:
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder already holds files this download did not write
+#, machine
+	This folder holds files from outside this download	ಈ ಫೋಲ್ಡರ್ ಈ ಡೌನ್‌ಲೋಡ್ ಹೊರಗಿನ ಫೈಲ್‌ಗಳನ್ನು ಹೊಂದಿದೆ
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder holds another download or is a save/category folder
+#, machine
+	This folder is shared with another download or save folder	ಈ ಫೋಲ್ಡರ್ ಅನ್ನು ಮತ್ತೊಂದು ಡೌನ್‌ಲೋಡ್ ಅಥವಾ ಉಳಿಸುವ ಫೋಲ್ಡರ್ ಜೊತೆ ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ
 #. text in errors.rs
 #. a download's error: a Google Drive file that isn't shared with everyone
 #, machine
@@ -4596,6 +4648,10 @@
 #. a magnet link's lookup, after 30 seconds: it can't find any peer at all
 #, machine
 	This magnet link names no trackers and the DHT is off, so no peer can be found.	ಈ ಮ್ಯಾಗ್ನೆಟ್ ಲಿಂಕ್‌ನಲ್ಲಿ ಯಾವುದೇ ಟ್ರ್ಯಾಕರ್‌ಗಳಿಲ್ಲ ಮತ್ತು DHT ಆಫ್ ಆಗಿದೆ, ಆದ್ದರಿಂದ ಯಾವುದೇ ಪೀರ್ ಅನ್ನು ಕಂಡುಹಿಡಿಯಲಾಗುವುದಿಲ್ಲ.
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name is a reserved device name on Windows (CON, NUL, COM1…)
+#, machine
+	This name is reserved by Windows	ಈ ಹೆಸರನ್ನು Windows ಕಾಯ್ದಿರಿಸಿದೆ
 #. tooltip (why a control is greyed) in the Download video window
 #. why "Put them into the video" is greyed: ffmpeg (a helper program) is not installed
 #, machine
@@ -5217,6 +5273,13 @@
 #. a row of the browser extension's window when no browser was found by name
 #, machine
 	Your browser	ನಿಮ್ಮ ಬ್ರೌಸರ್
+#. text in the Options window
+#, machine
+	Your default browser isn't one MDM knows: a current Chrome's User-Agent	ನಿಮ್ಮ ಡೀಫಾಲ್ಟ್ ಬ್ರೌಸರ್ MDM ಗೆ ತಿಳಿದಿಲ್ಲ: ಪ್ರಸ್ತುತ Chrome ನ User-Agent
+#. text in the Options window
+#. tooltip; {browser} is a browser and its version, e.g. "Brave 157"
+#, machine
+	Your default browser's User-Agent: {browser}	ನಿಮ್ಮ ಡೀಫಾಲ್ಟ್ ಬ್ರೌಸರ್‌ನ User-Agent: {browser}
 #. text in the settings
 #. Options → DNS: the name of a DNS the user typed in, in messages: "your DNS (DNS over TLS)"
 #, machine
@@ -5330,6 +5393,11 @@
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
 	{done} of {size}	{size} ರಲ್ಲಿ {done}
+#. text in deferred_rename.rs
+#. appended to an OS error when a case-only rename could not move the temporary file back to its original name; {error} = first OS error, {path} = temporary path left on disk, {rollback_error} = second OS error
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	{error} (left as {path}: {rollback_error})	{error} ({path} ಆಗಿ ಉಳಿಸಲಾಗಿದೆ: {rollback_error})
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 #, machine
@@ -5594,9 +5662,21 @@ column	Transfer rate	ವರ್ಗಾವಣೆ ದರ
 #, machine
 column	Upload speed	ಅಪ್‌ಲೋಡ್ ವೇಗ
 #. text in the browser extension
+#. in the menu under the download button over a video: the page is a list of videos (a playlist), whose videos are chosen in the app's window; keep the name Mister Download Manager as it is
+#, machine
+extension	A list of videos: choose them in Mister Download Manager	ವೀಡಿಯೊಗಳ ಪಟ್ಟಿ: ಅವುಗಳನ್ನು Mister Download Manager ನಲ್ಲಿ ಆಯ್ಕೆಮಾಡಿ
+#. text in the browser extension
+#. shown briefly on the download button over a video after a quality was picked: the download was added to the app's download queue, to start later
+#, machine
+extension	Added to the queue	ಕ್ಯೂಗೆ ಸೇರಿಸಲಾಗಿದೆ
+#. text in the browser extension
 #. choice under Send downloads to: an MDM running on another computer of the network, such as a home server; keep the name Mister Download Manager as it is
 #, machine
 extension	Another Mister Download Manager (a server)	ಇನ್ನೊಂದು Mister Download Manager (ಸರ್ವರ್)
+#. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that are sound only (MP3, Opus and the like); short, one word
+#, machine
+extension	Audio	ಆಡಿಯೊ
 #. text in the browser extension
 #. the name this browser gets in the other MDM's list of paired devices
 #, machine
@@ -5619,6 +5699,10 @@ extension	Connected to Mister Download Manager	Mister Download Manager ಗೆ �
 #. {version} = a version number (keep the braces as they are)
 #, machine
 extension	Connected to Mister Download Manager {version}	Mister Download Manager {version} ಗೆ ಸಂಪರ್ಕಿಸಲಾಗಿದೆ
+#. text in the browser extension
+#. in the menu under the download button over a video: finding the video's qualities failed; the app's own explanation follows on the next line
+#, machine
+extension	Could not look it up	ಹುಡುಕಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ
 #. text in the browser extension
 #. button beside a video, sound or stream in the toolbar button's popup: download it with the app; verb; short
 #, machine
@@ -5710,6 +5794,14 @@ extension	Left to the browser: {name}	ಬ್ರೌಸರ್‌ಗೆ ಬಿಡ�
 #, machine
 extension	Live	ಲೈವ್
 #. text in the browser extension
+#. in the menu that opens from the download button over a video, while the app finds which qualities (resolutions, formats) the video can be downloaded in
+#, machine
+extension	Looking up the qualities…	ಗುಣಮಟ್ಟಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ…
+#. text in the browser extension
+#. in the menu under the download button over a video: the app took more than a minute to find the video's qualities, so the menu stopped waiting
+#, machine
+extension	Looking up took too long	ಹುಡುಕಲು ತುಂಬಾ ಸಮಯ ತೆಗೆದುಕೊಂಡಿತು
+#. text in the browser extension
 #. heading in the toolbar button's popup over the list of the videos, sounds and streams the current web page has loaded
 #, machine
 extension	Media on this page	ಈ ಪುಟದಲ್ಲಿರುವ ಮಾಧ್ಯಮ
@@ -5726,6 +5818,10 @@ extension	Mister Download Manager didn't start in time	Mister Download Manager �
 #, machine
 extension	Mister Download Manager doesn't accept this copy of the extension	Mister Download Manager ವಿಸ್ತರಣೆಯ ಈ ನಕಲನ್ನು ಸ್ವೀಕರಿಸುವುದಿಲ್ಲ
 #. text in the browser extension
+#. in the menu under the download button over a video: the app is already looking up other videos and can't look this one up now; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager is busy with other videos	Mister Download Manager ಇತರ ವೀಡಿಯೊಗಳಲ್ಲಿ ನಿರತವಾಗಿದೆ
+#. text in the browser extension
 #. shown briefly on the download button when the app could not be reached; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed or didn't start	Mister Download Manager ಅನ್ನು ಸ್ಥಾಪಿಸಲಾಗಿಲ್ಲ ಅಥವಾ ಪ್ರಾರಂಭವಾಗಲಿಲ್ಲ
@@ -5733,6 +5829,10 @@ extension	Mister Download Manager isn't installed or didn't start	Mister Downloa
 #. status when the browser can't find the app's connection; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed, or its browser integration isn't set up	Mister Download Manager ಅನ್ನು ಸ್ಥಾಪಿಸಲಾಗಿಲ್ಲ, ಅಥವಾ ಅದರ ಬ್ರೌಸರ್ ಏಕೀಕರಣವನ್ನು ಹೊಂದಿಸಲಾಗಿಲ್ಲ
+#. text in the browser extension
+#. in the menu under the download button over a video: the app needs the yt-dlp tool (a program's name, keep it as it is) to find this video's qualities, and it isn't installed; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager needs yt-dlp for this video	ಈ ವೀಡಿಯೊಗೆ Mister Download Manager ಗೆ yt-dlp ಬೇಕು
 #. text in the browser extension
 #. tooltip of the switch Send downloads through this browser's proxy or VPN extension; keep the name Mister Download Manager as it is
 #, machine
@@ -5760,9 +5860,17 @@ extension	Never take downloads from {site}	{site} ನಿಂದ ಡೌನ್‌�
 #, machine
 extension	No video or sound found on this page yet. Play it, then open this again.	ಈ ಪುಟದಲ್ಲಿ ಯಾವುದೇ ವೀಡಿಯೊ ಅಥವಾ ಧ್ವನಿ ಇನ್ನೂ ಕಂಡುಬಂದಿಲ್ಲ. ಅದನ್ನು ಪ್ಲೇ ಮಾಡಿ, ನಂತರ ಇದನ್ನು ಮತ್ತೆ ತೆರೆಯಿರಿ.
 #. text in the browser extension
+#. in the menu under the download button over a video: the app found no quality of the video it could download
+#, machine
+extension	No video to download here	ಇಲ್ಲಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ವೀಡಿಯೊ ಇಲ್ಲ
+#. text in the browser extension
 #. pairing failed: the other MDM didn't answer
 #, machine
 extension	Not reached. Open its address once in this browser and accept its certificate, then try again.	ತಲುಪಿಲ್ಲ. ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಅದರ ವಿಳಾಸವನ್ನು ಒಮ್ಮೆ ತೆರೆಯಿರಿ ಮತ್ತು ಅದರ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಸ್ವೀಕರಿಸಿ, ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.
+#. text in the browser extension
+#. last command of the menu of qualities under the download button over a video: opens the app's Download video window for this video instead; keep the name Mister Download Manager as it is
+#, machine
+extension	Open in Mister Download Manager…	Mister Download Manager ನಲ್ಲಿ ತೆರೆಯಿರಿ…
 #. text in the browser extension
 #. button: open the other MDM's address in a tab (to accept its certificate once)
 #, machine
@@ -5775,6 +5883,9 @@ extension	Open its address once and accept its certificate, then enter a code fr
 #. button in the toolbar button's popup; keep the name Mister Download Manager as it is
 #, machine
 extension	Open Mister Download Manager	Mister Download Manager ತೆರೆಯಿರಿ
+#. shown briefly on the download button over a video in a feed (a social site's home page, a timeline) when nothing in the feed gives that video's own address, so nothing was sent: the user should open the post the video belongs to and click the button on that page; short
+#, machine
+extension	Open the post, then use the button there	ಪೋಸ್ಟ್ ತೆರೆಯಿರಿ, ನಂತರ ಅಲ್ಲಿರುವ ಬಟನ್ ಬಳಸಿ
 #. text in the browser extension
 #. button in the toolbar button's popup: open the app's Options
 #. the trailing ... means it is still going on: keep it
@@ -5868,6 +5979,10 @@ extension	Update Mister Download Manager to use everything this extension offers
 #. why a download stayed with the browser: the app's setting 'Use advanced browser integration' is off; keep the setting's name as the app shows it
 #, machine
 extension	Use advanced browser integration is off in Options → General.	ಆಯ್ಕೆಗಳು → ಸಾಮಾನ್ಯದಲ್ಲಿ ಸುಧಾರಿತ ಬ್ರೌಸರ್ ಇಂಟಿಗ್ರೇಷನ್ ಬಳಸಿ ಆಫ್ ಆಗಿದೆ.
+#. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that include picture (video with sound); short, one word
+#, machine
+extension	Video	ವೀಡಿಯೊ
 #. text in the browser extension
 #. pairing failed: codes tried too fast
 #, machine

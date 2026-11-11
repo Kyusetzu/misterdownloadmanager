@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "مشخص نیست این کدام ویدیو است: صفحهٔ خود ویدیو را باز کنید و آنجا امتحان کنید"
   },
+  "video_looking": {
+    "message": "در حال جست‌وجوی کیفیت‌ها…"
+  },
+  "video_open_mdm": {
+    "message": "باز کردن در Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "ویدیویی برای دانلود در اینجا نیست"
+  },
+  "video_playlist": {
+    "message": "فهرستی از ویدیوها: آن‌ها را در Mister Download Manager انتخاب کنید"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager برای این ویدیو به yt-dlp نیاز دارد"
+  },
+  "video_too_long": {
+    "message": "جست‌وجو بیش از حد طول کشید"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager با ویدیوهای دیگر مشغول است"
+  },
+  "video_queued": {
+    "message": "به صف اضافه شد"
+  },
+  "video_failed_lookup": {
+    "message": "جست‌وجو انجام نشد"
+  },
+  "video_tab_video": {
+    "message": "ویدیو"
+  },
+  "video_tab_audio": {
+    "message": "صدا"
+  },
+  "video_open_post": {
+    "message": "پست را باز کنید، سپس از دکمه آنجا استفاده کنید"
+  },
   "popup_send_to": {
     "message": "ارسال دانلودها به"
   },

@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Tidak dapat dipastikan video yang mana ini: buka halamannya sendiri dan cuba di sana"
   },
+  "video_looking": {
+    "message": "Mencari kualiti…"
+  },
+  "video_open_mdm": {
+    "message": "Buka dalam Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Tiada video untuk dimuat turun di sini"
+  },
+  "video_playlist": {
+    "message": "Senarai video: pilih video dalam Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager memerlukan yt-dlp untuk video ini"
+  },
+  "video_too_long": {
+    "message": "Pencarian mengambil masa terlalu lama"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager sedang sibuk dengan video lain"
+  },
+  "video_queued": {
+    "message": "Ditambah pada giliran"
+  },
+  "video_failed_lookup": {
+    "message": "Tidak dapat mencarinya"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Buka siaran, kemudian gunakan butang di sana"
+  },
   "popup_send_to": {
     "message": "Hantar muat turun ke"
   },

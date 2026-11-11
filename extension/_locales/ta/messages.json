@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "இது எந்த வீடியோ என்று தெரியவில்லை: அதன் சொந்தப் பக்கத்தைத் திறந்து அங்கே முயலுங்கள்"
   },
+  "video_looking": {
+    "message": "தரங்களைத் தேடுகிறது…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Manager இல் திறக்கவும்…"
+  },
+  "video_no_choices": {
+    "message": "இங்கே பதிவிறக்க வீடியோ எதுவும் இல்லை"
+  },
+  "video_playlist": {
+    "message": "வீடியோக்களின் பட்டியல்: அவற்றை Mister Download Manager இல் தேர்ந்தெடுக்கவும்"
+  },
+  "video_no_ytdlp": {
+    "message": "இந்த வீடியோவுக்கு Mister Download Manager க்கு yt-dlp தேவை"
+  },
+  "video_too_long": {
+    "message": "தேட மிக அதிக நேரம் ஆனது"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager பிற வீடியோக்களில் பிஸியாக உள்ளது"
+  },
+  "video_queued": {
+    "message": "வரிசையில் சேர்க்கப்பட்டது"
+  },
+  "video_failed_lookup": {
+    "message": "தேட முடியவில்லை"
+  },
+  "video_tab_video": {
+    "message": "வீடியோ"
+  },
+  "video_tab_audio": {
+    "message": "ஆடியோ"
+  },
+  "video_open_post": {
+    "message": "பதிவைத் திறந்து, அங்குள்ள பொத்தானைப் பயன்படுத்தவும்"
+  },
   "popup_send_to": {
     "message": "பதிவிறக்கங்களை இதற்கு அனுப்பவும்"
   },

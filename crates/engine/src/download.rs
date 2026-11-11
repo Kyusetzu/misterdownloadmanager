@@ -80,12 +80,25 @@ pub struct Options {
     pub max_retries: u32,
     /// The first retry is immediate (as IDM, lab S5); then this delay, doubling, capped at 30 s.
     pub retry_delay: Duration,
+    /// The download's User-Agent: by default the automatic one (`agent::automatic`, the default
+    /// browser's), else the user's or the one a browser handed over.
     pub user_agent: String,
+    /// `user_agent` is MDM's automatic one, not one the user set or a browser handed over: a
+    /// site that wants an agent of its own (Google Drive's hosts, `sites::user_agent`) gets it.
+    /// [`Options::speak_as`] sets another agent and clears this.
+    pub automatic_agent: bool,
     /// Asked with instead of `user_agent` when the server refuses the first request with 403
     /// (#372): a browser's User-Agent on a connection that isn't a browser's trips some sites'
     /// bot checks (Cloudflare, seen on a public PDF), while MDM's own passes. Set when
     /// `user_agent` is the browser's. A later 403 is left to the download.
     pub agent_fallback: Option<String>,
+    /// From the browser: the address its own download of this file ended at, its redirects
+    /// followed. When the address asked for is refused before any byte (`link_refused`: a
+    /// one-time link the browser already spent, a token bound to its session, a site that
+    /// turns away whatever isn't that browser), the download asks there once instead (#630),
+    /// the address's cookies and logins going only if it is the same site (`scoped_headers`).
+    /// Never for a form's POST (its body goes where it was given) or through a service account.
+    pub browser_final: Option<Url>,
     /// How often resume state is saved (IDM: "several times per minute").
     pub save_interval: Duration,
     /// Speed limit for this download, bytes/s (IDM's limiter is per file). None = unlimited.
@@ -126,7 +139,7 @@ pub struct Options {
     /// FTP data connections: passive (the client connects; IDM's "Use passive mode for FTP",
     /// on by default), else active (the server connects back).
     pub ftp_passive: bool,
-    /// Certificates (DER) trusted besides the system's for FTPS (tests' own CA).
+    /// Certificates (DER) trusted besides the system's for FTPS and HTTPS (tests' own CA).
     pub extra_roots: Vec<Vec<u8>>,
     /// Send every request as POST with this body, the Content-Type coming from the headers (a
     /// browser form's download). Redirects go as in browsers: 301, 302 and 303 turn it into a
@@ -204,10 +217,6 @@ pub fn supported(url: &Url) -> bool {
     matches!(url.scheme(), "http" | "https") || crate::ftp::is_ftp(url)
 }
 
-/// IDM 6.42 sends this browser-style User-Agent (lab S1, D-007).
-pub const DEFAULT_USER_AGENT: &str =
-    "Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko";
-
 impl Default for Options {
     fn default() -> Self {
         Options {
@@ -217,8 +226,10 @@ impl Default for Options {
             read_timeout: Duration::from_secs(30),
             max_retries: 5,
             retry_delay: Duration::from_secs(1),
-            user_agent: DEFAULT_USER_AGENT.to_owned(),
+            user_agent: crate::agent::automatic(),
+            automatic_agent: true,
             agent_fallback: None,
+            browser_final: None,
             save_interval: Duration::from_secs(2),
             speed_limit: None,
             verify_overlap: 64,
@@ -244,6 +255,18 @@ impl Default for Options {
 }
 
 impl Options {
+    /// Speak as `agent` (the user's, a browser's) instead of the automatic User-Agent.
+    pub fn speak_as(&mut self, agent: String) {
+        self.user_agent = agent;
+        self.automatic_agent = false;
+    }
+
+    /// A site's own User-Agent may replace this download's (`request_agent`): the agent is the
+    /// automatic one, or MDM's former one (#372's fallback, D-007), as before #668.
+    fn site_agent(&self) -> bool {
+        self.automatic_agent || self.user_agent == crate::agent::IE11_USER_AGENT
+    }
+
     /// The connections this download may open: `max_connections` in
     /// `1..=MAX_CONNECTIONS_UNLOCKED` (a hand-edited setting can hold anything).
     pub fn connections(&self) -> u32 {
@@ -538,7 +561,7 @@ impl From<disk::Refusal> for Error {
 /// (cookies, authorization) never follow a redirect to another host or from https down to
 /// http — as reqwest does while it follows the redirect itself — except between one site's own
 /// hosts (`sites::same_party`: a Drive link's cookies go to Drive's file host).
-fn scoped_headers(headers: &HeaderMap, from: &Url, to: &Url) -> HeaderMap {
+pub(crate) fn scoped_headers(headers: &HeaderMap, from: &Url, to: &Url) -> HeaderMap {
     let mut h = headers.clone();
     let same_host = (from.host_str() == to.host_str()
         && from.port_or_known_default() == to.port_or_known_default())
@@ -622,18 +645,18 @@ fn post_for(opts: &Options, as_get: bool, headers: &mut HeaderMap) -> Option<Byt
     None
 }
 
-/// A request for `url` with `headers`: a POST with `post` as its body, else a GET. `agent` is the
-/// download's User-Agent (`Options::user_agent`, the client's default); a site that wants a
-/// browser's gets it instead when `agent` is MDM's default (`request_agent`).
+/// A request for `url` with `headers`: a POST with `post` as its body, else a GET. The client
+/// sends the download's User-Agent (`Options::user_agent`); a site that wants a browser's gets
+/// it instead when `site_agent` (`Options::site_agent`: the agent is MDM's automatic one).
 fn build(
     client: &Client,
     url: Url,
     post: Option<&Bytes>,
     headers: &HeaderMap,
-    agent: &str,
+    site_agent: bool,
 ) -> RequestBuilder {
     let mut headers = headers.clone();
-    if let Some(site) = request_agent(agent, &url)
+    if let Some(site) = request_agent(site_agent, &url)
         && !headers.contains_key(header::USER_AGENT)
     {
         headers.insert(header::USER_AGENT, HeaderValue::from_static(site));
@@ -645,13 +668,12 @@ fn build(
     req.headers(headers)
 }
 
-/// The User-Agent a request to `url` carries instead of the download's own `agent`: a site's
-/// browser agent (`sites::user_agent`: Google Drive's hosts), only when `agent` is MDM's default
-/// (D-007). A browser's agent handed over with the download, or one the user set, always wins.
-fn request_agent(agent: &str, url: &Url) -> Option<&'static str> {
-    (agent == DEFAULT_USER_AGENT)
-        .then(|| sites::user_agent(url))
-        .flatten()
+/// The User-Agent a request to `url` carries instead of the download's own: a site's browser
+/// agent (`sites::user_agent`: Google Drive's hosts), only when `site_agent` (the download's is
+/// MDM's automatic one, `Options::site_agent`). A browser's agent handed over with the download,
+/// or one the user set, always wins.
+fn request_agent(site_agent: bool, url: &Url) -> Option<&'static str> {
+    site_agent.then(|| sites::user_agent(url)).flatten()
 }
 
 /// A header's text: UTF-8, else ISO-8859-1 (servers send file names either way, while
@@ -730,6 +752,9 @@ pub struct Snapshot {
     /// What happened, oldest first (the last `EVENTS`): the download's event log. Never
     /// cookies or credentials.
     pub events: Vec<Event>,
+    /// While a service account prepares the file's link (#44): the service, and how far it is
+    /// (0 to 1) when it says. The list shows it instead of "Connecting...".
+    pub at_service: Option<(String, Option<f32>)>,
     /// Where its server is, as its connections saw it (#140).
     pub server: Option<crate::Server>,
 }
@@ -771,7 +796,11 @@ pub struct KeptAnswer {
     url: Url,
     client: Client,
     as_get: AsGet,
-    resp: Response,
+    head: Head,
+    body: Body,
+    /// The browser-like connection it came through, when only that one got past the site's
+    /// bot check (#668): the download goes on with it.
+    browser: Option<Arc<crate::browserlike::Browser>>,
     headers: HeaderMap,
     took: Duration,
     at: std::time::Instant,
@@ -785,7 +814,8 @@ impl std::fmt::Debug for KeptAnswer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("KeptAnswer")
             .field("url", &self.url.as_str())
-            .field("status", &self.resp.status())
+            .field("status", &self.head.status)
+            .field("browser_like", &self.browser.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -825,13 +855,15 @@ pub async fn probe_kept(
     let seen = Arc::new(crate::server::ServerSeen::default());
     let client = client(opts, &target, &as_get, &seen)?;
     let expects = expects_other_file(opts.expected_type.as_deref(), None, &url);
+    // Where the look asked, and with what: asked again there if the site refuses (#668).
+    let (asked_at, asked_with) = (target.clone(), headers.clone());
     // A browser's User-Agent refused (#372): asked once more as MDM.
     let (client, asked) = match get(
         &client,
         target.clone(),
         headers.clone(),
         opts.post.as_ref(),
-        &opts.user_agent,
+        opts.site_agent(),
         expects,
         &CancellationToken::new(),
     )
@@ -846,7 +878,7 @@ pub async fn probe_kept(
                 target,
                 headers,
                 opts.post.as_ref(),
-                &plain.user_agent,
+                plain.site_agent(),
                 expects,
                 &CancellationToken::new(),
             )
@@ -855,18 +887,37 @@ pub async fn probe_kept(
         }
         asked => (client, asked),
     };
-    let (resp, headers, took) = asked?;
-    seen.answered(&resp);
-    let final_url = resp.url().clone();
-    let (size, from_zero) = match resp.status() {
+    let (head, body, browser, headers, took) = match asked {
+        Ok((resp, headers, took)) => {
+            seen.answered(&resp);
+            (Head::of(&resp), Body::Http(resp), None, headers, took)
+        }
+        // #668: the site refused MDM's connection as a program's (`refused_as_a_program`):
+        // looked at once more the way a browser connects, its answer kept for the download
+        // (which then asks no more).
+        Err(e) if refused_as_a_program(&e) && unlocked.is_none() && opts.post.is_none() => {
+            let cancel = CancellationToken::new();
+            let (b, (head, body, headers, took)) =
+                browser_ask(opts, &asked_at, &asked_with, expects, &cancel)
+                    .await
+                    .map_err(|other| match other {
+                        Error::Cancelled | Error::Adapter(_) => other,
+                        _ => e,
+                    })?;
+            (head, body, Some(b), headers, took)
+        }
+        Err(e) => return Err(e),
+    };
+    let final_url = head.url.clone();
+    let (size, from_zero) = match head.status {
         StatusCode::PARTIAL_CONTENT => {
-            let (start, _, total) = parse_content_range(resp.headers())?;
+            let (start, _, total) = parse_content_range(&head.headers)?;
             (total, start == 0)
         }
-        StatusCode::OK => (resp.content_length(), true),
-        _ => (resp.content_length(), false),
+        StatusCode::OK => (head.len, true),
+        _ => (head.len, false),
     };
-    let cd = header_text(resp.headers(), header::CONTENT_DISPOSITION);
+    let cd = header_text(&head.headers, header::CONTENT_DISPOSITION);
     let file_name = name_for(cd.as_deref(), &final_url, unlocked.as_ref());
     let info = ProbeInfo {
         final_url,
@@ -879,7 +930,9 @@ pub async fn probe_kept(
         client,
         seen,
         as_get,
-        resp,
+        head,
+        body,
+        browser,
         headers,
         took,
         at: std::time::Instant::now(),
@@ -892,6 +945,15 @@ pub async fn probe_kept(
 /// the same proxy, DNS and network adapter as `opts`' downloads.
 pub fn http_client(opts: &Options, url: &Url) -> Result<Client, Error> {
     client(opts, url, &AsGet::default(), &Default::default())
+}
+
+/// A client for one request to `url`'s server, as [`http_client`]'s, that follows no redirect
+/// and adds no `Referer` of its own: its caller follows each hop itself, with a client for that
+/// hop's server (its proxy and adapter checks are that server's), and decides which of its
+/// headers go there (the browser's quality menu reading a stream's manifest, mdm-tools'
+/// `manifest`: the browser's cookie never reaches another server).
+pub fn hop_client(opts: &Options, url: &Url) -> Result<Client, Error> {
+    client_with(opts, url, &AsGet::default(), &Default::default(), false)
 }
 
 /// The file's name: the server's (Content-Disposition), else the service's (#44), else the
@@ -917,22 +979,36 @@ async fn unlock_origin(
     if opts.post.is_some() || !matches!(url.scheme(), "http" | "https") {
         return Ok(None);
     }
-    let note = |s: String| {
-        if let Some(sh) = shared {
-            sh.event(s);
-        }
-    };
-    match u.unlock(url, &note, cancel).await {
-        Ok(Some(x)) => {
-            note(crate::unlock::note_unlocked(u.name(), &x));
-            Ok(Some(x))
-        }
-        Ok(None) => Ok(None),
-        Err(fault) => Err(Error::Refused(Refusal::Service {
+    unlock_noted(u, url, shared, cancel).await.map_err(|fault| {
+        Error::Refused(Refusal::Service {
             service: u.name().to_owned(),
             fault,
-        })),
+        })
+    })
+}
+
+/// `u`'s link for `url`, its waits told in the event log and the list's status ("40% at
+/// TorBox") meanwhile, and the link it gave noted (never the link itself).
+async fn unlock_noted(
+    u: &Arc<dyn crate::unlock::Unlocker>,
+    url: &Url,
+    shared: Option<&Shared>,
+    cancel: &CancellationToken,
+) -> Result<Option<crate::unlock::Unlocked>, crate::unlock::ServiceFault> {
+    let note = |s: String, progress: Option<f32>| {
+        if let Some(sh) = shared {
+            sh.event(s);
+            sh.view.lock().unwrap().at_service = Some((u.name().to_owned(), progress));
+        }
+    };
+    let out = u.unlock(url, &note, cancel).await;
+    if let Some(sh) = shared {
+        sh.view.lock().unwrap().at_service = None;
+        if let Ok(Some(x)) = &out {
+            sh.event(crate::unlock::note_unlocked(u.name(), x));
+        }
     }
+    out
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1013,6 +1089,7 @@ impl Download {
                 failure: None,
                 events: Vec::new(),
                 server: None,
+                at_service: None,
             }),
             seen: Default::default(),
             planner: Mutex::new(None),
@@ -1224,12 +1301,18 @@ struct Ctx {
     web_page_ok: bool,
     /// An FTP download's server and its idle sessions (else HTTP through `client`).
     ftp: Option<Arc<crate::ftp::Site>>,
+    /// The browser-like connection every request goes through instead of `client`, when only it
+    /// got past the site's bot check (#668).
+    browser: Option<Arc<crate::browserlike::Browser>>,
 }
 
 /// An answer's body coming in: an HTTP response, or an FTP transfer.
-enum Body {
+pub(crate) enum Body {
     Http(Response),
     Ftp(crate::ftp::Transfer),
+    /// An answer to the browser-like connection (#668, `crate::browserlike`).
+    #[cfg_attr(not(feature = "browser-connection"), allow(dead_code))]
+    Browser(crate::browserlike::Stream),
 }
 
 impl Body {
@@ -1238,6 +1321,7 @@ impl Body {
         match self {
             Body::Http(r) => Ok(r.chunk().await?),
             Body::Ftp(t) => t.chunk().await,
+            Body::Browser(b) => b.chunk().await,
         }
     }
 
@@ -1246,6 +1330,7 @@ impl Body {
         match self {
             Body::Http(r) => r.content_length(),
             Body::Ftp(t) => t.expected(),
+            Body::Browser(b) => b.len(),
         }
     }
 
@@ -1259,6 +1344,30 @@ impl Body {
                 }
             }
             Body::Ftp(t) => t.done(at_end).await,
+            // Its connection isn't pooled for another request: there is only the one.
+            Body::Browser(_) => {}
+        }
+    }
+}
+
+/// What the engine reads of an HTTP answer's head, from either client (reqwest's, or the
+/// browser-like one's, #668).
+#[derive(Clone, Debug)]
+pub(crate) struct Head {
+    pub(crate) status: StatusCode,
+    pub(crate) headers: HeaderMap,
+    /// Where the answer came from, its redirects followed.
+    pub(crate) url: Url,
+    pub(crate) len: Option<u64>,
+}
+
+impl Head {
+    fn of(resp: &Response) -> Head {
+        Head {
+            status: resp.status(),
+            headers: resp.headers().clone(),
+            url: resp.url().clone(),
+            len: resp.content_length(),
         }
     }
 }
@@ -1289,10 +1398,11 @@ impl Ctx {
             origin,
             headers,
             self.opts.post.as_ref(),
-            &self.opts.user_agent,
+            self.opts.site_agent(),
             self.size,
             &self.cancel,
             self.opts.unlocker.as_ref(),
+            &self.shared,
         )
         .await
         .filter(|(u, _)| *u != self.target.lock().unwrap().url) else {
@@ -1336,12 +1446,30 @@ fn client(
     as_get: &AsGet,
     seen: &Arc<crate::server::ServerSeen>,
 ) -> Result<Client, Error> {
+    client_with(opts, url, as_get, seen, true)
+}
+
+/// [`client`], following redirects (`follow`) or none at all ([`hop_client`]).
+fn client_with(
+    opts: &Options,
+    url: &Url,
+    as_get: &AsGet,
+    seen: &Arc<crate::server::ServerSeen>,
+    follow: bool,
+) -> Result<Client, Error> {
     let port = url.port_or_known_default().unwrap_or(443);
     let route = &opts.route;
     // An IP address in the URL never reaches the resolver, which drops what the chosen adapter
     // can't reach (#35): check it here.
     net::check_url(route, url)?;
-    let builder = Client::builder();
+    let mut builder = Client::builder();
+    if !opts.extra_roots.is_empty() {
+        builder = builder.tls_certs_merge(
+            opts.extra_roots
+                .iter()
+                .filter_map(|der| reqwest::Certificate::from_der(der).ok()),
+        );
+    }
     // With an adapter chosen, the system's proxy is looked up now, so that it can be checked
     // (and a proxy on this computer recognised) like the others.
     let system = match (&opts.proxy, route.is_any()) {
@@ -1447,7 +1575,11 @@ fn client(
         Some(_) => as_get.policy(),
         None => get_policy(),
     };
-    let builder = if route.is_any() {
+    let builder = if !follow {
+        builder
+            .redirect(reqwest::redirect::Policy::none())
+            .referer(false)
+    } else if route.is_any() {
         builder.redirect(inner)
     } else {
         let route = route.clone();
@@ -1542,16 +1674,19 @@ async fn run_fresh(
     let kept = kept.filter(|k| {
         k.url == req.url
             && k.at.elapsed() < KEEP_ANSWER_FOR
-            && !(expects && is_web_page(k.resp.headers()) && !named(k.resp.headers()))
+            && !(expects && is_web_page(&k.head.headers) && !named(&k.head.headers))
     });
     let mut unlocked = kept.as_ref().and_then(|k| k.unlocked.clone());
-    let (as_get, client0, (resp, headers), ttfb) = match kept {
+    // The browser-like connection the download goes on with, when only it got through (#668).
+    let mut browser: Option<Arc<crate::browserlike::Browser>> = None;
+    let (as_get, client0, (head, body), headers, ttfb) = match kept {
         Some(k) => {
             shared.event(
                 "Connection 1: continuing from the answer the file's information window got",
             );
             let _ = shared.seen.set(k.seen);
-            (k.as_get, k.client, (k.resp, k.headers), k.took)
+            browser = k.browser;
+            (k.as_get, k.client, (k.head, k.body), k.headers, k.took)
         }
         None => {
             // Through a service account (#44): its direct link, without the host's cookies
@@ -1564,31 +1699,74 @@ async fn run_fresh(
             };
             let as_get = AsGet::default();
             let seen = shared.seen.get_or_init(Default::default).clone();
-            let client0 = client(&opts, &target, &as_get, &seen)?;
-            let (client0, first) = match first_get(
-                &client0, &target, &asked, &opts, expects, shared, cancel,
-            )
-            .await
-            {
-                Err(e) if agent_refused(&e) && opts.agent_fallback.is_some() => {
-                    // #372: the rest of the download goes as MDM too.
-                    opts.user_agent = opts.agent_fallback.take().unwrap_or_default();
-                    asked_as_mdm = true;
-                    shared.event(
-                            "The server refused the browser's User-Agent; asking as Mister Download Manager",
-                        );
-                    let client1 = client(&opts, &target, &as_get, &seen)?;
-                    let first =
-                        first_get(&client1, &target, &asked, &opts, expects, shared, cancel).await;
-                    (client1, first)
-                }
-                first => (client0, first),
+            let as_given = opts.clone();
+            // The download's own User-Agent, which the browser-like connection carries (#668),
+            // even when MDM's connection had to give it up (#372).
+            let given_agent = opts.user_agent.clone();
+            let ask = FirstAsk {
+                as_get: &as_get,
+                seen: &seen,
+                expects,
+                shared,
+                cancel,
             };
-            let (answer, ttfb) = first?;
-            seen.answered(&answer.0);
-            (as_get, client0, answer, ttfb)
+            let (mut client0, mut first, as_mdm) = ask.at(&mut opts, &target, &asked).await?;
+            asked_as_mdm = as_mdm;
+            // #630: the link refused, where the browser's own download of it ended is asked
+            // once, as the link was (the browser's User-Agent first). The link's refusal is
+            // the one told if that fails too.
+            if let Err(e) = &first
+                && link_refused(e)
+                && unlocked.is_none()
+                && opts.post.is_none()
+                && let Some(other) = opts.browser_final.clone().filter(|o| *o != target)
+            {
+                shared.event(format!(
+                    "{}: {e}; asking where the browser's download ended ({})",
+                    target.host_str().unwrap_or("?"),
+                    other.host_str().unwrap_or("?"),
+                ));
+                let mut again = as_given;
+                let headers = scoped_headers(&asked, &target, &other);
+                match ask.at(&mut again, &other, &headers).await {
+                    Ok((client1, Ok(answer), as_mdm)) => {
+                        (opts, client0, first, asked_as_mdm) = (again, client1, Ok(answer), as_mdm);
+                    }
+                    Ok((_, Err(Error::Cancelled), _)) | Err(Error::Cancelled) => {
+                        return Err(Error::Cancelled);
+                    }
+                    Ok((_, Err(e), _)) | Err(e) => {
+                        shared.event(format!("{}: {e}", other.host_str().unwrap_or("?")));
+                    }
+                }
+            }
+            // #668: the site refused MDM's connection as a program's (its bot check, or a 412):
+            // asked once more, the way a browser connects, at the same address with the same
+            // headers. Its refusal stays the one told if that fails too.
+            match first {
+                Ok(((resp, headers), ttfb)) => {
+                    seen.answered(&resp);
+                    let head = Head::of(&resp);
+                    (as_get, client0, (head, Body::Http(resp)), headers, ttfb)
+                }
+                Err(e) if refused_as_a_program(&e) && unlocked.is_none() && opts.post.is_none() => {
+                    if asked_as_mdm {
+                        opts.user_agent = given_agent;
+                        asked_as_mdm = false;
+                    }
+                    let (b, head, body, headers, ttfb) =
+                        browser_first(&opts, &target, &asked, e, expects, shared, cancel).await?;
+                    browser = Some(b);
+                    (as_get, client0, (head, body), headers, ttfb)
+                }
+                Err(e) => return Err(e),
+            }
         }
     };
+    // One connection, as a browser downloads: the site let this one through.
+    if browser.is_some() {
+        opts.max_connections = 1;
+    }
     // The service's own cap on connections to its link (Real-Debrid's "chunks").
     if let Some(cap) = unlocked
         .as_ref()
@@ -1598,25 +1776,25 @@ async fn run_fresh(
         opts.max_connections = opts.max_connections.min(cap);
     }
     let preempt_after = (ttfb * PREEMPT_TTFB).max(PREEMPT_MIN);
-    let size = match resp.status() {
-        StatusCode::OK => resp.content_length(),
+    let size = match head.status {
+        StatusCode::OK => head.len,
         // Some servers answer partially even without Range; accept it if it starts at 0.
-        StatusCode::PARTIAL_CONTENT => match parse_content_range(resp.headers())? {
+        StatusCode::PARTIAL_CONTENT => match parse_content_range(&head.headers)? {
             (0, _, total) => total,
             (start, ..) => return Err(Error::BadRange(format!("probe started at {start}"))),
         },
         s => return Err(Error::Status(s)),
     };
-    let ranges = if resp.status() == StatusCode::PARTIAL_CONTENT {
+    let ranges = if head.status == StatusCode::PARTIAL_CONTENT {
         RANGES_YES
     } else {
         RANGES_UNKNOWN
     };
     // The first answer says the server takes ranges (`Accept-Ranges: bytes`).
     let advertised = ranges == RANGES_YES
-        || header_str(resp.headers(), header::ACCEPT_RANGES)
+        || header_str(&head.headers, header::ACCEPT_RANGES)
             .is_some_and(|v| v.split(',').any(|t| t.trim().eq_ignore_ascii_case("bytes")));
-    let final_url = resp.url().clone();
+    let final_url = head.url.clone();
     shared.event(format!(
         "Connected to {}{}: {}, size {}",
         final_url.host_str().unwrap_or("?"),
@@ -1625,7 +1803,7 @@ async fn run_fresh(
         } else {
             ""
         },
-        resp.status(),
+        head.status,
         size.map_or("unknown".to_owned(), disk::human),
     ));
     // Credentials stay with the host they were given for, with the cookies pages set on the way
@@ -1636,10 +1814,10 @@ async fn run_fresh(
     // something each time it is posted (an export, an order).
     let post = post_for(&opts, as_get.contains(&final_url), &mut headers);
     let wait_for_ranges = post.is_some() && ranges != RANGES_YES;
-    let h = resp.headers();
+    let h = &head.headers;
     // The expected hash: the user's, else what a full (200) answer announces for its content.
     let checksum = opts.checksum.clone().or_else(|| {
-        (resp.status() == StatusCode::OK)
+        (head.status == StatusCode::OK)
             .then(|| crate::verify::Hash::from_headers(h))
             .flatten()
     });
@@ -1657,13 +1835,13 @@ async fn run_fresh(
         .flatten()
         .and_then(|lm| httpdate::parse_http_date(lm).ok());
 
-    let content_type = resp
-        .headers()
+    let content_type = head
+        .headers
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
         .map(str::to_owned);
     let (dest, _reservation, file) = open_destination(&req.dest, size, &opts, || {
-        let cd = header_text(resp.headers(), header::CONTENT_DISPOSITION);
+        let cd = header_text(&head.headers, header::CONTENT_DISPOSITION);
         name_for(cd.as_deref(), &final_url, unlocked.as_ref())
     })
     .await?;
@@ -1685,6 +1863,7 @@ async fn run_fresh(
         saved.checksum = checksum.clone();
         saved.final_get = opts.post.is_some() && post.is_none();
         saved.asked_as_mdm = asked_as_mdm;
+        saved.browser_like = browser.is_some();
         let ctx = Arc::new(Ctx {
             client: client0.clone(),
             validators: Mutex::new(validators),
@@ -1694,7 +1873,10 @@ async fn run_fresh(
                 post: post.clone(),
                 generation: 0,
             }),
-            origin: (req.url != final_url).then(|| (req.url.clone(), req.headers.clone())),
+            // Asked again through MDM's own connection, which the site's bot check refuses: a
+            // browser-like download keeps the address it has (#668).
+            origin: (req.url != final_url && browser.is_none())
+                .then(|| (req.url.clone(), req.headers.clone())),
             refreshed: Default::default(),
             size,
             file: file.clone(),
@@ -1710,32 +1892,41 @@ async fn run_fresh(
             as_get,
             web_page_ok: expects_web_page(&dest, content_type.as_deref()),
             ftp: None,
+            browser: browser.clone(),
         });
-        match segmented(ctx, saved, Some(Body::Http(resp))).await {
+        match segmented(ctx, saved, Some(body)).await {
             Ok(()) => size,
             // The server ignores ranges and the probe's data can't be kept: start over on
             // one connection.
             Err(Error::NoRanges) => {
                 *shared.planner.lock().unwrap() = None;
                 shared.view.lock().unwrap().resumable = Some(false);
-                let agent = &opts.user_agent;
-                let (resp, ..) = get(
-                    &client0,
-                    final_url,
-                    headers,
-                    post.as_ref(),
-                    agent,
-                    expects,
-                    cancel,
-                )
-                .await?;
-                let body = Body::Http(resp);
+                let body = match &browser {
+                    Some(b) => {
+                        let (head, body, _) = b.get(final_url, headers, false, cancel).await?;
+                        crate::browserlike::check_first(&head, expects)?;
+                        body
+                    }
+                    None => {
+                        let agent = opts.site_agent();
+                        let (resp, ..) = get(
+                            &client0,
+                            final_url,
+                            headers,
+                            post.as_ref(),
+                            agent,
+                            expects,
+                            cancel,
+                        )
+                        .await?;
+                        Body::Http(resp)
+                    }
+                };
                 single_stream(body, &file, shared, opts.global.as_deref(), cancel).await?
             }
             Err(e) => return Err(e),
         }
     } else {
-        let body = Body::Http(resp);
         single_stream(body, &file, shared, opts.global.as_deref(), cancel).await?
     };
     verify_part(shared, &dest, checksum.as_ref()).await?;
@@ -1912,6 +2103,7 @@ async fn run_fresh_ftp(
             as_get: AsGet::default(),
             web_page_ok: true,
             ftp: Some(site.clone()),
+            browser: None,
         });
         match segmented(ctx, saved, Some(first)).await {
             Ok(()) => size,
@@ -1967,31 +2159,48 @@ async fn run_resume(
     let as_get = AsGet::default();
     let seen = shared.seen.get_or_init(Default::default).clone();
     let client = client(&opts, &saved.url, &as_get, &seen)?;
+    // Only the browser-like connection got past the site's bot check (#668): it goes on with
+    // it, on one connection, at the address it had (MDM's own connection would be refused).
+    let browser = match saved.browser_like && crate::browserlike::AVAILABLE {
+        true => Some(Arc::new(crate::browserlike::Browser::new(
+            &opts,
+            &saved.final_url,
+            &headers,
+        )?)),
+        false => None,
+    };
+    if browser.is_some() {
+        opts.max_connections = 1;
+        shared.event("Going on the way a browser connects, as the site's bot check asked");
+    }
     // Through a service account (#44), the service is asked for today's link even when the
     // state holds none of its links (the download went directly until now).
-    let refreshed = if saved.url != saved.final_url || opts.unlocker.is_some() {
-        let post = opts.post.as_ref();
-        let agent = &opts.user_agent;
-        refresh_final_url(
-            &client,
-            &saved.url,
-            &headers,
-            post,
-            agent,
-            saved.size,
-            &cancel,
-            opts.unlocker.as_ref(),
-        )
-        .await
-    } else {
-        None
-    };
+    let refreshed =
+        if browser.is_none() && (saved.url != saved.final_url || opts.unlocker.is_some()) {
+            let post = opts.post.as_ref();
+            let agent = opts.site_agent();
+            refresh_final_url(
+                &client,
+                &saved.url,
+                &headers,
+                post,
+                agent,
+                saved.size,
+                &cancel,
+                opts.unlocker.as_ref(),
+                &shared,
+            )
+            .await
+        } else {
+            None
+        };
     // A POST download's target is asked with GET when its redirects turned it into one.
     let (url, final_get, refreshed_headers) = match refreshed {
         Some((url, h)) => (url.clone(), as_get.contains(&url), Some(h)),
         None => (saved.final_url.clone(), saved.final_get, None),
     };
-    let origin = (saved.url != url).then(|| (saved.url.clone(), headers.clone()));
+    let origin =
+        (saved.url != url && browser.is_none()).then(|| (saved.url.clone(), headers.clone()));
     // Credentials stay with the host they were given for (the refresh's own way there scoped
     // them as it went).
     headers = refreshed_headers.unwrap_or_else(|| scoped_headers(&headers, &saved.url, &url));
@@ -2079,6 +2288,7 @@ async fn run_resume(
         as_get,
         web_page_ok,
         ftp,
+        browser,
     });
     let stamp = ctx
         .opts
@@ -2102,15 +2312,19 @@ async fn refresh_final_url(
     origin: &Url,
     headers: &HeaderMap,
     post: Option<&Bytes>,
-    agent: &str,
+    site_agent: bool,
     size: u64,
     cancel: &CancellationToken,
     unlocker: Option<&Arc<dyn crate::unlock::Unlocker>>,
+    shared: &Shared,
 ) -> Option<(Url, HeaderMap)> {
     // Through a service account (#44): the service gives today's direct link (the host's link
     // itself leads to its web page); the host's cookies and logins stay with the host.
     let unlocked = match unlocker.filter(|_| post.is_none()) {
-        Some(u) => u.unlock(origin, &|_| {}, cancel).await.ok().flatten(),
+        Some(u) => unlock_noted(u, origin, Some(shared), cancel)
+            .await
+            .ok()
+            .flatten(),
         None => None,
     };
     let (target, mut asked) = match &unlocked {
@@ -2118,7 +2332,7 @@ async fn refresh_final_url(
         None => (origin.clone(), headers.clone()),
     };
     asked.insert(header::RANGE, HeaderValue::from_static("bytes=0-0"));
-    let (resp, mut headers, _) = get(client, target, asked, post, agent, false, cancel)
+    let (resp, mut headers, _) = get(client, target, asked, post, site_agent, false, cancel)
         .await
         .ok()?;
     headers.remove(header::RANGE);
@@ -2385,10 +2599,138 @@ fn forced_gap(force: bool, took: Duration) -> Duration {
     if force { Duration::ZERO } else { took }
 }
 
+/// A refusal of the address asked for that the browser's own download got past (#630): 401
+/// and 403 (a token bound to the browser's session), 404 and 410 (a one-time link the browser
+/// already spent, which some servers then forget, others call gone), 412 (FileHippo's answer
+/// to whatever isn't a browser). A site's bot check stays the site's call (#376).
+fn link_refused(e: &Error) -> bool {
+    matches!(e, Error::Status(s) if matches!(s.as_u16(), 401 | 403 | 404 | 410 | 412))
+}
+
+/// What a download's first request needs besides its address, headers and options.
+struct FirstAsk<'a> {
+    as_get: &'a AsGet,
+    seen: &'a Arc<crate::server::ServerSeen>,
+    expects: bool,
+    shared: &'a Shared,
+    cancel: &'a CancellationToken,
+}
+
+/// A first request's client, its answer (or why not) and whether it went as MDM (#372).
+type FirstAnswer = (
+    Client,
+    Result<((Response, HeaderMap), Duration), Error>,
+    bool,
+);
+
+impl FirstAsk<'_> {
+    /// `first_get` at `url` with its client; asked once more as MDM when the browser's
+    /// User-Agent is refused (#372, `opts` then goes on as MDM: the third value says so).
+    async fn at(
+        &self,
+        opts: &mut Options,
+        url: &Url,
+        headers: &HeaderMap,
+    ) -> Result<FirstAnswer, Error> {
+        let (shared, cancel, expects) = (self.shared, self.cancel, self.expects);
+        let client0 = client(opts, url, self.as_get, self.seen)?;
+        match first_get(&client0, url, headers, opts, expects, shared, cancel).await {
+            Err(e) if agent_refused(&e) && opts.agent_fallback.is_some() => {
+                // #372: the rest of the download goes as MDM too.
+                opts.user_agent = opts.agent_fallback.take().unwrap_or_default();
+                shared.event(
+                    "The server refused the browser's User-Agent; asking as Mister Download Manager",
+                );
+                let client1 = client(opts, url, self.as_get, self.seen)?;
+                let first = first_get(&client1, url, headers, opts, expects, shared, cancel).await;
+                Ok((client1, first, true))
+            }
+            first => Ok((client0, first, false)),
+        }
+    }
+}
+
 /// A plain 403, which a browser's User-Agent may have brought on (#372). A site's bot check
-/// isn't asked again: that one stays the site's call (#376).
+/// isn't asked again as MDM: it gets one try the way a browser connects (`browser_first`).
 fn agent_refused(e: &Error) -> bool {
     matches!(e, Error::Status(s) if s.as_u16() == 403)
+}
+
+/// A first answer that refuses MDM's connection for not being a browser's (#668): the site's bot
+/// check (`Error::BotCheck`, Cloudflare's), or 412 Precondition Failed, which MDM's first
+/// request, sent without any precondition (no `If-…` header), can only get as such a refusal
+/// (FileHippo's, #630).
+fn refused_as_a_program(e: &Error) -> bool {
+    matches!(e, Error::BotCheck) || matches!(e, Error::Status(s) if s.as_u16() == 412)
+}
+
+/// #668: the first request once more, after the site refused MDM's own connection as a
+/// program's (`refused_as_a_program`, its error `refused`): through the browser-like connection
+/// (`crate::browserlike`), at the same address with the same headers, once, its answer checked
+/// as the first one is. When that fails too, `refused` is what is told (the error users know,
+/// with its way out: the browser), the reason in the event log. With the answer, the connection
+/// the download goes on with.
+async fn browser_first(
+    opts: &Options,
+    url: &Url,
+    headers: &HeaderMap,
+    refused: Error,
+    expects: bool,
+    shared: &Shared,
+    cancel: &CancellationToken,
+) -> Result<
+    (
+        Arc<crate::browserlike::Browser>,
+        Head,
+        Body,
+        HeaderMap,
+        Duration,
+    ),
+    Error,
+> {
+    if !crate::browserlike::AVAILABLE {
+        return Err(refused);
+    }
+    let host = url.host_str().unwrap_or("?");
+    shared.event(format!(
+        "{host}: {refused}; asking once more the way a browser connects"
+    ));
+    let (b, asked) = match browser_ask(opts, url, headers, expects, cancel).await {
+        Ok(got) => got,
+        Err(e @ (Error::Cancelled | Error::Adapter(_))) => return Err(e),
+        Err(e) => {
+            shared.event(format!("{host}, asked the way a browser connects: {e}"));
+            return Err(refused);
+        }
+    };
+    let (head, body, headers, took) = asked;
+    shared.event(format!(
+        "{host}: the browser-like connection got through; downloading on it, one connection"
+    ));
+    Ok((b, head, body, headers, took))
+}
+
+/// The browser-like connection for `url`, and its answer to the first request (`browser_first`,
+/// `probe_kept`): the file's, or why not.
+async fn browser_ask(
+    opts: &Options,
+    url: &Url,
+    headers: &HeaderMap,
+    expects: bool,
+    cancel: &CancellationToken,
+) -> Result<
+    (
+        Arc<crate::browserlike::Browser>,
+        (Head, Body, HeaderMap, Duration),
+    ),
+    Error,
+> {
+    let b = Arc::new(crate::browserlike::Browser::new(opts, url, headers)?);
+    let asked = std::time::Instant::now();
+    let (head, body, headers) = b.get(url.clone(), headers.clone(), false, cancel).await?;
+    let took = asked.elapsed();
+    crate::browserlike::check_first(&head, expects)?;
+    Ok((b, (head, body, headers, took)))
 }
 
 /// A plain `GET` (no Range), or a POST of `post`, that must answer 200 or 206. A GET follows
@@ -2414,7 +2756,7 @@ async fn get(
     url: Url,
     headers: HeaderMap,
     post: Option<&Bytes>,
-    agent: &str,
+    site_agent: bool,
     expects: bool,
     cancel: &CancellationToken,
 ) -> Result<(Response, HeaderMap, Duration), Error> {
@@ -2439,7 +2781,7 @@ async fn get(
     // Redirects between a site's own hosts followed here (`get_policy`).
     let mut party_hops = 0;
     loop {
-        let req = build(client, url.clone(), post, &headers, agent);
+        let req = build(client, url.clone(), post, &headers, site_agent);
         let asked = std::time::Instant::now();
         let resp = cancellable(cancel, async { Ok(req.send().await?) }).await?;
         let took = asked.elapsed();
@@ -2649,7 +2991,7 @@ fn meta_refresh(page: &[u8], base: &Url) -> Option<(Duration, Url)> {
 }
 
 /// The `name=value` pairs a response's `Set-Cookie` headers set.
-fn set_cookies(h: &HeaderMap) -> Vec<String> {
+pub(crate) fn set_cookies(h: &HeaderMap) -> Vec<String> {
     h.get_all(header::SET_COOKIE)
         .iter()
         .filter_map(|v| v.to_str().ok())
@@ -2661,7 +3003,7 @@ fn set_cookies(h: &HeaderMap) -> Vec<String> {
 }
 
 /// `cookies` added to the request's `Cookie` header, each replacing one of the same name.
-fn add_cookies(headers: &mut HeaderMap, cookies: &[String]) {
+pub(crate) fn add_cookies(headers: &mut HeaderMap, cookies: &[String]) {
     if cookies.is_empty() {
         return;
     }
@@ -2699,7 +3041,7 @@ async fn first_get(
             url.clone(),
             headers.clone(),
             opts.post.as_ref(),
-            &opts.user_agent,
+            opts.site_agent(),
             expects,
             cancel,
         )
@@ -3014,34 +3356,52 @@ async fn request(ctx: &Ctx, target: &Target, from: u64, to: u64) -> Result<Body,
         .unwrap()
         .if_range(target.url.host_str())
         .and_then(|v| HeaderValue::from_str(v).ok());
-    let mut req = build(
-        &ctx.client,
-        target.url.clone(),
-        target.post.as_ref(),
-        &target.headers,
-        &ctx.opts.user_agent,
-    )
-    .header(header::RANGE, format!("bytes={from}-{}", to - 1));
-    if let Some(v) = &if_range {
-        req = req.header(header::IF_RANGE, v);
-    }
-    let resp = cancellable(&ctx.cancel, async { Ok(req.send().await?) }).await?;
-    if resp.status().is_success() && !ctx.web_page_ok && is_web_page(resp.headers()) {
+    let range = format!("bytes={from}-{}", to - 1);
+    let (head, body) = match &ctx.browser {
+        // The browser-like connection's own (#668): its redirects followed as `get` does.
+        Some(b) => {
+            let mut headers = target.headers.clone();
+            headers.insert(header::RANGE, HeaderValue::from_str(&range).expect("ascii"));
+            if let Some(v) = &if_range {
+                headers.insert(header::IF_RANGE, v.clone());
+            }
+            let (head, body, _) = b
+                .get(target.url.clone(), headers, true, &ctx.cancel)
+                .await?;
+            (head, body)
+        }
+        None => {
+            let mut req = build(
+                &ctx.client,
+                target.url.clone(),
+                target.post.as_ref(),
+                &target.headers,
+                ctx.opts.site_agent(),
+            )
+            .header(header::RANGE, range);
+            if let Some(v) = &if_range {
+                req = req.header(header::IF_RANGE, v);
+            }
+            let resp = cancellable(&ctx.cancel, async { Ok(req.send().await?) }).await?;
+            (Head::of(&resp), Body::Http(resp))
+        }
+    };
+    if head.status.is_success() && !ctx.web_page_ok && is_web_page(&head.headers) {
         return Err(Error::GotWebPage);
     }
-    match resp.status() {
+    match head.status {
         StatusCode::PARTIAL_CONTENT => {
             ctx.learn_ranges(true);
             ctx.range_answered.notify_one();
         }
         // The same file under another ETag (each CDN node has its own): go on with the date.
-        StatusCode::OK if per_node_etag(ctx, if_range.as_ref(), &resp) => {
+        StatusCode::OK if per_node_etag(ctx, if_range.as_ref(), &head) => {
             return Err(Error::RangesUnavailable);
         }
         // A full body for a ranged request once ranges are known to work: If-Range failed (the
         // file changed), unless it is still the same file and this answer just lacks the range.
         StatusCode::OK if ctx.ranges.load(Ordering::SeqCst) == RANGES_YES => {
-            return Err(if same_file(ctx, &resp) {
+            return Err(if same_file(ctx, &head) {
                 Error::RangesUnavailable
             } else {
                 Error::FileChanged
@@ -3052,38 +3412,38 @@ async fn request(ctx: &Ctx, target: &Target, from: u64, to: u64) -> Result<Body,
             return Err(Error::NoRanges);
         }
         s if s == StatusCode::TOO_MANY_REQUESTS || s == StatusCode::SERVICE_UNAVAILABLE => {
-            return Err(Error::Throttled(s, retry_after(resp.headers())));
+            return Err(Error::Throttled(s, retry_after(&head.headers)));
         }
         s => return Err(Error::Status(s)),
     }
-    let (start, _, total) = parse_content_range(resp.headers())?;
+    let (start, _, total) = parse_content_range(&head.headers)?;
     if start != from || total.is_some_and(|t| t != ctx.size) {
         return Err(Error::BadRange(format!(
             "asked {from}-{}, got {start}..",
             to - 1
         )));
     }
-    Ok(Body::Http(resp))
+    Ok(body)
 }
 
 /// A full answer that still describes the file being downloaded: the same length and, when the
 /// download has validators, the same one it would send.
-fn same_file(ctx: &Ctx, resp: &Response) -> bool {
-    let host = resp.url().host_str();
+fn same_file(ctx: &Ctx, resp: &Head) -> bool {
+    let host = resp.url.host_str();
     let v = ctx.validators.lock().unwrap();
-    let h = resp.headers();
+    let h = &resp.headers;
     let theirs = match v.if_range(host) {
-        None => return resp.content_length() == Some(ctx.size),
+        None => return resp.len == Some(ctx.size),
         Some(ours) if Some(ours) == v.etag.as_deref() => header_str(h, header::ETAG),
         Some(_) => header_str(h, header::LAST_MODIFIED),
     };
-    resp.content_length() == Some(ctx.size) && theirs.is_some() && theirs == v.if_range(host)
+    resp.len == Some(ctx.size) && theirs.is_some() && theirs == v.if_range(host)
 }
 
 /// A full answer to an ETag `If-Range` that still matches by length and Last-Modified: the
 /// ETag differs per node (CDNs, mirrors), not the file. The ETag is dropped for the rest of the
 /// download, so the next request validates with the date (and the overlap check).
-fn per_node_etag(ctx: &Ctx, sent: Option<&HeaderValue>, resp: &Response) -> bool {
+fn per_node_etag(ctx: &Ctx, sent: Option<&HeaderValue>, resp: &Head) -> bool {
     let mut v = ctx.validators.lock().unwrap();
     // Sent with an ETag (dates never start with a quote) — possibly one another connection has
     // just dropped, so don't compare it with the current one.
@@ -3091,14 +3451,14 @@ fn per_node_etag(ctx: &Ctx, sent: Option<&HeaderValue>, resp: &Response) -> bool
     // Another node's ETag differs from the one sent. The same ETag is that too only from a
     // server that advertised ranges: one that didn't, answering in full, has no ranges (#136),
     // and is told so at once rather than after a round of retries.
-    let theirs = header_str(resp.headers(), header::ETAG);
+    let theirs = header_str(&resp.headers, header::ETAG);
     let other_node = ctx.advertised
         || (theirs.is_some() && theirs.map(str::as_bytes) != sent.map(HeaderValue::as_bytes));
     let same = sent_etag
         && other_node
-        && resp.content_length() == Some(ctx.size)
+        && resp.len == Some(ctx.size)
         && v.last_modified.is_some()
-        && header_str(resp.headers(), header::LAST_MODIFIED) == v.last_modified.as_deref();
+        && header_str(&resp.headers, header::LAST_MODIFIED) == v.last_modified.as_deref();
     if same {
         v.etag = None;
         v.etag_host = None;
@@ -3111,13 +3471,13 @@ fn header_str(h: &HeaderMap, name: header::HeaderName) -> Option<&str> {
 }
 
 /// A site's bot check turning the request away (#376), as Cloudflare marks it.
-fn is_bot_check(status: StatusCode, h: &HeaderMap) -> bool {
+pub(crate) fn is_bot_check(status: StatusCode, h: &HeaderMap) -> bool {
     status == StatusCode::FORBIDDEN
         && h.get("cf-mitigated")
             .is_some_and(|v| v.as_bytes().eq_ignore_ascii_case(b"challenge"))
 }
 
-fn is_web_page(h: &HeaderMap) -> bool {
+pub(crate) fn is_web_page(h: &HeaderMap) -> bool {
     h.get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
         .is_some_and(is_web_page_type)
@@ -3129,7 +3489,7 @@ fn is_web_page_type(content_type: &str) -> bool {
 }
 
 /// The server names what it sends (`Content-Disposition`): its own file, page or not.
-fn named(h: &HeaderMap) -> bool {
+pub(crate) fn named(h: &HeaderMap) -> bool {
     h.contains_key(header::CONTENT_DISPOSITION)
 }
 
@@ -3591,7 +3951,7 @@ fn parse_content_range(h: &HeaderMap) -> Result<(u64, u64, Option<u64>), Error> 
 }
 
 /// `Retry-After`: delay in seconds, or an HTTP date.
-fn retry_after(h: &HeaderMap) -> Option<Duration> {
+pub(crate) fn retry_after(h: &HeaderMap) -> Option<Duration> {
     let v = h.get(header::RETRY_AFTER)?.to_str().ok()?.trim();
     if let Ok(secs) = v.parse::<u64>() {
         return Some(Duration::from_secs(secs));
@@ -3603,7 +3963,7 @@ fn retry_after(h: &HeaderMap) -> Option<Duration> {
     )
 }
 
-async fn cancellable<T>(
+pub(crate) async fn cancellable<T>(
     cancel: &CancellationToken,
     fut: impl Future<Output = Result<T, Error>>,
 ) -> Result<T, Error> {
@@ -3840,13 +4200,16 @@ mod tests {
     fn drive_gets_a_browsers_agent_and_only_drive() {
         let u = |s: &str| Url::parse(s).unwrap();
         let browser = Some(sites::gdrive::USER_AGENT);
+        // MDM's automatic agent (the default browser's, #668), by default.
+        let auto = Options::default();
+        assert!(auto.automatic_agent && auto.site_agent());
         for drive in [
             "https://drive.google.com/file/d/x/view",
             "https://drive.usercontent.google.com/download?id=x",
             "http://docs.google.com:8080/document/d/x/export",
         ] {
             assert_eq!(
-                request_agent(DEFAULT_USER_AGENT, &u(drive)),
+                request_agent(auto.site_agent(), &u(drive)),
                 browser,
                 "{drive}"
             );
@@ -3857,20 +4220,26 @@ mod tests {
             "https://doc-0.docs.googleusercontent.com/export/x",
             "https://drive.google.com.evil.test/x",
         ] {
+            assert_eq!(request_agent(auto.site_agent(), &u(other)), None, "{other}");
+        }
+        // The browser's own agent (handed over with the download) or the user's wins, even
+        // when it is the same text as the automatic one.
+        for own in [
+            "Mozilla/5.0 Firefox/140.0".to_owned(),
+            crate::agent::automatic(),
+        ] {
+            let mut opts = Options::default();
+            opts.speak_as(own);
+            assert!(!opts.site_agent());
             assert_eq!(
-                request_agent(DEFAULT_USER_AGENT, &u(other)),
-                None,
-                "{other}"
+                request_agent(opts.site_agent(), &u("https://drive.google.com/x")),
+                None
             );
         }
-        // The browser's own agent (handed over with the download) or the user's wins.
-        assert_eq!(
-            request_agent(
-                "Mozilla/5.0 Firefox/140.0",
-                &u("https://drive.google.com/x")
-            ),
-            None
-        );
+        // MDM's former agent, asked with when a browser's is refused (#372), still gets it.
+        let mut fallback = Options::default();
+        fallback.speak_as(crate::agent::IE11_USER_AGENT.to_owned());
+        assert!(fallback.site_agent());
     }
 
     #[test]
