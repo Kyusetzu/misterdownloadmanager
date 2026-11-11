@@ -187,6 +187,10 @@
 #. Options → Accounts: what these accounts are, and the services' rule against sharing
 #, machine
 	A debrid service downloads a file host's link with your own paid account and gives MDM a direct link. Use only your own account: sharing an account or its links breaks the services' terms and can get it suspended. Downloads the browser already started stay as they are.	டீப்ரிட் சேவை, உங்கள் சொந்தக் கட்டணக் கணக்கைப் பயன்படுத்தி கோப்பு ஹோஸ்டின் இணைப்பிலிருந்து கோப்பைப் பதிவிறக்கி, MDM-க்கு நேரடி இணைப்பை வழங்குகிறது. உங்கள் சொந்தக் கணக்கை மட்டுமே பயன்படுத்தவும்: கணக்கையோ அதன் இணைப்புகளையோ பகிர்வது சேவைகளின் விதிமுறைகளை மீறும், மேலும் உங்கள் கணக்கு இடைநிறுத்தப்படலாம். உலாவி ஏற்கனவே தொடங்கிய பதிவிறக்கங்கள் அப்படியே இருக்கும்.
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name ends with a period
+#, machine
+	A file name cannot end with a dot	கோப்புப் பெயர் புள்ளியில் முடியக்கூடாது
 #. text in errors.rs
 #. a torrent through a debrid service: one of its files has a name that would be written outside its folder; nothing was written. {name} the file's name as the service gave it
 #. {name} = a file name (keep the braces as they are)
@@ -216,6 +220,10 @@
 #. an error: a server on this computer redirected the download to the internet, which would not go through the chosen network adapter; {adapter} its name
 #, machine
 	a server on this computer sent the download elsewhere, which would not go through {adapter}	இந்தக் கணினியில் உள்ள ஒரு சேவையகம் பதிவிறக்கத்தை வேறு இடத்திற்கு அனுப்பியது; அது {adapter} வழியாகச் செல்லாது
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box for a single-file torrent
+#, machine
+	A single-file torrent keeps its name	ஒற்றைக் கோப்பு டொரண்ட் தன் பெயரைத் தக்கவைத்துக் கொள்ளும்
 #. text in the Add torrent window
 #. Add trackers: MDM never contacts a tracker on this computer or the local network
 #, machine
@@ -572,6 +580,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Austria	ஆஸ்திரியா
+#. checkbox in the Options window; text in the Options window
+#. checkbox: the User-Agent is the default browser's, which MDM finds itself
+#, machine
+	Automatic	தானியங்கு
 #. text in remote.rs
 #. remote control page (on a phone): category choice: the category follows the file's type
 #, machine
@@ -951,6 +963,10 @@
 #. Options → DNS settings: NextDNS's own configuration ID (optional)
 #, machine
 	Configuration ID:	உள்ளமைவு ID:
+#. text in a download's progress window
+#. verb: button that saves the deferred rename in the progress window
+#, machine
+	Confirm	உறுதிப்படுத்து
 #. text in the Options window
 #, machine
 	Confirm before deleting downloads	பதிவிறக்கங்களை நீக்கும் முன் உறுதிப்படுத்து
@@ -1515,7 +1531,7 @@
 #. Options → Accounts: a note that the debrid services' support (Real-Debrid, AllDebrid, Premiumize) is new and not yet tried with real paid accounts
 #, machine
 	Experimental: built from the services' public API documentation, not yet confirmed with real accounts.	சோதனைக்குரியது: சேவைகளின் பொது API ஆவணத்திலிருந்து உருவாக்கப்பட்டது, உண்மையான கணக்குகளுடன் இன்னும் உறுதிப்படுத்தப்படவில்லை.
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Export	ஏற்றுமதி
 #. text in the Options window
@@ -1992,7 +2008,7 @@
 #. checkbox in the Options window
 #, machine
 	Ignore file modification time changes when resuming a download	பதிவிறக்கத்தை மீண்டும் தொடரும்போது கோப்பு மாற்ற நேர மாற்றங்களைப் புறக்கணி
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Import	இறக்குமதி
 #. value in a column's filter list in the download list
@@ -2369,6 +2385,10 @@
 #. crash report window: looking on GitHub for an issue about the same problem
 #, machine
 	Looking for this problem on GitHub…	GitHub இல் இந்தச் சிக்கலைத் தேடுகிறது…
+#. text in the Options window
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Looking for your default browser...	உங்கள் இயல்புநிலை உலாவியைத் தேடுகிறது...
 #. text in the Download video window
 #. the trailing ... means it is still going on: keep it
 #, machine
@@ -3471,6 +3491,10 @@
 #. {name} = a file name (keep the braces as they are)
 #, machine
 	Remove {name} from the list?	{name} ஐப் பட்டியலிலிருந்து அகற்றவா?
+#. text in a download's progress window
+#. noun: label before the deferred new file or folder name in the progress window
+#, machine
+	Rename	பெயர் மாற்று
 #. text in the Batch download window
 #. group box title: what the * in the address is replaced with (numbers or letters)
 #, machine
@@ -3604,6 +3628,10 @@
 #. RSS feeds window, Download rules: the folder the rule's torrents go to
 #, machine
 	Save to:	இதில் சேமிக்க:
+#. text in a download's progress window
+#. status shown in green beside the Rename box once the new name is saved
+#, machine
+	Saved	சேமிக்கப்பட்டது
 #. text in a download's progress window
 #. label before the folder the torrent is saved in
 #, machine
@@ -3764,6 +3792,11 @@
 #. event log entry, past tense: a finished torrent stopped being shared to others because its share ratio (sent ÷ received) reached the limit set in Torrent settings; {ratio} = e.g. 2.00
 #, machine
 	Sharing stopped: the share ratio reached {ratio}	பகிர்வு நிறுத்தப்பட்டது: பகிர்வு விகிதம் {ratio} ஐ எட்டியது
+#. message or event log entry in the main window
+#. event log entry on a finished torrent when re-attaching it to keep sharing failed; {error} = why
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	Sharing stopped: {error}	பகிர்வு நிறுத்தப்பட்டது: {error}
 #. text in the download list
 #, machine
 	Show	காட்டு
@@ -3958,6 +3991,10 @@
 #. window title in a dialog box
 #, machine
 	Speed Limiter settings	வேகக் கட்டுப்படுத்தி அமைப்புகள்
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the file is one part of a split archive (.part1.rar, .7z.001…)
+#, machine
+	Split archive volumes keep their names for extraction	பிரிக்கப்பட்ட காப்பகத் தொகுதிகள் பிரித்தெடுப்பதற்காக தங்களின் பெயர்களைத் தக்கவைத்துக் கொள்கின்றன
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -4330,7 +4367,7 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be moved: {error}	கோப்பை நகர்த்த முடியவில்லை: {error}
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be read: {error}	கோப்பை படிக்க முடியவில்லை: {error}
@@ -4379,13 +4416,17 @@
 #. a check of Test browser integration: the browsers are set up, but the small helper program they start (misterdownloadmanager-nmhost) is gone
 #, machine
 	The helper program the browsers start is missing	உலாவி தொடங்கும் உதவி நிரல் இல்லை
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The list could not be saved: {error}	பட்டியலைச் சேமிக்க முடியவில்லை: {error}
 #. text in whereis.rs
 #, machine
 	the local network	உள்ளூர் பிணையம்
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name exceeds the length limit
+#, machine
+	The name is too long	பெயர் மிகவும் நீளமாக உள்ளது
 #. text in errors.rs; text in torrent downloads
 #. an error: the network adapter chosen in Options (a VPN's, usually) is off or gone; {adapter} its name
 #, machine
@@ -4526,6 +4567,9 @@
 #. in the empty download list, under its title
 #, machine
 	This category or queue holds no downloads yet.	இந்த வகை அல்லது வரிசையில் இன்னும் பதிவிறக்கங்கள் இல்லை.
+#. text in a download's progress window
+#, machine
+	This character is not allowed in a file name	கோப்புப் பெயரில் இந்த எழுத்துக்கு அனுமதி இல்லை
 #. text in the Options window
 #. Options → Remote → Pair a device: the code ran out (10 minutes, or 5 wrong tries)
 #, machine
@@ -4569,6 +4613,14 @@
 #. text in a dialog box
 #, machine
 	This folder does not exist:	இந்தக் கோப்புறை இல்லை:
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder already holds files this download did not write
+#, machine
+	This folder holds files from outside this download	இந்தக் கோப்புறையில் இந்தப் பதிவிறக்கத்திற்கு வெளியேயான கோப்புகள் உள்ளன
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder holds another download or is a save/category folder
+#, machine
+	This folder is shared with another download or save folder	இந்தக் கோப்புறை மற்றொரு பதிவிறக்கம் அல்லது சேமிப்புக் கோப்புறையுடன் பகிரப்பட்டுள்ளது
 #. text in errors.rs
 #. a download's error: a Google Drive file that isn't shared with everyone
 #, machine
@@ -4596,6 +4648,10 @@
 #. a magnet link's lookup, after 30 seconds: it can't find any peer at all
 #, machine
 	This magnet link names no trackers and the DHT is off, so no peer can be found.	இந்த மேக்னட் இணைப்பில் டிராக்கர்கள் குறிப்பிடப்படவில்லை, மேலும் DHT முடக்கப்பட்டுள்ளது, எனவே பியர்களைக் கண்டறிய முடியாது.
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name is a reserved device name on Windows (CON, NUL, COM1…)
+#, machine
+	This name is reserved by Windows	இந்தப் பெயர் Windows ஆல் ஒதுக்கப்பட்டுள்ளது
 #. tooltip (why a control is greyed) in the Download video window
 #. why "Put them into the video" is greyed: ffmpeg (a helper program) is not installed
 #, machine
@@ -5217,6 +5273,13 @@
 #. a row of the browser extension's window when no browser was found by name
 #, machine
 	Your browser	உங்கள் உலாவி
+#. text in the Options window
+#, machine
+	Your default browser isn't one MDM knows: a current Chrome's User-Agent	உங்கள் இயல்புநிலை உலாவி MDM அறிந்த ஒன்றல்ல: தற்போதைய Chrome இன் பயனர்-முகவர்
+#. text in the Options window
+#. tooltip; {browser} is a browser and its version, e.g. "Brave 157"
+#, machine
+	Your default browser's User-Agent: {browser}	உங்கள் இயல்புநிலை உலாவியின் பயனர்-முகவர்: {browser}
 #. text in the settings
 #. Options → DNS: the name of a DNS the user typed in, in messages: "your DNS (DNS over TLS)"
 #, machine
@@ -5330,6 +5393,11 @@
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
 	{done} of {size}	{size} இல் {done}
+#. text in deferred_rename.rs
+#. appended to an OS error when a case-only rename could not move the temporary file back to its original name; {error} = first OS error, {path} = temporary path left on disk, {rollback_error} = second OS error
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	{error} (left as {path}: {rollback_error})	{error} ({path} ஆக விடப்பட்டது: {rollback_error})
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 #, machine
@@ -5594,9 +5662,21 @@ column	Transfer rate	பரிமாற்ற விகிதம்
 #, machine
 column	Upload speed	ஏேற்றுதல் வேகம்
 #. text in the browser extension
+#. in the menu under the download button over a video: the page is a list of videos (a playlist), whose videos are chosen in the app's window; keep the name Mister Download Manager as it is
+#, machine
+extension	A list of videos: choose them in Mister Download Manager	வீடியோக்களின் பட்டியல்: அவற்றை Mister Download Manager இல் தேர்ந்தெடுக்கவும்
+#. text in the browser extension
+#. shown briefly on the download button over a video after a quality was picked: the download was added to the app's download queue, to start later
+#, machine
+extension	Added to the queue	வரிசையில் சேர்க்கப்பட்டது
+#. text in the browser extension
 #. choice under Send downloads to: an MDM running on another computer of the network, such as a home server; keep the name Mister Download Manager as it is
 #, machine
 extension	Another Mister Download Manager (a server)	மற்றொரு Mister Download Manager (ஒரு சர்வர்)
+#. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that are sound only (MP3, Opus and the like); short, one word
+#, machine
+extension	Audio	ஆடியோ
 #. text in the browser extension
 #. the name this browser gets in the other MDM's list of paired devices
 #, machine
@@ -5619,6 +5699,10 @@ extension	Connected to Mister Download Manager	Mister Download Manager உடன
 #. {version} = a version number (keep the braces as they are)
 #, machine
 extension	Connected to Mister Download Manager {version}	Mister Download Manager {version} உடன் இணைக்கப்பட்டுள்ளது
+#. text in the browser extension
+#. in the menu under the download button over a video: finding the video's qualities failed; the app's own explanation follows on the next line
+#, machine
+extension	Could not look it up	தேட முடியவில்லை
 #. text in the browser extension
 #. button beside a video, sound or stream in the toolbar button's popup: download it with the app; verb; short
 #, machine
@@ -5710,6 +5794,14 @@ extension	Left to the browser: {name}	உலாவியில் விடப�
 #, machine
 extension	Live	நேரலை
 #. text in the browser extension
+#. in the menu that opens from the download button over a video, while the app finds which qualities (resolutions, formats) the video can be downloaded in
+#, machine
+extension	Looking up the qualities…	தரங்களைத் தேடுகிறது…
+#. text in the browser extension
+#. in the menu under the download button over a video: the app took more than a minute to find the video's qualities, so the menu stopped waiting
+#, machine
+extension	Looking up took too long	தேட மிக அதிக நேரம் ஆனது
+#. text in the browser extension
 #. heading in the toolbar button's popup over the list of the videos, sounds and streams the current web page has loaded
 #, machine
 extension	Media on this page	இந்தப் பக்கத்தில் உள்ள ஊடகங்கள்
@@ -5726,6 +5818,10 @@ extension	Mister Download Manager didn't start in time	Mister Download Manager �
 #, machine
 extension	Mister Download Manager doesn't accept this copy of the extension	Mister Download Manager இந்த நீட்டிப்பின் நகலை ஏற்கவில்லை
 #. text in the browser extension
+#. in the menu under the download button over a video: the app is already looking up other videos and can't look this one up now; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager is busy with other videos	Mister Download Manager பிற வீடியோக்களில் பிஸியாக உள்ளது
+#. text in the browser extension
 #. shown briefly on the download button when the app could not be reached; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed or didn't start	Mister Download Manager நிறுவப்படவில்லை அல்லது தொடங்கவில்லை
@@ -5733,6 +5829,10 @@ extension	Mister Download Manager isn't installed or didn't start	Mister Downloa
 #. status when the browser can't find the app's connection; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed, or its browser integration isn't set up	Mister Download Manager நிறுவப்படவில்லை, அல்லது அதன் உலாவி ஒருங்கிணைப்பு அமைக்கப்படவில்லை
+#. text in the browser extension
+#. in the menu under the download button over a video: the app needs the yt-dlp tool (a program's name, keep it as it is) to find this video's qualities, and it isn't installed; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager needs yt-dlp for this video	இந்த வீடியோவுக்கு Mister Download Manager க்கு yt-dlp தேவை
 #. text in the browser extension
 #. tooltip of the switch Send downloads through this browser's proxy or VPN extension; keep the name Mister Download Manager as it is
 #, machine
@@ -5760,9 +5860,17 @@ extension	Never take downloads from {site}	{site} இலிருந்து �
 #, machine
 extension	No video or sound found on this page yet. Play it, then open this again.	இந்தப் பக்கத்தில் இன்னும் வீடியோ அல்லது ஒலி எதுவும் கிடைக்கவில்லை. அதை இயக்கிவிட்டு, இதை மீண்டும் திறக்கவும்.
 #. text in the browser extension
+#. in the menu under the download button over a video: the app found no quality of the video it could download
+#, machine
+extension	No video to download here	இங்கே பதிவிறக்க வீடியோ எதுவும் இல்லை
+#. text in the browser extension
 #. pairing failed: the other MDM didn't answer
 #, machine
 extension	Not reached. Open its address once in this browser and accept its certificate, then try again.	அடையப்படவில்லை. இந்த உலாவியில் அதன் முகவரியை ஒருமுறை திறந்து அதன் சான்றிதழை ஏற்றுக்கொண்டு, மீண்டும் முயற்சிக்கவும்.
+#. text in the browser extension
+#. last command of the menu of qualities under the download button over a video: opens the app's Download video window for this video instead; keep the name Mister Download Manager as it is
+#, machine
+extension	Open in Mister Download Manager…	Mister Download Manager இல் திறக்கவும்…
 #. text in the browser extension
 #. button: open the other MDM's address in a tab (to accept its certificate once)
 #, machine
@@ -5775,6 +5883,9 @@ extension	Open its address once and accept its certificate, then enter a code fr
 #. button in the toolbar button's popup; keep the name Mister Download Manager as it is
 #, machine
 extension	Open Mister Download Manager	Mister Download Managerஐத் திறக்கவும்
+#. shown briefly on the download button over a video in a feed (a social site's home page, a timeline) when nothing in the feed gives that video's own address, so nothing was sent: the user should open the post the video belongs to and click the button on that page; short
+#, machine
+extension	Open the post, then use the button there	பதிவைத் திறந்து, அங்குள்ள பொத்தானைப் பயன்படுத்தவும்
 #. text in the browser extension
 #. button in the toolbar button's popup: open the app's Options
 #. the trailing ... means it is still going on: keep it
@@ -5868,6 +5979,10 @@ extension	Update Mister Download Manager to use everything this extension offers
 #. why a download stayed with the browser: the app's setting 'Use advanced browser integration' is off; keep the setting's name as the app shows it
 #, machine
 extension	Use advanced browser integration is off in Options → General.	மேம்பட்ட உலாவி ஒருங்கிணைப்பைப் பயன்படுத்து விருப்பத்தேர்வுகள் → பொது என்பதில் முடக்கப்பட்டுள்ளது.
+#. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that include picture (video with sound); short, one word
+#, machine
+extension	Video	வீடியோ
 #. text in the browser extension
 #. pairing failed: codes tried too fast
 #, machine

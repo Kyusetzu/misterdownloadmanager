@@ -312,18 +312,32 @@ fn upper_list(exts: &[String]) -> String {
         .join(" ")
 }
 
+/// The base folder that categories without their own folder live under (#556): General's
+/// folder when one was chosen in Options → Save to, else `downloads`.
+pub fn default_downloads<'a>(
+    downloads: &'a Path,
+    dirs: &'a [(String, String)],
+) -> std::borrow::Cow<'a, Path> {
+    let general = Category::General.key();
+    dirs.iter()
+        .find(|(c, _)| *c == *general)
+        .map(|(_, d)| std::borrow::Cow::Owned(crate::dialogs::resolve_path(d)))
+        .unwrap_or(std::borrow::Cow::Borrowed(downloads))
+}
+
 /// The category's folder: the one chosen in Options → Save to (or remembered from Download
-/// File Info), else the default.
+/// File Info), else the default under [`default_downloads`] (#556).
 pub fn category_folder(cat: Category, downloads: &Path, dirs: &[(String, String)]) -> PathBuf {
+    let base = default_downloads(downloads, dirs);
     if cat.is_custom() {
-        return cat.folder(downloads);
+        return cat.folder(&base);
     }
     let key = cat.key();
     dirs.iter()
         .find(|(c, _)| *c == *key)
         // A folder may be saved as shown, relative to the user's home.
         .map(|(_, d)| crate::dialogs::resolve_path(d))
-        .unwrap_or_else(|| cat.folder(downloads))
+        .unwrap_or_else(|| cat.folder(&base))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -397,6 +411,14 @@ pub struct Item {
     /// (or its one file, once known).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remote: Option<RemoteSpec>,
+    /// Safe deferred main name chosen in the progress window: applied in place once the
+    /// download reaches `Status::Complete`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rename_on_complete: Option<String>,
+    /// True when a folder download's destination already held files before MDM added it, so
+    /// folder-level deferred rename refuses to sweep untracked files along.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub preexisting_folder: bool,
     #[serde(skip)]
     pub live: Option<Live>,
     /// The session's temporary view while a torrent is being checked; never saved.
@@ -415,6 +437,28 @@ pub struct Item {
     /// #68), in the interface language; memory only.
     #[serde(skip)]
     pub notices: Vec<String>,
+    /// A video chosen in the browser's quality menu: the menu's look-up, for its first run only
+    /// (taken then); memory only, never written (its links are signed).
+    #[serde(skip)]
+    pub preloaded: Option<mdm_tools::video::Preloaded>,
+    /// Finished video / subtitle / gallery paths waiting to be marked as downloaded from the
+    /// web once any deferred rename in `App::poll` has moved them to their final names.
+    #[serde(skip)]
+    pub(crate) pending_mark: Option<PendingMark>,
+    /// Files known to belong to a finished gallery or debrid folder download, kept across
+    /// restarts so a requeued or resumed folder rename still checks for untracked files.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) written_files: Option<Vec<PathBuf>>,
+}
+
+/// Files saved by `yt-dlp` or `gallery-dl` waiting for Mark-of-the-Web after deferred rename.
+#[derive(Clone, Debug)]
+pub(crate) struct PendingMark {
+    pub main_file: Option<PathBuf>,
+    pub side_files: Vec<PathBuf>,
+    pub gallery_files: Vec<PathBuf>,
+    pub url: String,
+    pub referer: Option<String>,
 }
 
 /// A Link grabber package, as each of its downloads keeps it (#37).
@@ -511,6 +555,7 @@ fn tool_snapshot(p: mdm_tools::video::Progress, url: &Url) -> mdm_engine::Snapsh
             .collect(),
         // yt-dlp's and gallery-dl's connections are theirs: not seen here (#140).
         server: None,
+        at_service: None,
     }
 }
 
@@ -698,12 +743,17 @@ impl Item {
             server: None,
             direct: false,
             remote: None,
+            rename_on_complete: None,
+            preexisting_folder: false,
             live: None,
             torrent_check: None,
             snap: None,
             login: None,
             context: Default::default(),
             notices: Vec::new(),
+            preloaded: None,
+            pending_mark: None,
+            written_files: None,
         }
     }
     /// This row's resume state is at its place. `downloaded` can't say: after a crash the list
@@ -794,7 +844,7 @@ impl Item {
                     self.downloaded = self.size.unwrap_or(self.downloaded);
                 }
                 // A video and its subtitles (#68), marked as downloaded from the web once
-                // yt-dlp has saved them, as the engine's files are as they are created.
+                // yt-dlp has saved them (and after any deferred rename in `App::poll`).
                 let mut notices = Vec::new();
                 if status == Status::Complete
                     && let Some(Live {
@@ -812,22 +862,54 @@ impl Item {
                         .iter()
                         .map(|p| sub_notice(p, site))
                         .collect();
-                    let side = done.side_files;
-                    crate::app::mark_finished(
-                        s.file.iter().chain(side.iter()).cloned().collect(),
-                        url.to_string(),
-                        self.context.referer.clone(),
-                    );
+                    self.pending_mark = Some(PendingMark {
+                        main_file: s.file.clone(),
+                        side_files: done.side_files,
+                        gallery_files: Vec::new(),
+                        url: url.to_string(),
+                        referer: self.context.referer.clone(),
+                    });
                 }
-                // A gallery's files (#58), each marked as downloaded from the web, as above.
+                // A gallery's files (#58), each marked as downloaded from the web after any
+                // deferred folder rename in `App::poll`.
                 if status == Status::Complete
                     && let Some(Live {
                         dl: Job::Gallery { job, url },
                         ..
                     }) = &self.live
-                    && matches!(url.scheme(), "http" | "https")
                 {
-                    crate::app::mark_finished(job.saved(), url.to_string(), None);
+                    let known = job.known_files();
+                    let list = self.written_files.get_or_insert_with(Vec::new);
+                    for p in known {
+                        if !list.contains(&p) {
+                            list.push(p);
+                        }
+                    }
+                    if matches!(url.scheme(), "http" | "https") {
+                        self.pending_mark = Some(PendingMark {
+                            main_file: None,
+                            side_files: Vec::new(),
+                            gallery_files: job.saved(),
+                            url: url.to_string(),
+                            referer: None,
+                        });
+                    }
+                }
+                if status == Status::Complete
+                    && let Some(Live {
+                        dl: Job::Remote(r), ..
+                    }) = &self.live
+                {
+                    if r.preexisting_folder() {
+                        self.preexisting_folder = true;
+                    }
+                    let saved = r.saved_files();
+                    let list = self.written_files.get_or_insert_with(Vec::new);
+                    for p in saved {
+                        if !list.contains(&p) {
+                            list.push(p);
+                        }
+                    }
                 }
                 for n in &notices {
                     self.note(n.clone());
@@ -872,16 +954,18 @@ impl Item {
     }
 
     /// The Status column: `13.38%`, `Complete`, `Error`, or blank.
-    /// A torrent at its debrid service (#44), before its files come: "45% at Real-Debrid" (the
-    /// percentage first: the list's Status column is narrow).
+    /// A torrent at its debrid service (#44), before its files come, or a file-host link whose file
+    /// the service fetches first (TorBox): "45% at Real-Debrid" (the percentage first: the list's
+    /// Status column is narrow).
     pub fn at_service(&self) -> Option<String> {
-        let Some(Live {
-            dl: Job::Remote(r), ..
-        }) = &self.live
-        else {
-            return None;
+        let (service, progress) = match &self.live {
+            Some(Live {
+                dl: Job::Remote(r), ..
+            }) => r.at_service().map(|(s, p)| (s.to_owned(), p))?,
+            Some(_) => self.snap.as_ref()?.at_service.clone()?,
+            None => return None,
         };
-        let (service, progress) = r.at_service()?;
+        let service = service.as_str();
         Some(crate::i18n::fmt(
             // i18n: a torrent's status while the user's debrid service downloads it, before MDM gets its files; {service} the service ("Real-Debrid"), {percent} how far it is ("45%")
             crate::i18n::t("{percent} at {service}"),

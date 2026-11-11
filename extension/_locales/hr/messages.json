@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Nije moguće utvrditi koji je ovo videozapis: otvorite njegovu stranicu i pokušajte ondje"
   },
+  "video_looking": {
+    "message": "Traženje kvaliteta…"
+  },
+  "video_open_mdm": {
+    "message": "Otvori u Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Ovdje nema videozapisa za preuzimanje"
+  },
+  "video_playlist": {
+    "message": "Popis videozapisa: odaberite ih u Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager treba yt-dlp za ovaj videozapis"
+  },
+  "video_too_long": {
+    "message": "Traženje je trajalo predugo"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager je zauzet drugim videozapisima"
+  },
+  "video_queued": {
+    "message": "Dodano u red čekanja"
+  },
+  "video_failed_lookup": {
+    "message": "Traženje nije uspjelo"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Zvuk"
+  },
+  "video_open_post": {
+    "message": "Otvorite objavu, a zatim upotrijebite gumb tamo"
+  },
   "popup_send_to": {
     "message": "Šalji preuzimanja na"
   },

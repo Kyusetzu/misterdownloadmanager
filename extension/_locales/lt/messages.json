@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Neaišku, kuris tai vaizdo įrašas: atidarykite jo paties puslapį ir bandykite ten"
   },
+  "video_looking": {
+    "message": "Ieškoma kokybių…"
+  },
+  "video_open_mdm": {
+    "message": "Atidaryti programoje Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Čia nėra vaizdo įrašo, kurį būtų galima atsisiųsti"
+  },
+  "video_playlist": {
+    "message": "Vaizdo įrašų sąrašas: pasirinkite juos programoje Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager šiam vaizdo įrašui reikia yt-dlp"
+  },
+  "video_too_long": {
+    "message": "Paieška užtruko per ilgai"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager užsiėmusi kitais vaizdo įrašais"
+  },
+  "video_queued": {
+    "message": "Pridėta į eilę"
+  },
+  "video_failed_lookup": {
+    "message": "Nepavyko surasti"
+  },
+  "video_tab_video": {
+    "message": "Vaizdas"
+  },
+  "video_tab_audio": {
+    "message": "Garsas"
+  },
+  "video_open_post": {
+    "message": "Atidarykite įrašą, tada naudokite ten esantį mygtuką"
+  },
   "popup_send_to": {
     "message": "Siųsti atsisiuntimus į"
   },

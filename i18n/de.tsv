@@ -187,6 +187,10 @@
 #. Options → Accounts: what these accounts are, and the services' rule against sharing
 #, machine
 	A debrid service downloads a file host's link with your own paid account and gives MDM a direct link. Use only your own account: sharing an account or its links breaks the services' terms and can get it suspended. Downloads the browser already started stay as they are.	Ein Debrid-Dienst lädt einen Link eines Dateihosters mit Ihrem eigenen bezahlten Konto herunter und stellt MDM einen direkten Link zur Verfügung. Verwenden Sie nur Ihr eigenes Konto: Das Teilen eines Kontos oder seiner Links verstößt gegen die Nutzungsbedingungen der Dienste und kann zur Sperrung führen. Downloads, die der Browser bereits gestartet hat, bleiben unverändert.
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name ends with a period
+#, machine
+	A file name cannot end with a dot	Ein Dateiname darf nicht mit einem Punkt enden
 #. text in errors.rs
 #. a torrent through a debrid service: one of its files has a name that would be written outside its folder; nothing was written. {name} the file's name as the service gave it
 #. {name} = a file name (keep the braces as they are)
@@ -216,6 +220,10 @@
 #. an error: a server on this computer redirected the download to the internet, which would not go through the chosen network adapter; {adapter} its name
 #, machine
 	a server on this computer sent the download elsewhere, which would not go through {adapter}	Ein Server auf diesem Computer hat den Download umgeleitet, was nicht über {adapter} erfolgen würde.
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box for a single-file torrent
+#, machine
+	A single-file torrent keeps its name	Ein Einzeldatei-Torrent behält seinen Namen
 #. text in the Add torrent window
 #. Add trackers: MDM never contacts a tracker on this computer or the local network
 #, machine
@@ -576,6 +584,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Austria	Österreich
+#. checkbox in the Options window; text in the Options window
+#. checkbox: the User-Agent is the default browser's, which MDM finds itself
+#, machine
+	Automatic	Automatisch
 #. text in remote.rs
 #. remote control page (on a phone): category choice: the category follows the file's type
 #, machine
@@ -955,6 +967,10 @@
 #. Options → DNS settings: NextDNS's own configuration ID (optional)
 #, machine
 	Configuration ID:	Konfigurations-ID:
+#. text in a download's progress window
+#. verb: button that saves the deferred rename in the progress window
+#, machine
+	Confirm	Bestätigen
 #. text in the Options window
 #, machine
 	Confirm before deleting downloads	Löschen von Downloads bestätigen
@@ -2373,6 +2389,10 @@
 #. crash report window: looking on GitHub for an issue about the same problem
 #, machine
 	Looking for this problem on GitHub…	Suche nach diesem Problem auf GitHub…
+#. text in the Options window
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Looking for your default browser...	Standardbrowser wird gesucht...
 #. text in the Download video window
 #. the trailing ... means it is still going on: keep it
 #, machine
@@ -3480,6 +3500,10 @@
 #. {name} = a file name (keep the braces as they are)
 #, machine
 	Remove {name} from the list?	{name} aus der Liste entfernen?
+#. text in a download's progress window
+#. noun: label before the deferred new file or folder name in the progress window
+#, machine
+	Rename	Umbenennen
 #. text in the Batch download window
 #. group box title: what the * in the address is replaced with (numbers or letters)
 #, machine
@@ -3613,6 +3637,10 @@
 #. RSS feeds window, Download rules: the folder the rule's torrents go to
 #, machine
 	Save to:	Speichern in:
+#. text in a download's progress window
+#. status shown in green beside the Rename box once the new name is saved
+#, machine
+	Saved	Gespeichert
 #. text in a download's progress window
 #. label before the folder the torrent is saved in
 #, machine
@@ -3773,6 +3801,11 @@
 #. event log entry, past tense: a finished torrent stopped being shared to others because its share ratio (sent ÷ received) reached the limit set in Torrent settings; {ratio} = e.g. 2.00
 #, machine
 	Sharing stopped: the share ratio reached {ratio}	Freigabe beendet: Das Freigabeverhältnis hat {ratio} erreicht
+#. message or event log entry in the main window
+#. event log entry on a finished torrent when re-attaching it to keep sharing failed; {error} = why
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	Sharing stopped: {error}	Freigabe beendet: {error}
 #. text in the download list
 #, machine
 	Show	Anzeigen
@@ -3975,6 +4008,10 @@
 #. window title in a dialog box
 #, machine
 	Speed Limiter settings	Einstellungen des Geschwindigkeitsbegrenzers
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the file is one part of a split archive (.part1.rar, .7z.001…)
+#, machine
+	Split archive volumes keep their names for extraction	Teilarchive behalten ihre Namen zum Entpacken bei
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -4403,6 +4440,10 @@
 #. text in whereis.rs
 #, machine
 	the local network	das lokale Netzwerk
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name exceeds the length limit
+#, machine
+	The name is too long	Der Name ist zu lang
 #. text in errors.rs; text in torrent downloads
 #. an error: the network adapter chosen in Options (a VPN's, usually) is off or gone; {adapter} its name
 #, machine
@@ -4547,6 +4588,9 @@
 #. in the empty download list, under its title
 #, machine
 	This category or queue holds no downloads yet.	Diese Kategorie oder Warteschlange enthält noch keine Downloads.
+#. text in a download's progress window
+#, machine
+	This character is not allowed in a file name	Dieses Zeichen ist in einem Dateinamen nicht zulässig
 #. text in the Options window
 #. Options → Remote → Pair a device: the code ran out (10 minutes, or 5 wrong tries)
 #, machine
@@ -4590,6 +4634,14 @@
 #. text in a dialog box
 #, machine
 	This folder does not exist:	Dieser Ordner existiert nicht:
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder already holds files this download did not write
+#, machine
+	This folder holds files from outside this download	Dieser Ordner enthält Dateien außerhalb dieses Downloads
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder holds another download or is a save/category folder
+#, machine
+	This folder is shared with another download or save folder	Dieser Ordner wird mit einem anderen Download oder Speicherordner geteilt
 #. text in errors.rs
 #. a download's error: a Google Drive file that isn't shared with everyone
 #, machine
@@ -4617,6 +4669,10 @@
 #. a magnet link's lookup, after 30 seconds: it can't find any peer at all
 #, machine
 	This magnet link names no trackers and the DHT is off, so no peer can be found.	Dieser Magnet-Link enthält keine Tracker und DHT ist deaktiviert, daher können keine Peers gefunden werden.
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name is a reserved device name on Windows (CON, NUL, COM1…)
+#, machine
+	This name is reserved by Windows	Dieser Name ist von Windows reserviert
 #. tooltip (why a control is greyed) in the Download video window
 #. why "Put them into the video" is greyed: ffmpeg (a helper program) is not installed
 #, machine
@@ -5242,6 +5298,13 @@
 #. a row of the browser extension's window when no browser was found by name
 #, machine
 	Your browser	Ihr Browser
+#. text in the Options window
+#, machine
+	Your default browser isn't one MDM knows: a current Chrome's User-Agent	Ihr Standardbrowser ist MDM nicht bekannt: ein aktueller Chrome-User-Agent
+#. text in the Options window
+#. tooltip; {browser} is a browser and its version, e.g. "Brave 157"
+#, machine
+	Your default browser's User-Agent: {browser}	User-Agent Ihres Standardbrowsers: {browser}
 #. text in the settings
 #. Options → DNS: the name of a DNS the user typed in, in messages: "your DNS (DNS over TLS)"
 #, machine
@@ -5355,6 +5418,11 @@
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
 	{done} of {size}	{done} von {size}
+#. text in deferred_rename.rs
+#. appended to an OS error when a case-only rename could not move the temporary file back to its original name; {error} = first OS error, {path} = temporary path left on disk, {rollback_error} = second OS error
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	{error} (left as {path}: {rollback_error})	{error} (belassen als {path}: {rollback_error})
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 #, machine
@@ -5619,9 +5687,21 @@ column	Transfer rate	Übertragungsrate
 #, machine
 column	Upload speed	Upload-Geschwindigkeit
 #. text in the browser extension
+#. in the menu under the download button over a video: the page is a list of videos (a playlist), whose videos are chosen in the app's window; keep the name Mister Download Manager as it is
+#, machine
+extension	A list of videos: choose them in Mister Download Manager	Eine Liste von Videos: Wählen Sie sie in Mister Download Manager aus
+#. text in the browser extension
+#. shown briefly on the download button over a video after a quality was picked: the download was added to the app's download queue, to start later
+#, machine
+extension	Added to the queue	Zur Warteschlange hinzugefügt
+#. text in the browser extension
 #. choice under Send downloads to: an MDM running on another computer of the network, such as a home server; keep the name Mister Download Manager as it is
 #, machine
 extension	Another Mister Download Manager (a server)	Ein anderer Mister Download Manager (ein Server)
+#. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that are sound only (MP3, Opus and the like); short, one word
+#, machine
+extension	Audio	Audio
 #. text in the browser extension
 #. the name this browser gets in the other MDM's list of paired devices
 #, machine
@@ -5644,6 +5724,10 @@ extension	Connected to Mister Download Manager	Mit Mister Download Manager verbu
 #. {version} = a version number (keep the braces as they are)
 #, machine
 extension	Connected to Mister Download Manager {version}	Mit Mister Download Manager {version} verbunden
+#. text in the browser extension
+#. in the menu under the download button over a video: finding the video's qualities failed; the app's own explanation follows on the next line
+#, machine
+extension	Could not look it up	Abfrage nicht möglich
 #. text in the browser extension
 #. button beside a video, sound or stream in the toolbar button's popup: download it with the app; verb; short
 #, machine
@@ -5735,6 +5819,14 @@ extension	Left to the browser: {name}	Für den Browser belassen: {name}
 #, machine
 extension	Live	Live
 #. text in the browser extension
+#. in the menu that opens from the download button over a video, while the app finds which qualities (resolutions, formats) the video can be downloaded in
+#, machine
+extension	Looking up the qualities…	Qualitäten werden gesucht…
+#. text in the browser extension
+#. in the menu under the download button over a video: the app took more than a minute to find the video's qualities, so the menu stopped waiting
+#, machine
+extension	Looking up took too long	Die Abfrage hat zu lange gedauert
+#. text in the browser extension
 #. heading in the toolbar button's popup over the list of the videos, sounds and streams the current web page has loaded
 #, machine
 extension	Media on this page	Medien auf dieser Seite
@@ -5751,6 +5843,10 @@ extension	Mister Download Manager didn't start in time	Mister Download Manager w
 #, machine
 extension	Mister Download Manager doesn't accept this copy of the extension	Mister Download Manager akzeptiert diese Kopie der Erweiterung nicht
 #. text in the browser extension
+#. in the menu under the download button over a video: the app is already looking up other videos and can't look this one up now; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager is busy with other videos	Mister Download Manager ist mit anderen Videos beschäftigt
+#. text in the browser extension
 #. shown briefly on the download button when the app could not be reached; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed or didn't start	Mister Download Manager ist nicht installiert oder wurde nicht gestartet
@@ -5758,6 +5854,10 @@ extension	Mister Download Manager isn't installed or didn't start	Mister Downloa
 #. status when the browser can't find the app's connection; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed, or its browser integration isn't set up	Mister Download Manager ist nicht installiert oder die Browserintegration ist nicht eingerichtet
+#. text in the browser extension
+#. in the menu under the download button over a video: the app needs the yt-dlp tool (a program's name, keep it as it is) to find this video's qualities, and it isn't installed; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager needs yt-dlp for this video	Mister Download Manager benötigt yt-dlp für dieses Video
 #. text in the browser extension
 #. tooltip of the switch Send downloads through this browser's proxy or VPN extension; keep the name Mister Download Manager as it is
 #, machine
@@ -5785,9 +5885,17 @@ extension	Never take downloads from {site}	Niemals Downloads von {site} überneh
 #, machine
 extension	No video or sound found on this page yet. Play it, then open this again.	Auf dieser Seite wurden noch keine Videos oder Sounds gefunden. Spielen Sie ein Video oder einen Sound ab und öffnen Sie dieses Fenster dann erneut.
 #. text in the browser extension
+#. in the menu under the download button over a video: the app found no quality of the video it could download
+#, machine
+extension	No video to download here	Hier gibt es kein Video zum Herunterladen
+#. text in the browser extension
 #. pairing failed: the other MDM didn't answer
 #, machine
 extension	Not reached. Open its address once in this browser and accept its certificate, then try again.	Nicht erreicht. Öffnen Sie die Adresse einmal in diesem Browser und akzeptieren Sie das Zertifikat, dann versuchen Sie es erneut.
+#. text in the browser extension
+#. last command of the menu of qualities under the download button over a video: opens the app's Download video window for this video instead; keep the name Mister Download Manager as it is
+#, machine
+extension	Open in Mister Download Manager…	In Mister Download Manager öffnen…
 #. text in the browser extension
 #. button: open the other MDM's address in a tab (to accept its certificate once)
 #, machine
@@ -5800,6 +5908,9 @@ extension	Open its address once and accept its certificate, then enter a code fr
 #. button in the toolbar button's popup; keep the name Mister Download Manager as it is
 #, machine
 extension	Open Mister Download Manager	Mister Download Manager öffnen
+#. shown briefly on the download button over a video in a feed (a social site's home page, a timeline) when nothing in the feed gives that video's own address, so nothing was sent: the user should open the post the video belongs to and click the button on that page; short
+#, machine
+extension	Open the post, then use the button there	Beitrag öffnen, dann die Schaltfläche dort verwenden
 #. text in the browser extension
 #. button in the toolbar button's popup: open the app's Options
 #. the trailing ... means it is still going on: keep it
@@ -5893,6 +6004,10 @@ extension	Update Mister Download Manager to use everything this extension offers
 #. why a download stayed with the browser: the app's setting 'Use advanced browser integration' is off; keep the setting's name as the app shows it
 #, machine
 extension	Use advanced browser integration is off in Options → General.	„Erweiterte Browserintegration verwenden“ ist in „Optionen → Allgemein“ deaktiviert.
+#. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that include picture (video with sound); short, one word
+#, machine
+extension	Video	Video
 #. text in the browser extension
 #. pairing failed: codes tried too fast
 #, machine

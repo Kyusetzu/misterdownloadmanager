@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "どの動画か判別できません。動画自体のページを開いて、そこでお試しください"
   },
+  "video_looking": {
+    "message": "画質を検索しています…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Manager で開く…"
+  },
+  "video_no_choices": {
+    "message": "ここにはダウンロードできる動画がありません"
+  },
+  "video_playlist": {
+    "message": "動画の一覧: Mister Download Manager で選択してください"
+  },
+  "video_no_ytdlp": {
+    "message": "この動画には Mister Download Manager に yt-dlp が必要です"
+  },
+  "video_too_long": {
+    "message": "検索に時間がかかりすぎました"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager は他の動画の処理中です"
+  },
+  "video_queued": {
+    "message": "キューに追加しました"
+  },
+  "video_failed_lookup": {
+    "message": "検索できませんでした"
+  },
+  "video_tab_video": {
+    "message": "ビデオ"
+  },
+  "video_tab_audio": {
+    "message": "オーディオ"
+  },
+  "video_open_post": {
+    "message": "投稿を開いて、そこにあるボタンを使用してください"
+  },
   "popup_send_to": {
     "message": "ダウンロードの送信先"
   },

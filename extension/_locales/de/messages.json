@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Nicht erkennbar, welches Video das ist: Öffnen Sie seine eigene Seite und versuchen Sie es dort"
   },
+  "video_looking": {
+    "message": "Qualitäten werden gesucht…"
+  },
+  "video_open_mdm": {
+    "message": "In Mister Download Manager öffnen…"
+  },
+  "video_no_choices": {
+    "message": "Hier gibt es kein Video zum Herunterladen"
+  },
+  "video_playlist": {
+    "message": "Eine Liste von Videos: Wählen Sie sie in Mister Download Manager aus"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager benötigt yt-dlp für dieses Video"
+  },
+  "video_too_long": {
+    "message": "Die Abfrage hat zu lange gedauert"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager ist mit anderen Videos beschäftigt"
+  },
+  "video_queued": {
+    "message": "Zur Warteschlange hinzugefügt"
+  },
+  "video_failed_lookup": {
+    "message": "Abfrage nicht möglich"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Beitrag öffnen, dann die Schaltfläche dort verwenden"
+  },
   "popup_send_to": {
     "message": "Downloads senden an"
   },

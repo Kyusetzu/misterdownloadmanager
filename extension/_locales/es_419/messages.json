@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "No se puede saber qué video es: abre su propia página e inténtalo ahí"
   },
+  "video_looking": {
+    "message": "Buscando las calidades…"
+  },
+  "video_open_mdm": {
+    "message": "Abrir en Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "No hay video que descargar aquí"
+  },
+  "video_playlist": {
+    "message": "Es una lista de videos: elíjalos en Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager necesita yt-dlp para este video"
+  },
+  "video_too_long": {
+    "message": "La búsqueda tardó demasiado"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager está ocupado con otros videos"
+  },
+  "video_queued": {
+    "message": "Agregado a la cola"
+  },
+  "video_failed_lookup": {
+    "message": "No se pudieron buscar las calidades"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Abre la publicación y usa el botón ahí"
+  },
   "popup_send_to": {
     "message": "Enviar descargas a"
   },

@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Ei selviä, mikä video tämä on: avaa videon oma sivu ja yritä siellä"
   },
+  "video_looking": {
+    "message": "Haetaan laatuvaihtoehtoja…"
+  },
+  "video_open_mdm": {
+    "message": "Avaa sovelluksessa Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Täällä ei ole ladattavaa videota"
+  },
+  "video_playlist": {
+    "message": "Videoluettelo: valitse videot sovelluksessa Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager tarvitsee yt-dlp:n tätä videota varten"
+  },
+  "video_too_long": {
+    "message": "Haku kesti liian kauan"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager on varattu muiden videoiden takia"
+  },
+  "video_queued": {
+    "message": "Lisätty jonoon"
+  },
+  "video_failed_lookup": {
+    "message": "Hakeminen epäonnistui"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Ääni"
+  },
+  "video_open_post": {
+    "message": "Avaa julkaisu ja käytä sitten painiketta siinä"
+  },
   "popup_send_to": {
     "message": "Lähetä lataukset kohteeseen"
   },

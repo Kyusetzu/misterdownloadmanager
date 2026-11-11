@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "ഇത് ഏത് വീഡിയോ ആണെന്ന് അറിയാൻ കഴിയുന്നില്ല: അതിന്റെ സ്വന്തം പേജ് തുറന്ന് അവിടെ ശ്രമിക്കുക"
   },
+  "video_looking": {
+    "message": "ക്വാളിറ്റികൾ തിരയുന്നു…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Manager-ൽ തുറക്കുക…"
+  },
+  "video_no_choices": {
+    "message": "ഇവിടെ ഡൗൺലോഡ് ചെയ്യാൻ വീഡിയോ ഒന്നുമില്ല"
+  },
+  "video_playlist": {
+    "message": "വീഡിയോകളുടെ ഒരു പട്ടിക: അവ Mister Download Manager-ൽ തിരഞ്ഞെടുക്കുക"
+  },
+  "video_no_ytdlp": {
+    "message": "ഈ വീഡിയോയ്ക്ക് Mister Download Manager-ന് yt-dlp ആവശ്യമാണ്"
+  },
+  "video_too_long": {
+    "message": "തിരയാൻ വളരെയധികം സമയമെടുത്തു"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager മറ്റ് വീഡിയോകളിൽ തിരക്കിലാണ്"
+  },
+  "video_queued": {
+    "message": "ക്യൂവിലേക്ക് ചേർത്തു"
+  },
+  "video_failed_lookup": {
+    "message": "തിരയാൻ കഴിഞ്ഞില്ല"
+  },
+  "video_tab_video": {
+    "message": "വീഡിയോ"
+  },
+  "video_tab_audio": {
+    "message": "ഓഡിയോ"
+  },
+  "video_open_post": {
+    "message": "പോസ്റ്റ് തുറക്കുക, എന്നിട്ട് അവിടെയുള്ള ബട്ടൺ ഉപയോഗിക്കുക"
+  },
   "popup_send_to": {
     "message": "ഡൗൺലോഡുകൾ ഇതിലേക്ക് അയയ്ക്കുക"
   },

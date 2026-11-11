@@ -20,11 +20,12 @@ pub trait Unlocker: Send + Sync + std::fmt::Debug {
     fn name(&self) -> &str;
 
     /// Today's direct address for `url`. `Ok(None)`: not for this service after all (it doesn't
-    /// support the host): the engine downloads `url` itself. `note` reports waits to the event log.
+    /// support the host): the engine downloads `url` itself. `note` reports waits to the event log,
+    /// with how far the service is (0 to 1) when it says: the list shows it while the link waits.
     fn unlock<'a>(
         &'a self,
         url: &'a Url,
-        note: &'a (dyn Fn(String) + Send + Sync),
+        note: &'a (dyn Fn(String, Option<f32>) + Send + Sync),
         cancel: &'a CancellationToken,
     ) -> BoxFuture<'a, Result<Option<Unlocked>, ServiceFault>>;
 }

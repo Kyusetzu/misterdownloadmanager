@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Hindi matukoy kung aling video ito: buksan ang sarili nitong page at subukan doon"
   },
+  "video_looking": {
+    "message": "Hinahanap ang mga kalidad…"
+  },
+  "video_open_mdm": {
+    "message": "Buksan sa Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Walang video na ida-download dito"
+  },
+  "video_playlist": {
+    "message": "Listahan ng mga video: piliin ang mga ito sa Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Kailangan ng Mister Download Manager ng yt-dlp para sa video na ito"
+  },
+  "video_too_long": {
+    "message": "Masyadong natagalan ang paghahanap"
+  },
+  "video_busy": {
+    "message": "Abala ang Mister Download Manager sa ibang mga video"
+  },
+  "video_queued": {
+    "message": "Naidagdag sa queue"
+  },
+  "video_failed_lookup": {
+    "message": "Hindi ito nahanap"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Buksan ang post, pagkatapos ay gamitin ang button doon"
+  },
   "popup_send_to": {
     "message": "Ipadala ang mga download sa"
   },

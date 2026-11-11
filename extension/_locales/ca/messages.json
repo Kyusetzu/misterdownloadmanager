@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "No es pot saber quin vídeo és: obriu la seva pàgina i torneu-ho a provar allà"
   },
+  "video_looking": {
+    "message": "Cercant les qualitats…"
+  },
+  "video_open_mdm": {
+    "message": "Obre a Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "No hi ha cap vídeo per baixar aquí"
+  },
+  "video_playlist": {
+    "message": "Una llista de vídeos: trieu-los a Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager necessita yt-dlp per a aquest vídeo"
+  },
+  "video_too_long": {
+    "message": "La cerca ha trigat massa"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager està ocupat amb altres vídeos"
+  },
+  "video_queued": {
+    "message": "S'ha afegit a la cua"
+  },
+  "video_failed_lookup": {
+    "message": "No s'ha pogut consultar"
+  },
+  "video_tab_video": {
+    "message": "Vídeo"
+  },
+  "video_tab_audio": {
+    "message": "Àudio"
+  },
+  "video_open_post": {
+    "message": "Obre la publicació i fes servir el botó que hi ha"
+  },
   "popup_send_to": {
     "message": "Enviar baixades a"
   },

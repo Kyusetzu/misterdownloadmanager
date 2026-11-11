@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Không xác định được đây là video nào: hãy mở trang riêng của video và thử ở đó"
   },
+  "video_looking": {
+    "message": "Đang tìm các chất lượng…"
+  },
+  "video_open_mdm": {
+    "message": "Mở trong Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Không có video nào để tải xuống ở đây"
+  },
+  "video_playlist": {
+    "message": "Danh sách video: hãy chọn chúng trong Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager cần yt-dlp cho video này"
+  },
+  "video_too_long": {
+    "message": "Việc tìm kiếm mất quá nhiều thời gian"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager đang bận với các video khác"
+  },
+  "video_queued": {
+    "message": "Đã thêm vào hàng đợi"
+  },
+  "video_failed_lookup": {
+    "message": "Không thể tìm kiếm"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Âm thanh"
+  },
+  "video_open_post": {
+    "message": "Mở bài đăng, sau đó dùng nút ở đó"
+  },
   "popup_send_to": {
     "message": "Gửi tải xuống đến"
   },
