@@ -817,3 +817,74 @@ fn a_failed_move_in_place_keeps_every_file() {
     assert!(out.join("z/link").symlink_metadata().unwrap().is_symlink());
     assert!(!out.join("a.txt").exists());
 }
+
+#[cfg(unix)]
+#[test]
+fn a_folder_that_cant_be_read_says_where_the_files_are() {
+    use std::os::unix::fs::PermissionsExt;
+    let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
+    let a = t.path().join("shut.zip");
+    zip_of(&a, &[("one.txt", b"1")], None);
+    // HatchZip finished, and then its folder can't be listed (its rights taken away): nothing
+    // was moved, and the error names the folder, as a move that failed does.
+    let body = "printf a > \"$out/a.txt\"\nchmod 000 \"$out\"";
+    let (r, seen) = run_hz(
+        &a,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 0, body)),
+        true,
+        runs.path(),
+    );
+    let out = t.path().join("shut.hatchzip-out");
+    std::fs::set_permissions(&out, std::fs::Permissions::from_mode(0o755)).unwrap();
+    // Root reads any folder: nothing to check then.
+    if r.is_ok() {
+        return;
+    }
+    let Err(Error::Unplaced { to, left, .. }) = r else {
+        panic!("{r:?}")
+    };
+    assert_eq!((to, left), (t.path().to_path_buf(), out.clone()));
+    assert_eq!(seen, 0);
+    assert_eq!(std::fs::read(out.join("a.txt")).unwrap(), b"a", "kept");
+}
+
+#[cfg(unix)]
+#[test]
+fn only_hatchzips_own_refusal_with_nothing_changed_falls_back() {
+    let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
+    // Another error that mentions the flag isn't the refusal: no second extraction.
+    let a = t.path().join("other.zip");
+    zip_of(&a, &[("one.txt", b"1")], None);
+    let mentions = "echo 'error: unexpected argument near --keep-archive' >&2";
+    let (r, seen) = run_hz(
+        &a,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 1, mentions)),
+        true,
+        runs.path(),
+    );
+    assert!(matches!(r, Err(Error::Damaged(_))), "{r:?}");
+    assert_eq!(seen, 0);
+    assert!(!t.path().join("one.txt").exists());
+    // The refusal's words, but the archive is shorter than it was: not extracted as usual.
+    let b = t.path().join("cut.zip");
+    zip_of(&b, &[("two.txt", b"2")], None);
+    let cuts =
+        "printf x > \"$archive\"\necho 'error: Run the command again with --keep-archive' >&2";
+    let (r, seen) = run_hz(
+        &b,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 1, cuts)),
+        true,
+        runs.path(),
+    );
+    assert!(matches!(r, Err(Error::Damaged(_))), "{r:?}");
+    assert_eq!(seen, 0);
+    assert!(!t.path().join("two.txt").exists());
+}

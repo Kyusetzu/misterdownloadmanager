@@ -259,11 +259,20 @@ pub fn extract(archive: &Path, policy: &mut Policy<'_>) -> Result<Report, Error>
         let resume = unfinished.then(|| runs.find(&full)).flatten();
         if resume.is_some() || (policy.in_place && !unfinished) {
             let fresh = resume.is_none();
+            let size = |p: &Path| std::fs::metadata(p).map(|m| m.len()).ok();
+            let before = size(&full);
             match in_place(&tool, &full, &runs, resume, policy) {
                 // HatchZip can't extract this one in place (a solid RAR: it says so before it
                 // touches anything, and asks for --keep-archive): extracted as usual below, by
-                // 7-Zip, and the archive kept.
-                Err(Error::Damaged(why)) if fresh && hatchzip::not_in_place(&why) => {
+                // 7-Zip, and the archive kept. Only when that is what happened: its sentence,
+                // the archive as long as it was, and no progress file of HatchZip's beside it.
+                Err(Error::Damaged(why))
+                    if fresh
+                        && hatchzip::not_in_place(&why)
+                        && before.is_some()
+                        && size(&full) == before
+                        && !hatchzip::progress(&full) =>
+                {
                     tracing::info!(
                         "extract: {} can't be extracted in place ({why}): extracted as usual",
                         archive.display()

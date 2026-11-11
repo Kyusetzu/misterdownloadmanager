@@ -469,6 +469,8 @@ pub struct Moved {
 /// deleted: those files are no longer in the archive. Entries that break the rules stay where
 /// they are; when a move fails, what was moved stays where it went, the rest in `from`. Empty
 /// folders are removed from `from` at the end, and `from` itself when nothing is left in it.
+/// When `from` can't even be read, nothing was moved and everything is still in it: that is
+/// said the same way ([`Error::Unplaced`]), so the user is told where the files are.
 pub fn move_out(
     from: &Path,
     dest: &Path,
@@ -477,10 +479,22 @@ pub fn move_out(
     depth: usize,
     on_file: &mut dyn FnMut(&Path),
 ) -> Result<Moved, Error> {
-    let bad = scan(from, depth)?;
+    let unread = |e: io::Error| {
+        tracing::warn!(
+            "extract: {} can't be read: {e}; nothing was moved out of it",
+            from.display()
+        );
+        Error::Unplaced {
+            to: dest.to_path_buf(),
+            left: from.to_path_buf(),
+            why: e.to_string(),
+        }
+    };
+    let bad = scan(from, depth).map_err(unread)?;
     let bad_paths: Vec<PathBuf> = bad.iter().map(|(p, _, _)| p.clone()).collect();
     // By name: the same order every time.
-    let mut tops: Vec<PathBuf> = fs::read_dir(from)?
+    let mut tops: Vec<PathBuf> = fs::read_dir(from)
+        .map_err(unread)?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| !bad_paths.contains(p))
         .collect();

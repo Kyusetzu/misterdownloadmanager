@@ -58,9 +58,10 @@ pub fn work_folder(dest: &Path, base: &str) -> PathBuf {
 
 /// Whether HatchZip's error says it can't extract this archive in place, only while keeping it
 /// (a solid RAR), which it says before it touches anything: "… Run the command again with
-/// --keep-archive …" (HatchZip 0.1.10's own words).
+/// --keep-archive …" (HatchZip 0.1.10's own words). Its sentence, not any mention of the flag
+/// (an archive's name can hold it); the caller also checks that nothing was changed.
 pub fn not_in_place(error: &str) -> bool {
-    error.contains("--keep-archive")
+    error.contains("Run the command again with --keep-archive")
 }
 
 /// Whether HatchZip's progress file is beside `archive` (an unfinished extraction, whoever
@@ -69,6 +70,16 @@ pub fn progress(archive: &Path) -> bool {
     let mut p = archive.as_os_str().to_owned();
     p.push(".hatchzip");
     std::fs::symlink_metadata(Path::new(&p)).is_ok()
+}
+
+/// A path as run records are named and compared: as it is, or without regard to case where
+/// file names ignore it (Windows: `D:\Dl\A.zip` and `d:\dl\a.zip` are one archive).
+fn path_key(path: &Path, ignore_case: bool) -> Vec<u8> {
+    if ignore_case {
+        path.to_string_lossy().to_lowercase().into_bytes()
+    } else {
+        path.as_os_str().as_encoded_bytes().to_vec()
+    }
 }
 
 /// The extractions in place MDM started, one small file each in a folder of MDM's own data:
@@ -86,8 +97,8 @@ impl Runs {
     /// One file per archive, named after its path (FNV-1a: the same in every MDM version).
     fn file(&self, archive: &Path) -> PathBuf {
         let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-        for b in archive.as_os_str().as_encoded_bytes() {
-            h = (h ^ u64::from(*b)).wrapping_mul(0x0000_0100_0000_01b3);
+        for b in path_key(archive, cfg!(windows)) {
+            h = (h ^ u64::from(b)).wrapping_mul(0x0000_0100_0000_01b3);
         }
         self.dir.join(format!("{h:016x}.run"))
     }
@@ -97,7 +108,8 @@ impl Runs {
         let text = std::fs::read_to_string(self.file(archive)).ok()?;
         let mut lines = text.lines();
         let (path, out) = (lines.next()?, lines.next()?);
-        (Path::new(path) == archive && !out.is_empty()).then(|| PathBuf::from(out))
+        let same = path_key(Path::new(path), cfg!(windows)) == path_key(archive, cfg!(windows));
+        (same && !out.is_empty()).then(|| PathBuf::from(out))
     }
 
     /// Record that MDM starts extracting `archive` in place into `out`. Paths that aren't
@@ -205,4 +217,24 @@ pub fn extract(
         _ => return Err(Error::Damaged(first())),
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_run_is_found_whatever_the_case_where_names_ignore_it() {
+        let (a, b) = (Path::new("D:\\Dl\\Game.ZIP"), Path::new("d:\\dl\\game.zip"));
+        assert_eq!(path_key(a, true), path_key(b, true));
+        assert_ne!(path_key(a, false), path_key(b, false));
+        // Elsewhere a record is found by the path as it is.
+        let t = tempfile::tempdir().unwrap();
+        let runs = Runs::new(t.path().join("runs"));
+        let archive = t.path().join("a.zip");
+        runs.start(&archive, &t.path().join("a.hatchzip-out"))
+            .unwrap();
+        assert_eq!(runs.find(&archive), Some(t.path().join("a.hatchzip-out")));
+        assert_eq!(runs.find(&t.path().join("b.zip")), None);
+    }
 }
