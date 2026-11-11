@@ -66,12 +66,12 @@ impl Session {
                 t.await
             }
             ServiceKind::AllDebrid => {
-                alldebrid::add_magnet(&self.http, &self.token(false).await?, magnet).await
+                alldebrid::add_magnet(&self.http, &self.token(None).await?, magnet).await
             }
             // Never asked: `torrent_account` skips it.
             ServiceKind::MegaDebrid => Err(Fault::Unsupported),
             ServiceKind::Premiumize => {
-                premiumize::create(&self.http, &self.token(false).await?, magnet).await
+                premiumize::create(&self.http, &self.token(None).await?, magnet).await
             }
         }
     }
@@ -85,12 +85,12 @@ impl Session {
                 .await
             }
             ServiceKind::AllDebrid => {
-                alldebrid::magnet_status(&self.http, &self.token(false).await?, id).await
+                alldebrid::magnet_status(&self.http, &self.token(None).await?, id).await
             }
             // Never asked: `torrent_account` skips it.
             ServiceKind::MegaDebrid => Err(Fault::Unsupported),
             ServiceKind::Premiumize => {
-                premiumize::transfer_status(&self.http, &self.token(false).await?, id).await
+                premiumize::transfer_status(&self.http, &self.token(None).await?, id).await
             }
         }
     }
@@ -104,12 +104,12 @@ impl Session {
                 .await
             }
             ServiceKind::AllDebrid => {
-                alldebrid::magnet_delete(&self.http, &self.token(false).await?, id).await
+                alldebrid::magnet_delete(&self.http, &self.token(None).await?, id).await
             }
             // Never asked: `torrent_account` skips it.
             ServiceKind::MegaDebrid => Err(Fault::Unsupported),
             ServiceKind::Premiumize => {
-                premiumize::transfer_delete(&self.http, &self.token(false).await?, id).await
+                premiumize::transfer_delete(&self.http, &self.token(None).await?, id).await
             }
         }
     }

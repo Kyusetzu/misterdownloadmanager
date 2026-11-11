@@ -24,12 +24,17 @@ MDM supports four services: **Real-Debrid**, **AllDebrid**, **Premiumize** and *
      dialog notices on its own.
    - **User name** and **Password**, then **Sign in** (Mega-Debrid). Mega-Debrid blocks your
      connection for some minutes after a few wrong passwords. Each sign-in replaces the
-     account's last one at Mega-Debrid, so another program signed in to the same account (or
-     MDM's own check) makes MDM sign in again on its next link, on its own.
+     account's last one at Mega-Debrid, so another program signed in to the same account makes
+     MDM sign in again on its next link, on its own. MDM itself signs in only when its token is
+     refused, so its checks and its downloads at once don't end each other's. MDM keeps your
+     password (in the keychain, see below) to sign in again.
    - or paste your **API token** (**Find my token** opens the service's page that shows it),
      then **Use the token**. Premiumize signs in this way only: paste the API key from its
      Account page. On Mega-Debrid, make an application under **My Account → API Key** and paste
-     its key; MDM then never needs your password.
+     its key; MDM then never needs your password, and doesn't keep it: the key is all it stores,
+     and you can delete the key on that page at any time. Mega-Debrid doesn't say whether a
+     key's account is premium, so MDM shows **signed in** only; a free account's links are
+     refused when you download them.
 3. MDM checks the account and shows its name and whether it is premium. **OK** keeps it.
 
 The list's order is the order accounts are asked: a link goes through the first account

@@ -142,8 +142,10 @@ pub enum Credential {
         client_secret: String,
         refresh_token: String,
     },
-    /// The user name and password the service signs in with (Mega-Debrid's `connectUser`),
-    /// for a token kept in memory only.
+    /// The user name and password the service signs in with (Mega-Debrid's `connectUser`). The
+    /// password itself is kept (sealed, in the keychain), to sign in again when the token the
+    /// sign-in gave is refused; only that token stays in memory. An application's key
+    /// ([`Credential::Token`]) keeps no password.
     Login { user: String, password: String },
 }
 
@@ -170,7 +172,8 @@ pub struct Account {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AccountInfo {
     pub user: String,
-    pub premium: bool,
+    /// None: the service doesn't say (Mega-Debrid, for an application's key).
+    pub premium: Option<bool>,
     /// Premium time left.
     pub premium_left: Option<Duration>,
 }
@@ -366,23 +369,29 @@ struct Session {
     account: Account,
     http: Arc<Http>,
     access: tokio::sync::Mutex<Option<(String, Instant)>>,
+    /// Mega-Debrid: what the sign-in behind `access` said (premium's end, Unix time; the
+    /// account's e-mail), so checking the account doesn't sign in again.
+    signed_in: std::sync::Mutex<Option<(i64, String)>>,
 }
 
 impl Session {
     /// A token to call with: the pasted one, the device flow's access token, refreshed five
-    /// minutes before it expires, or the sign-in's (or when `stale`, after a sign-in error).
-    async fn token(&self, stale: bool) -> Result<String, Fault> {
+    /// minutes before it expires, or the sign-in's. `refused`: the one a call just had refused;
+    /// a new one is made only if no other call made one since (on Mega-Debrid each sign-in ends
+    /// the token before it, so two downloads signing in at once would end each other's).
+    async fn token(&self, refused: Option<&str>) -> Result<String, Fault> {
         match &self.account.credential {
             Credential::Token { token } => Ok(token.clone()),
             Credential::Login { user, password } => {
                 let mut access = self.access.lock().await;
                 if let Some((t, _)) = access.as_ref()
-                    && !stale
+                    && Some(t.as_str()) != refused
                 {
                     return Ok(t.clone());
                 }
                 let c = megadebrid::connect(&self.http, user, password).await?;
                 *access = Some((c.token.clone(), Instant::now()));
+                *self.signed_in.lock().unwrap() = Some((c.vip_end, c.email));
                 Ok(c.token)
             }
             Credential::Oauth {
@@ -392,7 +401,7 @@ impl Session {
             } => {
                 let mut access = self.access.lock().await;
                 if let Some((t, until)) = access.as_ref()
-                    && !stale
+                    && Some(t.as_str()) != refused
                     && *until > Instant::now()
                 {
                     return Ok(t.clone());
@@ -414,14 +423,15 @@ impl Session {
         F: Fn(String) -> Fut,
         Fut: std::future::Future<Output = Result<T, Fault>>,
     {
-        match call(self.token(false).await?).await {
+        let token = self.token(None).await?;
+        match call(token.clone()).await {
             Err(Fault::Service(ServiceFault::SignIn))
                 if matches!(
                     self.account.credential,
                     Credential::Oauth { .. } | Credential::Login { .. }
                 ) =>
             {
-                call(self.token(true).await?).await
+                call(self.token(Some(&token)).await?).await
             }
             r => r,
         }
@@ -440,7 +450,7 @@ impl Session {
         };
         match self.account.service {
             ServiceKind::AllDebrid => {
-                let key = self.token(false).await?;
+                let key = self.token(None).await?;
                 let u = match alldebrid::unlock(&self.http, &key, link).await {
                     Ok(u) => u,
                     Err(Fault::Unsupported) => return Ok(None),
@@ -486,7 +496,7 @@ impl Session {
                 }))
             }
             ServiceKind::Premiumize => {
-                let key = self.token(false).await?;
+                let key = self.token(None).await?;
                 let d = match premiumize::direct(&self.http, &key, link).await {
                     Ok(d) => d,
                     Err(Fault::Unsupported) => return Ok(None),
@@ -616,6 +626,7 @@ impl Debrid {
                             account,
                             http: http.clone(),
                             access: tokio::sync::Mutex::new(None),
+                            signed_in: std::sync::Mutex::new(None),
                         })
                     })
             })
@@ -639,7 +650,7 @@ impl Debrid {
                 ServiceKind::RealDebrid => realdebrid::domains(&s.http).await,
                 ServiceKind::AllDebrid => alldebrid::domains(&s.http).await,
                 // Premiumize lists its services to signed-in accounts.
-                ServiceKind::Premiumize => match s.token(false).await {
+                ServiceKind::Premiumize => match s.token(None).await {
                     Ok(t) => premiumize::domains(&s.http, &t).await,
                     Err(e) => Err(e),
                 },
@@ -715,25 +726,25 @@ async fn account_info(s: &Session) -> Result<AccountInfo, Fault> {
                 .with_token(|t| async move { realdebrid::user(&s.http, &t).await })
                 .await?;
             Ok(AccountInfo {
-                premium: u.kind == "premium" && u.premium > 0,
+                premium: Some(u.kind == "premium" && u.premium > 0),
                 premium_left: (u.premium > 0).then(|| Duration::from_secs(u.premium as u64)),
                 user: u.username,
             })
         }
         ServiceKind::AllDebrid => {
-            let u = alldebrid::user(&s.http, &s.token(false).await?).await?;
+            let u = alldebrid::user(&s.http, &s.token(None).await?).await?;
             let left = u.premium_until - now_unix();
             Ok(AccountInfo {
-                premium: u.is_premium,
+                premium: Some(u.is_premium),
                 premium_left: (u.is_premium && left > 0).then(|| Duration::from_secs(left as u64)),
                 user: u.username,
             })
         }
         ServiceKind::Premiumize => {
-            let a = premiumize::account(&s.http, &s.token(false).await?).await?;
+            let a = premiumize::account(&s.http, &s.token(None).await?).await?;
             let left = a.premium_until.map(|t| t - now_unix()).filter(|l| *l > 0);
             Ok(AccountInfo {
-                premium: left.is_some(),
+                premium: Some(left.is_some()),
                 premium_left: left.map(|l| Duration::from_secs(l as u64)),
                 // Premiumize gives no user name: its customer ID stands for it.
                 user: match a.customer_id {
@@ -744,26 +755,48 @@ async fn account_info(s: &Session) -> Result<AccountInfo, Fault> {
             })
         }
         ServiceKind::MegaDebrid => match &s.account.credential {
-            // Signing in says when premium ends; the account's e-mail stands for its name.
-            Credential::Login { user, password } => {
-                let c = megadebrid::connect(&s.http, user, password).await?;
-                *s.access.lock().await = Some((c.token.clone(), Instant::now()));
-                let left = c.vip_end - now_unix();
+            // Signing in says when premium ends; the account's e-mail stands for its name. The
+            // token the last sign-in gave is checked first: signing in again would end it, and
+            // the downloads using it with it.
+            Credential::Login { user, .. } => {
+                let held = s.access.lock().await.as_ref().map(|(t, _)| t.clone());
+                match held.filter(|_| s.signed_in.lock().unwrap().is_some()) {
+                    Some(t) => match megadebrid::token_works(&s.http, &t).await {
+                        Ok(()) => {}
+                        Err(Fault::Service(ServiceFault::SignIn)) => {
+                            s.token(Some(&t)).await?;
+                        }
+                        Err(e) => return Err(e),
+                    },
+                    // Not signed in yet: this signs in.
+                    None => {
+                        s.token(None).await?;
+                    }
+                }
+                let (vip_end, email) = s
+                    .signed_in
+                    .lock()
+                    .unwrap()
+                    .clone()
+                    .ok_or(Fault::Service(ServiceFault::SignIn))?;
+                let left = vip_end - now_unix();
                 Ok(AccountInfo {
-                    premium: left > 0,
+                    premium: Some(left > 0),
                     premium_left: (left > 0).then(|| Duration::from_secs(left as u64)),
-                    user: if c.email.is_empty() {
+                    user: if email.is_empty() {
                         user.clone()
                     } else {
-                        c.email
+                        email
                     },
                 })
             }
-            // An application's key: the API answers premium accounts only, and says no more.
+            // An application's key: the API has no call that says whether its account is
+            // premium (read 2026-11-11), so MDM checks that the key works and says no more. A
+            // free account's links are refused, with the service's reason, when downloading.
             _ => {
-                megadebrid::token_works(&s.http, &s.token(false).await?).await?;
+                megadebrid::token_works(&s.http, &s.token(None).await?).await?;
                 Ok(AccountInfo {
-                    premium: true,
+                    premium: None,
                     premium_left: None,
                     user: String::new(),
                 })
@@ -796,6 +829,7 @@ pub async fn check(
             budgets: Mutex::default(),
         }),
         access: tokio::sync::Mutex::new(None),
+        signed_in: std::sync::Mutex::new(None),
     };
     account_info(&s).await
 }

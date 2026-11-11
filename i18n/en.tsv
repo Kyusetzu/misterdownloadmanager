@@ -3311,6 +3311,9 @@
 	the server sent a web page instead of the file (sign-in needed or the link expired?)	the server sent a web page instead of the file (sign-in needed or the link expired?)
 #. text in errors.rs
 	the server sent an unexpected part of the file ({detail})	the server sent an unexpected part of the file ({detail})
+#. text in debrid.rs
+#. Options → Accounts: the service doesn't say whether the account is premium (Mega-Debrid, signed in with an API key); a free account's links are refused when downloading
+	the service doesn't say whether it is premium	the service doesn't say whether it is premium
 #. text in the Download video window
 #. the Download video window: the site asked for a sign-in although the browser's extension passed the page's cookies
 	The site wants you signed in, even with your browser's cookies for this page. Sign in to it in your browser, then try again.	The site wants you signed in, even with your browser's cookies for this page. Sign in to it in your browser, then try again.

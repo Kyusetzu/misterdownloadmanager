@@ -301,7 +301,7 @@
 #. text in the Options window
 #. Options → Add an account: a note under the user name and password fields (Mega-Debrid bans the address for some minutes after a few wrong passwords)
 #, machine
-	After a few wrong passwords the service blocks this connection for some minutes.	بعد عدة كلمات مرور خاطئة يحظر الخدمة هذا الاتصال لبضع دقائق.
+	After a few wrong passwords the service blocks this connection for some minutes.	بعد عدة كلمات مرور خاطئة تحظر الخدمة هذا الاتصال لبضع دقائق.
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Aland Islands	جزر آلاند
@@ -1149,7 +1149,7 @@
 #. text in the Options window
 #. Options → Accounts: a note that the debrid services' support (Real-Debrid, AllDebrid, Premiumize) is new and not yet tried with real paid accounts
 	Experimental: built from the services' public API documentation, not yet confirmed with real accounts.	تجريبي: مبني على وثائق API العامة للخدمات، ولم يتم تأكيده بعد بحسابات حقيقية.
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 	Export	تصدير
 #. text in the Options window
 	Extend the availability of Manifest 2 Chrome extensions	توسيع إتاحة ملحقات Chrome Manifest 2
@@ -1503,7 +1503,7 @@
 	If it can't be reached, use the system's DNS	إذا تعذر الوصول إليه، فاستخدم DNS الخاص بالنظام
 #. checkbox in the Options window
 	Ignore file modification time changes when resuming a download	تجاهل تغييرات وقت تعديل الملف عند متابعة التنزيل
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 	Import	استيراد
 #. value in a column's filter list in the download list
 	In a queue	في قائمة انتظار
@@ -3285,7 +3285,7 @@
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
 	The file could not be moved: {error}	تعذر نقل الملف: {error}
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 	The file could not be read: {error}	تعذر قراءة الملف: {error}
 #. text in the Checksum window
@@ -3322,7 +3322,7 @@
 #. a check of Test browser integration: the browsers are set up, but the small helper program they start (misterdownloadmanager-nmhost) is gone
 #, machine
 	The helper program the browsers start is missing	برنامج المساعد الذي تبدأه المستعرضات مفقود
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 	The list could not be saved: {error}	تعذر حفظ القائمة: {error}
 #. text in whereis.rs
@@ -3372,6 +3372,10 @@
 	the server sent a web page instead of the file (sign-in needed or the link expired?)	أرسل الخادم صفحة ويب بدلا من الملف (هل يلزم تسجيل الدخول أو انتهت صلاحية الرابط؟)
 #. text in errors.rs
 	the server sent an unexpected part of the file ({detail})	أرسل الخادم جزءا غير متوقع من الملف ({detail})
+#. text in debrid.rs
+#. Options → Accounts: the service doesn't say whether the account is premium (Mega-Debrid, signed in with an API key); a free account's links are refused when downloading
+#, machine
+	the service doesn't say whether it is premium	لا تذكر الخدمة ما إذا كان الحساب مميزا
 #. text in the Download video window
 #. the Download video window: the site asked for a sign-in although the browser's extension passed the page's cookies
 	The site wants you signed in, even with your browser's cookies for this page. Sign in to it in your browser, then try again.	يطلب الموقع تسجيل الدخول، حتى مع ملفات تعريف الارتباط الخاصة بمستعرضك لهذه الصفحة. سجل الدخول إليه في مستعرضك، ثم حاول مرة أخرى.

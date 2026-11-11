@@ -84,7 +84,7 @@ async fn alldebrid_links_come_through_the_account_delayed_ones_too() {
     )
     .await
     .unwrap();
-    assert!(info.premium && info.premium_left.is_some());
+    assert!(info.premium == Some(true) && info.premium_left.is_some());
     let d = account(&http, ServiceKind::AllDebrid, "good").await;
     let p = download(&d, "http://hoster.test/file/1M/a.bin")
         .await
@@ -163,7 +163,7 @@ async fn premiumize_links_come_through_the_account() {
     )
     .await
     .unwrap();
-    assert_eq!((info.user.as_str(), info.premium), ("1234567", true));
+    assert_eq!((info.user.as_str(), info.premium), ("1234567", Some(true)));
     let d = account(&http, ServiceKind::Premiumize, "good").await;
     let p = download(&d, "http://hoster.test/file/2M/b.bin")
         .await
@@ -208,7 +208,8 @@ async fn premiumize_links_come_through_the_account() {
 #[tokio::test]
 async fn megadebrid_links_come_through_the_account_by_key_or_password() {
     let (lab, http) = lab().await;
-    // An application's key: the API answers premium accounts only.
+    // An application's key: it works, and the API has no call that says whether its account is
+    // premium, so MDM doesn't claim it is.
     let info = check(
         &http,
         ServiceKind::MegaDebrid,
@@ -218,7 +219,7 @@ async fn megadebrid_links_come_through_the_account_by_key_or_password() {
     )
     .await
     .unwrap();
-    assert!(info.premium);
+    assert_eq!((info.premium, info.premium_left), (None, None));
     let d = account(&http, ServiceKind::MegaDebrid, "good").await;
     let p = download(&d, "http://hoster.test/file/2M/m.bin")
         .await
@@ -253,7 +254,7 @@ async fn megadebrid_links_come_through_the_account_by_key_or_password() {
         .unwrap();
     assert_eq!(
         (info.user.as_str(), info.premium),
-        ("labuser@lab.test", true)
+        ("labuser@lab.test", Some(true))
     );
     assert!(info.premium_left.is_some());
     let d = Debrid::default();
@@ -271,6 +272,20 @@ async fn megadebrid_links_come_through_the_account_by_key_or_password() {
             .await
             .is_ok()
     );
+    // Checking the account (Options does, now and then) keeps the token the downloads use: a
+    // sign-in would end it.
+    let signins = || {
+        lab.log()
+            .iter()
+            .filter(|e| e.path.contains("action=connectUser"))
+            .count()
+    };
+    let before = signins();
+    for _ in 0..2 {
+        let info = d.account_info(5).await.unwrap();
+        assert_eq!(info.premium, Some(true));
+    }
+    assert_eq!(signins(), before);
     // Another sign-in to the account (another program, Options' check) replaces the token the
     // downloads had: the next one signs in again by itself.
     check(&http, ServiceKind::MegaDebrid, login).await.unwrap();
@@ -291,7 +306,7 @@ async fn megadebrid_links_come_through_the_account_by_key_or_password() {
     )
     .await
     .unwrap();
-    assert!(!free.premium);
+    assert_eq!(free.premium, Some(false));
     assert!(matches!(
         check(
             &http,
