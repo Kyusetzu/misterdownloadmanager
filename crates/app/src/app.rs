@@ -5547,7 +5547,7 @@ impl App {
         }
         // A password opened an archive (the package's, a saved one, or one typed with "Remember
         // it"): first in Options → Archives' list.
-        if let Some(pw) = self.extracts.take_vault() {
+        for pw in self.extracts.take_vault() {
             self.settings.remember_archive_password(&pw);
             self.dirty = true;
         }

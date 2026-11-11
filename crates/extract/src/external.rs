@@ -4,6 +4,7 @@
 //! then checked as our own entries are ([`safe::check_tree`]) before anything is moved into
 //! place.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -43,17 +44,22 @@ pub fn extract(
     password: Option<&str>,
 ) -> Result<(), Error> {
     let mut cmd = Command::new(tool);
-    cmd.arg("x")
-        .arg("-y")
-        .arg("-bso0")
-        .arg("-bsp0")
-        // An empty password when none is given: 7-Zip then fails at once on an encrypted
-        // archive instead of asking on a console nobody sees.
-        .arg(format!("-p{}", password.unwrap_or("")))
-        .arg(format!("-o{}", w.root().display()))
+    cmd.arg("x").arg("-y").arg("-bso0").arg("-bsp0");
+    // A password goes in on 7-Zip's standard input, where it asks for one when the archive is
+    // encrypted, never on its command line, which other programs can read. Without one, an
+    // empty `-p`: 7-Zip then fails at once on an encrypted archive instead of waiting for an
+    // answer.
+    if password.is_none() {
+        cmd.arg("-p");
+    }
+    cmd.arg(format!("-o{}", w.root().display()))
         .arg("--")
         .arg(archive)
-        .stdin(Stdio::null())
+        .stdin(if password.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     // No console window flashing up for it.
@@ -65,7 +71,13 @@ pub fn extract(
     }
     // The password is never logged.
     tracing::info!("extract: {} x {}", tool.display(), archive.display());
-    let out = cmd.output()?;
+    let mut child = cmd.spawn()?;
+    if let (Some(pw), Some(mut input)) = (password, child.stdin.take()) {
+        // One line, then the end (dropped): asked again, 7-Zip finds nothing and stops. Not
+        // asked (the archive isn't encrypted), it never reads it.
+        let _ = writeln!(input, "{pw}");
+    }
+    let out = child.wait_with_output()?;
     let err = String::from_utf8_lossy(&out.stderr).to_lowercase();
     if !out.status.success() {
         return Err(

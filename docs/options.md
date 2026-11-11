@@ -151,7 +151,7 @@ Archives (zip, 7z, rar, tar, gz, xz), and [Link grabber](link-grabber.md).
 - **Then move the archives to the Recycle Bin** (off by default; the Trash on macOS and Linux) — after a successful extraction only. This is also the default of a new package's **Delete archives after extracting**.
 - **What an archive holds goes** — into a folder named after it when it holds several things (the default), always into such a folder, or straight into the archive's folder.
 - Whether **7-Zip** was found: 7z and RAR archives need it.
-- **Archive passwords...** — the passwords tried on an encrypted archive before MDM asks, one per line; the one that fits moves to the top, and a package's password that opens its archive is added. See [Archive passwords](link-grabber.md#archive-passwords).
+- **Archive passwords...** — the passwords tried on an encrypted archive before MDM asks, one per line; the one that fits moves to the top, and a package's password that an encrypted archive needed is added. See [Archive passwords](link-grabber.md#archive-passwords).
 - **Look links up when they arrive (name, size, online)** — Link grabber asks each server about its file (on by default).
 - **Hide web pages** — Link grabber's default for the same box (on).
 

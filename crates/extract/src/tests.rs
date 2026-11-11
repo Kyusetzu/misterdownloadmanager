@@ -265,6 +265,23 @@ fn sevenz_plain_encrypted_and_split_through_7zip() {
         .0
         .unwrap();
     no_staging(&dest);
+    // Its names encrypted too (`-mhe`): 7-Zip asks before it can list it; the password, given
+    // on its input, opens it.
+    let hidden = t.path().join("hidden.7z");
+    seven_of(&tool, &src, &hidden, &["-ps3cret", "-mhe=on"]);
+    let dest = t.path().join("o3");
+    assert!(matches!(
+        run(&hidden, &dest, None, Subfolder::Smart).0,
+        Err(Error::NeedsPassword)
+    ));
+    assert!(matches!(
+        run(&hidden, &dest, Some("bad"), Subfolder::Smart).0,
+        Err(Error::WrongPassword)
+    ));
+    run(&hidden, &dest, Some("s3cret"), Subfolder::Smart)
+        .0
+        .unwrap();
+    no_staging(&dest);
 
     // 7-Zip's "Split to volumes": split.7z.001, .002…
     let split = t.path().join("split.7z");

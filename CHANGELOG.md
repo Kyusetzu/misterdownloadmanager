@@ -7,7 +7,7 @@ Each release's notes on GitHub come from its section here (`## [X.Y.Z]`, see
 
 ### Added
 
-- **Archive passwords** ([#37](https://github.com/anefzaoui/misterdownloadmanager/issues/37)): **Options → Archives → Archive passwords...** keeps the passwords you use again and again. An encrypted archive is tried with its package's password, then with each saved one, before MDM asks; the one that fits moves to the top, and a package's password that opens its archive (typed in Link grabber, or sent with the links) is added. The **Archive password** window can remember what you type (**Remember it for other archives**). The list is kept in the system's keychain.
+- **Archive passwords** ([#37](https://github.com/anefzaoui/misterdownloadmanager/issues/37)): **Options → Archives → Archive passwords...** keeps the passwords you use again and again. An archive that turns out to be encrypted is tried with its package's password, then with each saved one, before MDM asks; the one that fits moves to the top, and a package's password that an archive needed (typed in Link grabber, or sent with the links) is added. The **Archive password** window can remember what you type (**Remember it for other archives**, unticked at first). The list is kept in the system's keychain.
 - Linux: the **7-Zip needed** window says to install the distribution's `7zip` (or `p7zip`) package.
 - Linux and macOS: a gallery-dl installed by the system (a package manager, Homebrew, pip) is found and used when MDM has none of its own, as yt-dlp is; **Helpers** can switch to MDM's own copy where MDM has one (Windows and Linux x86-64) ([#571](https://github.com/anefzaoui/misterdownloadmanager/issues/571)).
 - Videos a site sends in pieces (HLS and DASH streams, as many sites other than YouTube do) download several pieces at once, as many as **Options → Connection** gives a file (8 by default): against a test server that slows each connection, 4 at once took under a third of the time, 8 under a fifth. With a speed limit on, they still come one at a time, so the limit holds; a video in one file, as most of YouTube's are, is unchanged. The command line's `video-get` and `playlist-get` take `-c` for it ([#531](https://github.com/anefzaoui/misterdownloadmanager/issues/531)).
@@ -15,6 +15,7 @@ Each release's notes on GitHub come from its section here (`## [X.Y.Z]`, see
 
 ### Fixed
 
+- An archive's password no longer goes on 7-Zip's command line, where other programs on the computer could read it: 7-Zip gets it on its input.
 - **Download video** without ffmpeg (on macOS and Linux, where MDM doesn't install it): the sound alone comes from a format the site sends as one file when it has one, and a sound or video that came as an HLS stream's pieces is saved as what it is (`.aac`, `.ts`) instead of `.mp4`, which players refused to open ([#569](https://github.com/anefzaoui/misterdownloadmanager/issues/569)).
 - A freeze when the disk was slow: MDM looked on the disk for a portable data folder on every tick of the window; it now works the data folder out once ([#565](https://github.com/anefzaoui/misterdownloadmanager/issues/565)).
 - macOS 15 and later: Chinese names and text find the PingFang font again, which moved into the system's font assets, with Hiragino Sans GB and STHeiti as fallbacks ([#541](https://github.com/anefzaoui/misterdownloadmanager/issues/541)).

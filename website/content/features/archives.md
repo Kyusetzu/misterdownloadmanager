@@ -53,8 +53,9 @@ opens the archive, then joins your saved passwords in the system's keychain.
 ![Link grabber listing the links of a page in packages, with their names, sizes and whether they are online](images/help/link-grabber.webp)
 *Link grabber: untick what you don't want, then Add to queue.*
 
-An encrypted archive is tried with your saved passwords first (**Options → Archives → Archive
-passwords...**, the one that fits moving to the top; a package's password that opens its archive
-joins them), and only then opens the **Archive password**
-window, which can remember what you type. Hover over the
+An encrypted archive is tried with its package's password and your saved passwords first
+(**Options → Archives → Archive passwords...**, the one that fits moving to the top; a package's
+password the archive needed joins them), and only then opens the **Archive password** window,
+which can remember what you type. 7-Zip gets each password on its input, never on its command
+line. Hover over the
 download in the list to read what happened: how many files were extracted and where, or why not.
