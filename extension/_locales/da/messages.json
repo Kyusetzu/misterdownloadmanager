@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Kan ikke se, hvilken video det er: Åbn videoens egen side, og prøv der"
   },
+  "video_looking": {
+    "message": "Finder kvaliteterne…"
+  },
+  "video_open_mdm": {
+    "message": "Åbn i Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Ingen video at downloade her"
+  },
+  "video_playlist": {
+    "message": "En liste med videoer: vælg dem i Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager skal bruge yt-dlp til denne video"
+  },
+  "video_too_long": {
+    "message": "Opslaget tog for lang tid"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager er optaget af andre videoer"
+  },
+  "video_queued": {
+    "message": "Føjet til køen"
+  },
+  "video_failed_lookup": {
+    "message": "Kunne ikke slå det op"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Lyd"
+  },
+  "video_open_post": {
+    "message": "Åbn opslaget, og brug derefter knappen der"
+  },
   "popup_send_to": {
     "message": "Send downloads til"
   },

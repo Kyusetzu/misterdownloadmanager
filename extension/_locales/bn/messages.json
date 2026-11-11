@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "এটি কোন ভিডিও তা বোঝা যাচ্ছে না: ভিডিওটির নিজের পৃষ্ঠা খুলে সেখানে চেষ্টা করুন"
   },
+  "video_looking": {
+    "message": "কোয়ালিটি খোঁজা হচ্ছে…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Manager-এ খুলুন…"
+  },
+  "video_no_choices": {
+    "message": "এখানে ডাউনলোড করার মতো কোনো ভিডিও নেই"
+  },
+  "video_playlist": {
+    "message": "ভিডিওর তালিকা: Mister Download Manager-এ বেছে নিন"
+  },
+  "video_no_ytdlp": {
+    "message": "এই ভিডিওর জন্য Mister Download Manager-এর yt-dlp দরকার"
+  },
+  "video_too_long": {
+    "message": "খুঁজতে অনেক বেশি সময় লেগেছে"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager অন্য ভিডিওর কাজে ব্যস্ত"
+  },
+  "video_queued": {
+    "message": "কিউতে যোগ করা হয়েছে"
+  },
+  "video_failed_lookup": {
+    "message": "খোঁজা যায়নি"
+  },
+  "video_tab_video": {
+    "message": "ভিডিও"
+  },
+  "video_tab_audio": {
+    "message": "অডিও"
+  },
+  "video_open_post": {
+    "message": "পোস্টটি খুলুন, তারপর সেখানকার বোতামটি ব্যবহার করুন"
+  },
   "popup_send_to": {
     "message": "ডাউনলোডগুলি এখানে পাঠান"
   },

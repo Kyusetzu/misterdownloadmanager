@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Δεν είναι σαφές ποιο βίντεο είναι αυτό: ανοίξτε τη δική του σελίδα και δοκιμάστε εκεί"
   },
+  "video_looking": {
+    "message": "Αναζήτηση ποιοτήτων…"
+  },
+  "video_open_mdm": {
+    "message": "Άνοιγμα στο Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Δεν υπάρχει βίντεο για λήψη εδώ"
+  },
+  "video_playlist": {
+    "message": "Μια λίστα βίντεο: επιλέξτε τα στο Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Το Mister Download Manager χρειάζεται το yt-dlp για αυτό το βίντεο"
+  },
+  "video_too_long": {
+    "message": "Η αναζήτηση άργησε υπερβολικά"
+  },
+  "video_busy": {
+    "message": "Το Mister Download Manager είναι απασχολημένο με άλλα βίντεο"
+  },
+  "video_queued": {
+    "message": "Προστέθηκε στην ουρά"
+  },
+  "video_failed_lookup": {
+    "message": "Η αναζήτηση απέτυχε"
+  },
+  "video_tab_video": {
+    "message": "Βίντεο"
+  },
+  "video_tab_audio": {
+    "message": "Ήχος"
+  },
+  "video_open_post": {
+    "message": "Ανοίξτε την ανάρτηση και μετά χρησιμοποιήστε το κουμπί εκεί"
+  },
   "popup_send_to": {
     "message": "Αποστολή λήψεων σε"
   },

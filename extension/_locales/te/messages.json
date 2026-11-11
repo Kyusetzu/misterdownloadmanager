@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "ఇది ఏ వీడియోనో తెలియడం లేదు: దాని స్వంత పేజీని తెరిచి అక్కడ ప్రయత్నించండి"
   },
+  "video_looking": {
+    "message": "నాణ్యతలను వెతుకుతోంది…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Managerలో తెరువు…"
+  },
+  "video_no_choices": {
+    "message": "ఇక్కడ డౌన్‌లోడ్ చేయడానికి వీడియో లేదు"
+  },
+  "video_playlist": {
+    "message": "వీడియోల జాబితా: వాటిని Mister Download Managerలో ఎంచుకోండి"
+  },
+  "video_no_ytdlp": {
+    "message": "ఈ వీడియో కోసం Mister Download Managerకి yt-dlp అవసరం"
+  },
+  "video_too_long": {
+    "message": "వెతకడానికి చాలా సమయం పట్టింది"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager ఇతర వీడియోలతో బిజీగా ఉంది"
+  },
+  "video_queued": {
+    "message": "క్యూకి జోడించబడింది"
+  },
+  "video_failed_lookup": {
+    "message": "వెతకడం సాధ్యం కాలేదు"
+  },
+  "video_tab_video": {
+    "message": "వీడియో"
+  },
+  "video_tab_audio": {
+    "message": "ఆడియో"
+  },
+  "video_open_post": {
+    "message": "పోస్ట్‌ను తెరవండి, ఆపై అక్కడ బటన్‌ను ఉపయోగించండి"
+  },
   "popup_send_to": {
     "message": "డౌన్‌లోడ్‌లను దీనికి పంపండి"
   },

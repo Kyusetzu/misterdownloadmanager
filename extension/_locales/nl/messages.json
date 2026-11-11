@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Niet duidelijk welke video dit is: open de eigen pagina van de video en probeer het daar"
   },
+  "video_looking": {
+    "message": "Kwaliteiten opzoeken…"
+  },
+  "video_open_mdm": {
+    "message": "Openen in Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Geen video om hier te downloaden"
+  },
+  "video_playlist": {
+    "message": "Een lijst met video's: kies ze in Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager heeft yt-dlp nodig voor deze video"
+  },
+  "video_too_long": {
+    "message": "Opzoeken duurde te lang"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager is bezig met andere video's"
+  },
+  "video_queued": {
+    "message": "Toegevoegd aan de wachtrij"
+  },
+  "video_failed_lookup": {
+    "message": "Kon het niet opzoeken"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Open het bericht en gebruik dan de knop daar"
+  },
   "popup_send_to": {
     "message": "Downloads verzenden naar"
   },

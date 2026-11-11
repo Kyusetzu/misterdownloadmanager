@@ -8,6 +8,7 @@ pub mod chosen;
 pub mod ffmpeg;
 pub mod gallery;
 mod macos;
+pub mod manifest;
 mod openpgp;
 pub mod pages;
 pub mod playlist;
@@ -166,6 +167,7 @@ pub const USER_AGENT: &str = concat!("MisterDownloadManager/", env!("CARGO_PKG_V
 pub fn net(proxy: mdm_engine::Proxy) -> mdm_engine::Options {
     mdm_engine::Options {
         user_agent: USER_AGENT.to_owned(),
+        automatic_agent: false,
         proxy,
         ..Default::default()
     }

@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Не вдалося визначити, що це за відео: відкрийте його власну сторінку і спробуйте там"
   },
+  "video_looking": {
+    "message": "Пошук доступних якостей…"
+  },
+  "video_open_mdm": {
+    "message": "Відкрити в Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Тут немає відео для завантаження"
+  },
+  "video_playlist": {
+    "message": "Список відео: виберіть їх у Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Для цього відео Mister Download Manager потрібен yt-dlp"
+  },
+  "video_too_long": {
+    "message": "Пошук тривав надто довго"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager зайнятий іншими відео"
+  },
+  "video_queued": {
+    "message": "Додано до черги"
+  },
+  "video_failed_lookup": {
+    "message": "Не вдалося виконати пошук"
+  },
+  "video_tab_video": {
+    "message": "Відео"
+  },
+  "video_tab_audio": {
+    "message": "Аудіо"
+  },
+  "video_open_post": {
+    "message": "Відкрийте допис, потім скористайтеся кнопкою там"
+  },
   "popup_send_to": {
     "message": "Надсилати завантаження до"
   },

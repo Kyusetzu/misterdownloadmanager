@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Nevar noteikt, kurš video tas ir: atveriet tā lapu un mēģiniet tur"
   },
+  "video_looking": {
+    "message": "Meklē kvalitātes…"
+  },
+  "video_open_mdm": {
+    "message": "Atvērt programmā Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Šeit nav lejupielādējama video"
+  },
+  "video_playlist": {
+    "message": "Video saraksts: izvēlieties tos programmā Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Programmai Mister Download Manager šim video ir nepieciešams yt-dlp"
+  },
+  "video_too_long": {
+    "message": "Meklēšana ilga pārāk ilgi"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager ir aizņemts ar citiem video"
+  },
+  "video_queued": {
+    "message": "Pievienots rindai"
+  },
+  "video_failed_lookup": {
+    "message": "Meklēšana neizdevās"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Atveriet ierakstu, tad izmantojiet pogu tur"
+  },
   "popup_send_to": {
     "message": "Sūtīt lejupielādes uz"
   },

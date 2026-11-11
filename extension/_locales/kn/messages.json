@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "ಇದು ಯಾವ ವೀಡಿಯೊ ಎಂದು ತಿಳಿಯುತ್ತಿಲ್ಲ: ಅದರ ಸ್ವಂತ ಪುಟವನ್ನು ತೆರೆದು ಅಲ್ಲಿ ಪ್ರಯತ್ನಿಸಿ"
   },
+  "video_looking": {
+    "message": "ಗುಣಮಟ್ಟಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Manager ನಲ್ಲಿ ತೆರೆಯಿರಿ…"
+  },
+  "video_no_choices": {
+    "message": "ಇಲ್ಲಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ವೀಡಿಯೊ ಇಲ್ಲ"
+  },
+  "video_playlist": {
+    "message": "ವೀಡಿಯೊಗಳ ಪಟ್ಟಿ: ಅವುಗಳನ್ನು Mister Download Manager ನಲ್ಲಿ ಆಯ್ಕೆಮಾಡಿ"
+  },
+  "video_no_ytdlp": {
+    "message": "ಈ ವೀಡಿಯೊಗೆ Mister Download Manager ಗೆ yt-dlp ಬೇಕು"
+  },
+  "video_too_long": {
+    "message": "ಹುಡುಕಲು ತುಂಬಾ ಸಮಯ ತೆಗೆದುಕೊಂಡಿತು"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager ಇತರ ವೀಡಿಯೊಗಳಲ್ಲಿ ನಿರತವಾಗಿದೆ"
+  },
+  "video_queued": {
+    "message": "ಕ್ಯೂಗೆ ಸೇರಿಸಲಾಗಿದೆ"
+  },
+  "video_failed_lookup": {
+    "message": "ಹುಡುಕಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ"
+  },
+  "video_tab_video": {
+    "message": "ವೀಡಿಯೊ"
+  },
+  "video_tab_audio": {
+    "message": "ಆಡಿಯೊ"
+  },
+  "video_open_post": {
+    "message": "ಪೋಸ್ಟ್ ತೆರೆಯಿರಿ, ನಂತರ ಅಲ್ಲಿರುವ ಬಟನ್ ಬಳಸಿ"
+  },
   "popup_send_to": {
     "message": "ಡೌನ್‌ಲೋಡ್‌ಗಳನ್ನು ಇಲ್ಲಿಗೆ ಕಳುಹಿಸಿ"
   },

@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Bunun hangi video olduğu anlaşılamıyor: videonun kendi sayfasını açıp orada deneyin"
   },
+  "video_looking": {
+    "message": "Kaliteler aranıyor…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Manager uygulamasında aç…"
+  },
+  "video_no_choices": {
+    "message": "Burada indirilecek video yok"
+  },
+  "video_playlist": {
+    "message": "Bir video listesi: videoları Mister Download Manager uygulamasında seçin"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager uygulamasının bu video için yt-dlp'ye ihtiyacı var"
+  },
+  "video_too_long": {
+    "message": "Arama çok uzun sürdü"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager diğer videolarla meşgul"
+  },
+  "video_queued": {
+    "message": "Sıraya eklendi"
+  },
+  "video_failed_lookup": {
+    "message": "Aranamadı"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Ses"
+  },
+  "video_open_post": {
+    "message": "Gönderiyi açın, sonra oradaki düğmeyi kullanın"
+  },
   "popup_send_to": {
     "message": "İndirmeleri şuraya gönder"
   },

@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Nelze zjistit, o které video jde: otevřete jeho vlastní stránku a zkuste to tam"
   },
+  "video_looking": {
+    "message": "Vyhledávání kvalit…"
+  },
+  "video_open_mdm": {
+    "message": "Otevřít v Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Tady není žádné video ke stažení"
+  },
+  "video_playlist": {
+    "message": "Seznam videí: vyberte je v Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager potřebuje pro toto video yt-dlp"
+  },
+  "video_too_long": {
+    "message": "Vyhledávání trvalo příliš dlouho"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager je zaneprázdněn jinými videi"
+  },
+  "video_queued": {
+    "message": "Přidáno do fronty"
+  },
+  "video_failed_lookup": {
+    "message": "Vyhledání se nezdařilo"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Zvuk"
+  },
+  "video_open_post": {
+    "message": "Otevřete příspěvek a použijte tlačítko tam"
+  },
   "popup_send_to": {
     "message": "Odeslat stahování do"
   },

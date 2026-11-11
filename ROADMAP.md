@@ -30,6 +30,13 @@ Everything below ships together, in version 0.5.0.
 - ✅ **View → Interface size**: every window larger, 100 % to 200 %, with Ctrl + / Ctrl − / Ctrl 0
   as in a browser; a window larger than the screen scrolls. Sharper text on Windows (part of
   [#262](https://github.com/anefzaoui/misterdownloadmanager/issues/262))
+- ✅ Windows: **View → Text → Smooth** draws the text anti-aliased at its own size, not as
+  thick, hard-edged whole-pixel letters that read badly on a 1440p screen; **Classic**, the
+  default, keeps the hinted look MDM had. **Interface size** gains 110 %, 115 % and 120 % between 100 % and
+  125 %
+- ✅ Windows: sharp, evenly spaced text at every interface size: letters no longer run together
+  or drift apart ([#323](https://github.com/anefzaoui/misterdownloadmanager/issues/323),
+  [#334](https://github.com/anefzaoui/misterdownloadmanager/issues/334))
 - ✅ Linux: Update now asks the package manager which package MDM is; a copy installed by
   another package manager (pacman) is left to the system's updates, with a plain message
 - ✅ Linux: the .deb and .rpm install the browsers' host files for everyone and remove them on
@@ -222,6 +229,11 @@ Everything below ships together, in version 0.5.0.
 - ✅ Themes: Base16 and pywal colour schemes imported as themes (View → Theme → Add a theme
   file…, or the themes folder); **pywal** follows `wal` as it writes new colours, text kept
   readable (4.5:1) ([#45](https://github.com/anefzaoui/misterdownloadmanager/issues/45))
+- ✅ Themes: Emerald (a white canvas, one near-black ink, emerald
+  fills carrying near-black text, 6-point corners, Metro's one-colour icons); its theme file
+  gives a few seeds per variant and derives every other colour, so a role added later arrives
+  in this look rather than the classic one
+  ([#45](https://github.com/anefzaoui/misterdownloadmanager/issues/45))
 - ✅ Dark mode: grey notes and error texts readable (4.5:1), Options' failed checks no longer dark
   red on the dark dialog ([#45](https://github.com/anefzaoui/misterdownloadmanager/issues/45))
 - ✅ A minimized MDM keeps working: queues, the Scheduler, download limits, the kill switch and
@@ -311,6 +323,8 @@ Everything below ships together, in version 0.5.0.
   ([#44](https://github.com/anefzaoui/misterdownloadmanager/issues/44))
 - ✅ Debrid accounts: torrents and magnet links through the service, their files downloaded over
   HTTP, no peer connections ([#44](https://github.com/anefzaoui/misterdownloadmanager/issues/44))
+- ✅ Debrid accounts (experimental): TorBox, for file-host links and torrents
+  ([#391](https://github.com/anefzaoui/misterdownloadmanager/issues/391))
 - ✅ Sign-ins in the system's keychain: Windows Credential Manager, the Secret Service keyring on
   Linux, the macOS keychain; for debrid accounts, Sites Logins and the proxy
   ([#44](https://github.com/anefzaoui/misterdownloadmanager/issues/44))
@@ -492,12 +506,37 @@ Bug fixes from the first days of 0.5.0, a Safari extension, and more file types.
 
 These ship in the next version.
 
+- ✅ The browser's Download video button in right-to-left languages: its corners and divider follow the text direction, so its outline stays whole
+- ✅ **Deferred Rename** on a download's **Download status** tab: save a new name while downloading to rename the finished file's stem (and video subtitles) or an exclusive finished folder on completion, leaving shared/save or pre-existing folders, split-archive volumes and single-file torrents under their original names ([#655](https://github.com/anefzaoui/misterdownloadmanager/pull/655))
+- ✅ Links added by hand go with the User-Agent of your default browser, at the version you have
+  (Chrome, Edge, Brave, Opera, Vivaldi, Firefox, Safari), instead of a years-old one; **Automatic**
+  in Options, or one you type (part of
+  [#668](https://github.com/anefzaoui/misterdownloadmanager/issues/668))
+- ✅ Linux freeze and crash reports name MDM's functions again, and the right ones: the stack of
+  a program whose code begins a page after its start (0.5.0's) was read at the wrong place, so
+  reports showed only system libraries, or names from elsewhere in MDM
+  ([#661](https://github.com/anefzaoui/misterdownloadmanager/issues/661))
+- ✅ Windows: a freeze in the C runtime's memory routines, where the window hardly ran, is
+  reported as a computer too busy or slow to load MDM from disk, not as a deadlock
+  ([#663](https://github.com/anefzaoui/misterdownloadmanager/issues/663))
+- ✅ macOS: helpers opened from Finder find Homebrew's Deno and ffmpeg, so YouTube formats
+  load ([#659](https://github.com/anefzaoui/misterdownloadmanager/issues/659))
+- ✅ The website is named as the official one in the README, the browser add-on and the
+  site's data for search engines
+- ✅ Left click on the tray icon toggles the main window (on Windows also with the icon under
+  the taskbar's ^), and browser downloads open only their dialog when the main window is
+  hidden or minimized ([#520](https://github.com/anefzaoui/misterdownloadmanager/pull/520))
+- ✅ Debrid accounts: signing in by code opens only the service's own page
+- ✅ A speed limit raised or turned off applies at once, to the connections already waiting
+  under the old one too ([#621](https://github.com/anefzaoui/misterdownloadmanager/issues/621))
 - ✅ The build and release workflows: each job gets only the permissions it needs, and every
   action and release tool is pinned to an exact version
 - ✅ A freeze on a slow disk, the data folder looked up on every tick
   ([#565](https://github.com/anefzaoui/misterdownloadmanager/issues/565))
 - ✅ A `funding.json` file, the open format funds use to find projects and what they need
 - ✅ The tools that send the browser extension to the stores, at their current versions
+- ✅ macOS: downloads to a network volume (SMB, AFP, NFS), refused for "0 bytes free"
+  ([#623](https://github.com/anefzaoui/misterdownloadmanager/issues/623))
 
 ## Being worked on
 
@@ -505,6 +544,19 @@ These ship in a later version, when they're ready.
 
 ### Being built
 
+- 🔄 Helium: MDM offers it the extension on Linux and macOS, through Helium's own services, the
+  Linux packages' helper files cover it, and the docs say how to add the extension in Helium
+  ([#685](https://github.com/anefzaoui/misterdownloadmanager/issues/685)); in review
+- 🔄 A freeze of the window while torrents ran on a busy or slow disk: it waited for the torrent
+  engine, which holds a torrent while its writes to the disk end
+  ([#693](https://github.com/anefzaoui/misterdownloadmanager/issues/693)): the torrents' numbers
+  are now read beside the window; fix in review
+- 🔄 Sites that let only browsers through (a bot check, or FileHippo's 412): one more try
+  connecting the way the browser does, with its cookies for that site
+  ([#668](https://github.com/anefzaoui/misterdownloadmanager/issues/668)): in review
+- 🔄 Download video: a sound-only choice (MP3, a playlist as sound) saved in the Music folder and
+  listed under Music ([#611](https://github.com/anefzaoui/misterdownloadmanager/issues/611)):
+  in review
 - 🔄 Linux and macOS: the system's gallery-dl used when MDM has none of its own, as yt-dlp is
   ([#571](https://github.com/anefzaoui/misterdownloadmanager/issues/571)): in review
 - 🔄 Videos sent in pieces (HLS, DASH) downloading several pieces at once, as many as a file's
@@ -519,6 +571,15 @@ These ship in a later version, when they're ready.
 - 🔄 In English, the list's dates on the system's 12- or 24-hour clock
   ([#392](https://github.com/anefzaoui/misterdownloadmanager/issues/392)): in review
 - 🔄 Help: when an antivirus or VirusTotal flags MDM
+- 🔄 The Download video button lists the video's qualities, with their sizes, in a menu on the
+  page, video and audio in their own tabs: the one picked downloads at once with only its progress
+  window, MDM's main window staying where it is; "Open in Mister Download Manager…" keeps the
+  Download video window. A stream the page plays (HLS) is listed at once, read by MDM itself; the
+  same video asked again within 10 minutes opens at once; the pick starts without looking the
+  video up a second time: in review
+- 🔄 Picking a video quality already in the list (the menu over a video, the Download video window)
+  follows Options' duplicate setting instead of downloading it again: in review
+- 🔄 The progress window's bar glides instead of moving in steps: in review
 - 🔄 Linux, what's left ([#164](https://github.com/anefzaoui/misterdownloadmanager/issues/164)):
   screen readers (Orca) reading MDM's windows; browsers installed as a Flatpak (Firefox from
   Flathub may reach MDM through the desktop, as the Snap does: to check); native Wayland windows
@@ -535,9 +596,57 @@ These ship in a later version, when they're ready.
   ([#357](https://github.com/anefzaoui/misterdownloadmanager/issues/357)): the last one in review
 - 🔄 The browser extension's media list naming a file after its page, as an option: in review
 - 🔄 Malay: a native speaker's check of the menus, toolbar and list columns: in review
+- 🔄 Cancel in Download File Info asking whether the downloads waiting behind it are cancelled
+  too (a browser selection's arrive one by one)
+  ([#394](https://github.com/anefzaoui/misterdownloadmanager/issues/394)): in review
 
 ### Bugs being looked into
 
+- 🔄 The browser's video button over a video in a feed sending the feed's address, where yt-dlp
+  finds nothing (LinkedIn, Facebook, and other sites with feeds;
+  [#689](https://github.com/anefzaoui/misterdownloadmanager/issues/689),
+  [#643](https://github.com/anefzaoui/misterdownloadmanager/issues/643)): it now sends the post the
+  video sits in (LinkedIn, Facebook, X, Instagram, Reddit, TikTok, Vimeo, Dailymotion, and a
+  post's own link on other sites), else the video's own file, else it says to open the post; fix
+  in review, checked on a signed-in LinkedIn feed and Facebook's video page; Facebook's feed
+  posts still to check
+- 🔄 Torrents: a pause landing while a piece was being checked leaving the torrent one piece short
+  until MDM restarted ([#706](https://github.com/anefzaoui/misterdownloadmanager/issues/706)): the
+  piece is now downloaded again after the pause; fix in review
+- 🔄 Windows: the tray icon's menu light while MDM is dark
+  ([#682](https://github.com/anefzaoui/misterdownloadmanager/issues/682)): it now follows MDM's
+  look, dark or light, on Windows 10 and 11; fix in review
+- 🔄 Torrents: magnet links without trackers finding no peers where the DHT's first nodes didn't
+  answer ([#650](https://github.com/anefzaoui/misterdownloadmanager/issues/650)): four public
+  routers asked together, the ones that never answer left alone once one has, the IPv6 nodes kept
+  for the next start too, and the port picked kept from one start to the next; fix in review
+- 🔄 Windows: the window stopping on a stalled system while it checked its title bar's colours
+  ([#633](https://github.com/anefzaoui/misterdownloadmanager/issues/633),
+  [#583](https://github.com/anefzaoui/misterdownloadmanager/issues/583)): the colours are now set
+  once, when a window opens or the theme changes; fix in review
+- 🔄 Downloads from FileHippo failing at once with 412 Precondition Failed
+  ([#630](https://github.com/anefzaoui/misterdownloadmanager/issues/630)): a link the site refuses
+  to MDM now goes on from where the browser's own download of it had reached; fix in review, still
+  to check on FileHippo itself. A link pasted into Add URL has no such address to go on from
+- 🔄 Windows: a crash when the clipboard was read in two places at once (the clipboard monitor and
+  Add URL) ([#629](https://github.com/anefzaoui/misterdownloadmanager/issues/629)): every read and
+  write of the clipboard now goes one at a time; fix in review
+- 🔄 The window waiting on the program that owns the clipboard when it doesn't answer (Linux
+  especially; follows [#418](https://github.com/anefzaoui/misterdownloadmanager/issues/418)): a
+  text box's right-click menu, Add URL, Add batch download, Add torrent and Download video now
+  read the clipboard beside the window, and fill in a copied link when it comes; fix in review
+- 🔄 Categories without their own folder following General's folder (`Video`, `Music`, `Torrents`
+  inside it), and Add torrent starting with the Torrents category's folder instead of flipping
+  from General when metadata arrives ([#556](https://github.com/anefzaoui/misterdownloadmanager/issues/556),
+  [#550](https://github.com/anefzaoui/misterdownloadmanager/issues/550)): fix in review
+- 🔄 The window not answering while a file was dragged out of Download complete, for as long as
+  the program under the pointer took ([#561](https://github.com/anefzaoui/misterdownloadmanager/issues/561)): the drag now runs beside the window; fix
+  in review, to check with a real drag
+- 🔄 The video button jumping between corners over YouTube's thumbnail previews, out of the
+  pointer's reach ([#560](https://github.com/anefzaoui/misterdownloadmanager/issues/560)): fix in
+  review
+- 🔄 A submenu staying open, its item lit beside the one under the pointer, while the pointer
+  moved on through the menu ([#579](https://github.com/anefzaoui/misterdownloadmanager/issues/579)): fix in review
 - 🔄 Chromium browsers: another extension's file names and folders (Save In's) lost while MDM's
   extension was on, for downloads it left to the browser
   ([#578](https://github.com/anefzaoui/misterdownloadmanager/issues/578)): fix in review
@@ -565,14 +674,20 @@ These ship in a later version, when they're ready.
 - 🔄 Add URL's **Use authorization** empty for an address with a login in Options → Sites
   Logins, though the download used it
   ([#511](https://github.com/anefzaoui/misterdownloadmanager/issues/511)): fix in review
-- 🔄 Windows: closing the window left MDM in the taskbar instead of the notification area
-  when its icon was among the hidden icons behind ^
-  ([#545](https://github.com/anefzaoui/misterdownloadmanager/issues/545),
-  [#534](https://github.com/anefzaoui/misterdownloadmanager/issues/534),
-  [#527](https://github.com/anefzaoui/misterdownloadmanager/issues/527)): fix in review
+- 🔄 Windows: closing the window left MDM minimized in the taskbar instead of the notification
+  area while its icon was there, among the hidden icons behind ^ (0.5.2;
+  [#750](https://github.com/anefzaoui/misterdownloadmanager/issues/750), [#718](https://github.com/anefzaoui/misterdownloadmanager/issues/718),
+  [#754](https://github.com/anefzaoui/misterdownloadmanager/issues/754), [#545](https://github.com/anefzaoui/misterdownloadmanager/issues/545),
+  [#534](https://github.com/anefzaoui/misterdownloadmanager/issues/534), [#527](https://github.com/anefzaoui/misterdownloadmanager/issues/527)): MDM
+  now keeps the window in the taskbar only when Windows says it has no icon of MDM's, not when
+  Windows can't say where the icon is; fix in review, to confirm on Windows 10
+- 🔄 The window freezing while Explorer was slow to answer about MDM's notification-area icon
+  ([#747](https://github.com/anefzaoui/misterdownloadmanager/issues/747)): asked beside the window now; fix in review
 - 🔄 Two tests that fail now and then on busy CI runners
-  ([#518](https://github.com/anefzaoui/misterdownloadmanager/issues/518)): the slow-flush one fixed;
-  the crash-and-resume one found a real delay in saving a new download's progress, fix in review
+  ([#518](https://github.com/anefzaoui/misterdownloadmanager/issues/518)): the slow-flush one
+  now measures the transfer instead of how fast the runner's disk takes in the file (Windows
+  runners' disks failed it again), fix in review; the crash-and-resume one found a real delay in
+  saving a new download's progress, fix in review
 - 🔄 The window not answering for a few seconds while Windows makes a snapshot of the disk
   (a restore point or a backup) ([#513](https://github.com/anefzaoui/misterdownloadmanager/issues/513)):
   the log and the RSS feeds are now written beside the window, as the list already was; fix in
@@ -614,6 +729,7 @@ These ship in a later version, when they're ready.
   [#345](https://github.com/anefzaoui/misterdownloadmanager/issues/345)): fix in review
 - 🔄 A page that starts a download by script being saved instead of the file
   ([#374](https://github.com/anefzaoui/misterdownloadmanager/issues/374)): fix in review
+- 🔄 Google Colab: only tokenized runtime-proxy transfers stay with the browser; ordinary notebook links remain capturable ([#603](https://github.com/anefzaoui/misterdownloadmanager/issues/603)): fix in review
 - 🔄 A gofile share link saving a web page instead of the file
   ([#346](https://github.com/anefzaoui/misterdownloadmanager/issues/346)): fix in review
 - 🔄 A server's refusal page saved under the document's name and shown as complete, where the
@@ -643,6 +759,7 @@ These ship in a later version, when they're ready.
   ([#335](https://github.com/anefzaoui/misterdownloadmanager/issues/335)): fix in review
 - 🔄 A duplicate prompt for a finished file that is gone
   ([#342](https://github.com/anefzaoui/misterdownloadmanager/issues/342)): fix in review
+- 🔄 No size for a stream's qualities (HLS) in the Download video window: fix in review
 - 🔍 A 10-second freeze of the window after a night left open
   ([#304](https://github.com/anefzaoui/misterdownloadmanager/issues/304)): most likely the
   computer waking from sleep; waiting on the reporter's full report

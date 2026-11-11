@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Не удалось определить, что это за видео: откройте его страницу и попробуйте там"
   },
+  "video_looking": {
+    "message": "Поиск доступных качеств…"
+  },
+  "video_open_mdm": {
+    "message": "Открыть в Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Здесь нет видео для скачивания"
+  },
+  "video_playlist": {
+    "message": "Список видео: выберите их в Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Для этого видео Mister Download Manager нужен yt-dlp"
+  },
+  "video_too_long": {
+    "message": "Поиск занял слишком много времени"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager занят другими видео"
+  },
+  "video_queued": {
+    "message": "Добавлено в очередь"
+  },
+  "video_failed_lookup": {
+    "message": "Не удалось выполнить поиск"
+  },
+  "video_tab_video": {
+    "message": "Видео"
+  },
+  "video_tab_audio": {
+    "message": "Аудио"
+  },
+  "video_open_post": {
+    "message": "Откройте публикацию, затем используйте кнопку на этой странице"
+  },
   "popup_send_to": {
     "message": "Отправлять загрузки в"
   },

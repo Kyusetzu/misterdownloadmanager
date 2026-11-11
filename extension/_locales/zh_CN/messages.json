@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "无法判断这是哪个视频：请打开该视频自己的页面再试"
   },
+  "video_looking": {
+    "message": "正在查找画质…"
+  },
+  "video_open_mdm": {
+    "message": "在 Mister Download Manager 中打开…"
+  },
+  "video_no_choices": {
+    "message": "此处没有可下载的视频"
+  },
+  "video_playlist": {
+    "message": "视频列表：请在 Mister Download Manager 中选择"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager 需要 yt-dlp 才能下载此视频"
+  },
+  "video_too_long": {
+    "message": "查找耗时过长"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager 正忙于处理其他视频"
+  },
+  "video_queued": {
+    "message": "已添加到队列"
+  },
+  "video_failed_lookup": {
+    "message": "无法查找"
+  },
+  "video_tab_video": {
+    "message": "视频"
+  },
+  "video_tab_audio": {
+    "message": "音频"
+  },
+  "video_open_post": {
+    "message": "打开帖子，然后使用那里的按钮"
+  },
   "popup_send_to": {
     "message": "将下载发送到"
   },

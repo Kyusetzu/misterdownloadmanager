@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Не може да се определи кое видео е това: отворете собствената му страница и опитайте там"
   },
+  "video_looking": {
+    "message": "Търсене на качествата…"
+  },
+  "video_open_mdm": {
+    "message": "Отваряне в Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Тук няма видео за изтегляне"
+  },
+  "video_playlist": {
+    "message": "Списък с видеоклипове: изберете ги в Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager се нуждае от yt-dlp за това видео"
+  },
+  "video_too_long": {
+    "message": "Търсенето отне твърде много време"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager е зает с други видеоклипове"
+  },
+  "video_queued": {
+    "message": "Добавено към опашката"
+  },
+  "video_failed_lookup": {
+    "message": "Търсенето не успя"
+  },
+  "video_tab_video": {
+    "message": "Видео"
+  },
+  "video_tab_audio": {
+    "message": "Аудио"
+  },
+  "video_open_post": {
+    "message": "Отворете публикацията, след това използвайте бутона там"
+  },
   "popup_send_to": {
     "message": "Изпращане на изтегляния до"
   },

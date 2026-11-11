@@ -132,7 +132,7 @@ fn decode_plain(v: &str) -> String {
 pub fn sanitize(name: &str) -> String {
     let cleaned: String = name
         .chars()
-        .filter(|c| !is_format(*c))
+        .filter(|c| !is_format_char(*c))
         .map(|c| {
             if c.is_control() || r#"<>:"/\|?*"#.contains(c) {
                 '_'
@@ -145,13 +145,24 @@ pub fn sanitize(name: &str) -> String {
     if cleaned.is_empty() {
         return "download".to_owned();
     }
-    let stem = cleaned
+    if is_windows_reserved(&cleaned) {
+        format!("_{cleaned}")
+    } else {
+        cleaned
+    }
+}
+
+/// Whether `name` (with or without an extension) names one of Windows' reserved DOS devices
+/// (`CON`, `PRN`, `AUX`, `NUL`, `CONIN$`, `CONOUT$`, `COM0`–`COM9`, `LPT0`–`LPT9`, and the
+/// superscripted `COM¹`–`COM³` / `LPT¹`–`LPT³`).
+pub fn is_windows_reserved(name: &str) -> bool {
+    let stem = name
         .split('.')
         .next()
         .unwrap_or_default()
+        .trim()
         .to_ascii_uppercase();
-    // Windows' reserved device names, with or without an extension (COM¹ … use superscripts).
-    let reserved = matches!(
+    matches!(
         stem.as_str(),
         "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$"
     ) || ((stem.starts_with("COM") || stem.starts_with("LPT"))
@@ -159,18 +170,13 @@ pub fn sanitize(name: &str) -> String {
         && stem
             .chars()
             .nth(3)
-            .is_some_and(|c| c.is_ascii_digit() || matches!(c, '¹' | '²' | '³')));
-    if reserved {
-        format!("_{cleaned}")
-    } else {
-        cleaned
-    }
+            .is_some_and(|c| c.is_ascii_digit() || matches!(c, '¹' | '²' | '³')))
 }
 
 /// Unicode's format characters (general category Cf): bidirectional marks, embeddings,
 /// overrides and isolates, zero-width spaces and joiners, the byte order mark, the soft
 /// hyphen, invisible operators, tags.
-fn is_format(c: char) -> bool {
+pub fn is_format_char(c: char) -> bool {
     matches!(c,
         '\u{AD}'
         | '\u{600}'..='\u{605}'
@@ -327,12 +333,20 @@ fn clamp(name: &str) -> String {
 }
 
 fn clamp_to(name: &str, max: usize) -> String {
+    let name = name.trim_end_matches(['.', ' ']);
     let len = |s: &str| s.encode_utf16().count();
     if len(name) <= max {
         return name.to_owned();
     }
     let (stem, ext) = match name.rfind('.') {
-        Some(i) if i > 0 && len(&name[i..]) <= 16 => (&name[..i], &name[i..]),
+        Some(i)
+            if i > 0
+                && len(&name[i..]) > 1
+                && len(&name[i..]) <= 16
+                && !name[i + 1..].contains(' ') =>
+        {
+            (&name[..i], &name[i..])
+        }
         _ => (name, ""),
     };
     let mut out = String::new();
@@ -342,7 +356,20 @@ fn clamp_to(name: &str, max: usize) -> String {
         }
         out.push(ch);
     }
-    out.trim_end_matches(['.', ' ']).to_owned() + ext
+    let trimmed = out.trim_end_matches(['.', ' ']);
+    if trimmed.is_empty() {
+        let mut plain = String::new();
+        for ch in name.chars() {
+            if len(&plain) + ch.len_utf16() > max {
+                break;
+            }
+            plain.push(ch);
+        }
+        return plain.trim_end_matches(['.', ' ']).to_owned();
+    }
+    format!("{trimmed}{ext}")
+        .trim_end_matches(['.', ' '])
+        .to_owned()
 }
 
 /// The part file a download is written to before it is complete.
@@ -504,6 +531,24 @@ mod tests {
         let s = sanitize(&long);
         assert!(s.encode_utf16().count() <= MAX_NAME);
         assert!(s.ends_with(".mp4"));
+    }
+
+    #[test]
+    fn fit_name_never_leaves_trailing_space_or_dot() {
+        let dir = Path::new("/tmp/downloads");
+        for raw in [
+            "Folder. ".to_owned(),
+            format!("{}   ...", "Folder ".repeat(40)),
+            format!("{}. Vol 2 ", "Episode ".repeat(35)),
+            format!("{}.", "Archive".repeat(40)),
+            format!("{} .mp4", "Video ".repeat(40)),
+        ] {
+            let fitted = fit_name(dir, &raw).unwrap();
+            assert!(
+                !fitted.ends_with(['.', ' ']),
+                "shortened name {fitted:?} ended with a dot or space"
+            );
+        }
     }
 
     #[test]
