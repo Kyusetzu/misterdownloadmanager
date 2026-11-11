@@ -764,8 +764,8 @@ impl Grabber {
                             let mut on = l.on;
                             let size = l.size.map(crate::dialogs::dialog_size).unwrap_or_default();
                             let state = if l.found.from_page && l.state == LinkState::Unchecked {
-                                // i18n: Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up before it is added
-                                crate::i18n::t("Sent by a page: not looked up").to_owned()
+                                // i18n: Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up (name, size, online) before it is added
+                                crate::i18n::t("Not looked up").to_owned()
                             } else {
                                 state_text(&l.state)
                             };

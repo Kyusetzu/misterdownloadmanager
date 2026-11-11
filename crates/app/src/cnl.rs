@@ -206,7 +206,7 @@ impl SiteDialog {
             "cnl-site",
             // i18n: window title: a web page used Click'n'Load (a link site's button that sends its links to this program)
             "Click'n'Load",
-            [420.0, 130.0],
+            [420.0, 116.0],
             false,
             LIGHT_BG(),
             |ui, o| {
@@ -254,7 +254,7 @@ impl SiteDialog {
                     ui,
                     o,
                     409.0,
-                    98.0,
+                    84.0,
                     &[
                         // i18n: button in the Click'n'Load window: let this site send links (remembered)
                         (crate::i18n::mark("Allow"), ButtonKind::Default),

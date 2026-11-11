@@ -2255,6 +2255,10 @@
 #. text in helpers.rs
 #. Video helpers: no copy of this helper yet
 	Not installed yet	لم يتم التثبيت بعد
+#. text in the Link grabber window
+#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up (name, size, online) before it is added
+#, machine
+	Not looked up	لم يبحث عنه
 #. text in cnl.rs; button in helpers.rs
 #. button in the Click'n'Load window: refuse these links, ask again next time
 	Not now	ليس الآن
@@ -2823,10 +2827,6 @@
 #. column title: how much went to the peer
 #. how much was sent to other peers
 	Sent	تم الإرسال
-#. text in the Link grabber window
-#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up before it is added
-#, machine
-	Sent by a page: not looked up	أرسلته صفحة: لم يبحث عنه
 #. text in the Scheduler window
 	September	سبتمبر
 #. text in countries.rs

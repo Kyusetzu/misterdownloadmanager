@@ -2980,6 +2980,10 @@
 #. Video helpers: no copy of this helper yet
 #, machine
 	Not installed yet	Noch nicht installiert
+#. text in the Link grabber window
+#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up (name, size, online) before it is added
+#, machine
+	Not looked up	Nicht nachgeschlagen
 #. text in cnl.rs; button in helpers.rs
 #. button in the Click'n'Load window: refuse these links, ask again next time
 #, machine
@@ -3725,10 +3729,6 @@
 #. how much was sent to other peers
 #, machine
 	Sent	Gesendet
-#. text in the Link grabber window
-#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up before it is added
-#, machine
-	Sent by a page: not looked up	Von einer Seite gesendet: nicht nachgeschlagen
 #. text in the Scheduler window
 #, machine
 	September	September

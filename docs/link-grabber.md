@@ -32,7 +32,7 @@ Many link sites have a **Click'n'Load** button that sends their links straight t
 Any web page can send links there, not only the link site you are on, so MDM is careful with them:
 
 - **The first time a site sends links, MDM asks**: **Allow** (that site's links go to Link grabber from now on), **Block** (they never do), or **Not now** (these links are dropped, and the site is asked again next time). The site is the one your browser names, not what the page claims. Turning Click'n'Load off forgets the answers.
-- **Links a page sent aren't looked up**: Link grabber shows them as **Sent by a page: not looked up**, and no request leaves for them, with or without your Sites Logins or debrid accounts, until you add them to the queue. Nothing is downloaded before that.
+- **Links a page sent aren't looked up**: Link grabber shows them as **Not looked up**, and no request leaves for them, with or without your Sites Logins or debrid accounts, until you add them to the queue. Nothing is downloaded before that.
 - **Limits**: at most 10 posts a minute, 500 links and 256 KB a post; more is refused. At most 20 posts wait for an answer.
 - The page's own address isn't sent as the links' referrer: a page could name any.
 - Only one program can listen on port 9666. If JDownloader is running, MDM says so: close it, then turn the option off and on again.
