@@ -47,8 +47,8 @@ Recycle Bin (the Trash on macOS and Linux) only if you ask.
 
 In [Link grabber](link-grabber.md), the volumes of one archive form one package. Each package
 has its folder, the archives' password, **Extract when done** (ticked by itself when the package
-holds an archive) and **Delete archives after extracting**. The password is kept in memory until it
-opens the archive, then joins your saved passwords in the system's keychain.
+holds an archive) and **Delete archives after extracting**. The password is kept in memory only: it
+is tried first when an archive needs one, and is never saved by itself.
 
 ![Link grabber listing the links of a page in packages, with their names, sizes and whether they are online](images/help/link-grabber.webp)
 *Link grabber: untick what you don't want, then Add to queue.*

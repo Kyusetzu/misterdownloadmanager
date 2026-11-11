@@ -38,16 +38,20 @@ struct Job {
     /// The password being tried: none at first, so an archive that needs none never meets one.
     password: Option<String>,
     /// The passwords still to try, in order, once it turns out to need one: the package's
-    /// (typed in Link grabber or sent with the links, Click'n'Load or DLC), then Options'.
+    /// (typed in Link grabber or sent with the links), then Options'.
     vault: Vec<String>,
     /// The package's password, if it has one.
     package: Option<String>,
+    /// The package's password is one of Options' archive passwords already.
+    package_saved: bool,
     /// The password being tried came from `vault`.
     from_vault: bool,
     /// The log said "Trying the saved archive passwords...".
     noted: bool,
-    /// Keep the password in Options' list once it opens the archive: one from `vault`, or one
-    /// typed in the password window with "Remember it" ticked.
+    /// Keep the password in Options' list once it opens the archive: one that is in the list
+    /// already (it moves to the top), or one typed in the password window with "Remember it"
+    /// ticked. Never a package's own that isn't in the list: nobody chose to save it (a web
+    /// page may have sent it).
     keep: bool,
     delete: bool,
     /// Right-click → Extract (said again, a missing 7-Zip, each time).
@@ -173,15 +177,12 @@ impl Extracts {
         let package = pkg
             .and_then(|p| p.password.clone())
             .filter(|p| !p.is_empty());
+        let saved = settings.archive_password_list();
+        let package_saved = package.as_ref().is_some_and(|p| saved.contains(p));
         let vault = package
             .iter()
             .cloned()
-            .chain(
-                settings
-                    .archive_password_list()
-                    .into_iter()
-                    .filter(|p| Some(p) != package.as_ref()),
-            )
+            .chain(saved.into_iter().filter(|p| Some(p) != package.as_ref()))
             .collect();
         self.queue.push_back(Job {
             ids: set.iter().map(|(_, i)| i.id).collect(),
@@ -190,6 +191,7 @@ impl Extracts {
             password: None,
             vault,
             package,
+            package_saved,
             from_vault: false,
             noted: false,
             keep: false,
@@ -288,7 +290,7 @@ impl Extracts {
                 job.noted |= saved;
                 job.password = Some(job.vault.remove(0));
                 job.from_vault = true;
-                job.keep = true;
+                job.keep = saved || job.package_saved;
                 self.queue.push_front(job);
                 return;
             }
@@ -913,8 +915,9 @@ mod tests {
     }
 
     #[test]
-    fn a_package_password_is_kept_only_when_its_archive_needed_it() {
-        // Sent with the links (Click'n'Load, a DLC) or typed in Link grabber.
+    fn a_package_password_is_never_saved_by_itself() {
+        // Sent with the links by a page, or typed in Link grabber: used, not kept, unless it is
+        // one of Options' archive passwords already (then it moves to the top).
         let mut items = vec![
             item(1, "a.rar", Status::Complete, Some(5)),
             item(2, "b.rar", Status::Complete, Some(6)),
@@ -924,8 +927,12 @@ mod tests {
             items[i].package.as_mut().unwrap().password = Some(pw.into());
         }
         let mut q = Extracts::default();
-        let s = Settings::default();
-        // a and b need theirs, and both open in the same pass: neither is lost.
+        let s = Settings {
+            archive_passwords: "first\nother-site".into(),
+            ..Default::default()
+        };
+        // a and b need theirs, and both open in the same pass. a's isn't in the list: not
+        // kept. b's is: it goes to the top.
         q.finished(1, &items, &s);
         q.finished(2, &items, &s);
         let (a, b) = (q.queue.pop_front().unwrap(), q.queue.pop_front().unwrap());
@@ -935,7 +942,7 @@ mod tests {
         let b = q.queue.pop_front().unwrap();
         q.finish(a, Ok(Report::default()), None, &mut items);
         q.finish(b, Ok(Report::default()), None, &mut items);
-        assert_eq!(q.take_vault(), vec!["from-the-site", "other-site"]);
+        assert_eq!(q.take_vault(), vec!["other-site"]);
         // c opens without a password: its package's is never tried, nor kept.
         q.finished(3, &items, &s);
         let job = q.queue.pop_front().unwrap();

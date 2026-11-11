@@ -42,7 +42,7 @@ The box under the list edits the package you selected:
 
 - **Name**: the package's name, kept with its downloads.
 - **Save to**: the folder its files go to. When a package holds several kinds of files, the box says **Each file's category folder**: each file goes to its category's folder (**Options → Save to**), as Import always did.
-- **Password**: the archives' password, if they have one. It is kept in memory only; once it opens the archive, it joins your [archive passwords](#archive-passwords), which the system's keychain keeps.
+- **Password**: the archives' password, if they have one. It is kept in memory only and is never saved by itself: to keep one for other packages, add it to your [archive passwords](#archive-passwords).
 - **Extract when done**: ticked by itself when the package holds an archive.
 - **Delete archives after extracting**: once extracted, the archives go to the Recycle Bin (the Trash on macOS and Linux).
 
@@ -79,7 +79,7 @@ The download's log (hover over it in the list) says what happened: **Extracted 1
 
 ### Archive passwords
 
-**Options → Archives → Archive passwords...** keeps the passwords you use again and again (a site's own, say), one per line. The download's log says **Trying the saved archive passwords...** while MDM tries them. The one that opens an archive moves to the top of the list, so the passwords you need most are tried first. A package's password that an archive needed and that opened it is added too: one you typed in Link grabber, or one the site sent with its links (Click'n'Load, a DLC container), so the next package from that site needs none. A password typed in the **Archive password** window is added only with **Remember it for other archives** ticked, and only once it fits. The list is kept in the system's keychain, as the other passwords are (see [Where the sign-in is kept](debrid.md#where-the-sign-in-is-kept)).
+**Options → Archives → Archive passwords...** keeps the passwords you use again and again (a site's own, say), one per line. The download's log says **Trying the saved archive passwords...** while MDM tries them. The one that opens an archive moves to the top of the list, so the passwords you need most are tried first. A package's password (one you typed in Link grabber, or one that came with the links) is tried first and never added to the list by itself; when it is one of your saved passwords already, it moves to the top like any other. A password typed in the **Archive password** window is added only with **Remember it for other archives** ticked, and only once it fits. The list is kept in the system's keychain, as the other passwords are (see [Where the sign-in is kept](debrid.md#where-the-sign-in-is-kept)).
 
 Each try starts the extraction again: with a long list and a large archive whose file names aren't encrypted, it can take a moment before the right one is found.
 
