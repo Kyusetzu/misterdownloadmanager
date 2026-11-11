@@ -143,7 +143,7 @@
 #. Options → Archives: {path} is where 7-Zip's program is
 	7z and RAR archives are extracted by 7-Zip ({path}).	7z and RAR archives are extracted by 7-Zip ({path}).
 #. text in the Options window
-#. Options → Archives, when 7-Zip isn't installed but HatchZip (a program's name) is: {path} is where its program is
+#. Options → Archives, when Extract in place with HatchZip (a program's name) is on: {path} is where its program is
 	7z and RAR archives are extracted by HatchZip ({path}).	7z and RAR archives are extracted by HatchZip ({path}).
 #. text in the Options window
 #. Options → Archives, when 7-Zip isn't installed
@@ -1607,6 +1607,10 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Italy	Italy
+#. text in extracting archives (a download's log, the Archive password window)
+#. why an archive wasn't extracted in place (after "Couldn't extract {name}: "); HatchZip took its files out (the archive is gone), but moving them stopped: {to} holds those moved, {left} the others, {error} the system's reason
+#. {error} = an error message (keep the braces as they are)
+	its files came out, but moving them stopped ({error}). Those moved are in {to}, the others still in {left}; nothing was deleted	its files came out, but moving them stopped ({error}). Those moved are in {to}, the others still in {left}; nothing was deleted
 #. text in errors.rs
 #. {error} = an error message (keep the braces as they are)
 	its files could not be written: {error}	its files could not be written: {error}
@@ -3219,6 +3223,9 @@
 	The downloads you add, or drop on this window, show here.	The downloads you add, or drop on this window, show here.
 #. text in errors.rs
 	the drive or network share is no longer available	the drive or network share is no longer available
+#. text in extracting archives (a download's log, the Archive password window)
+#. in a download's log, after HatchZip (a program's name) extracted in place: the entries left out (links, unsafe names) were not deleted, they are still in {folder}
+	The entries left out are still in {folder}	The entries left out are still in {folder}
 #. text in extension.rs
 	The extension is already in this app. Apple hasn't notarized this build, so Safari needs these steps to allow it.	The extension is already in this app. Apple hasn't notarized this build, so Safari needs these steps to allow it.
 #. text in errors.rs

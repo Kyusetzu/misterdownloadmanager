@@ -29,8 +29,8 @@ archives, and single GZ and XZ files.
 7z and RAR archives need 7-Zip, a free program. MDM uses it when it is installed, for split and
 encrypted archives too. **Options → Archives** says whether it was found; when it wasn't, the
 **7-Zip needed** window says so, with a **Get 7-Zip** button. RAR's own extraction code can't be
-part of a free program like MDM, which is why it asks 7-Zip. Without 7-Zip, HatchZip (below)
-extracts them too.
+part of a free program like MDM, which is why it asks 7-Zip. With **Extract in place with
+HatchZip** on (below), HatchZip extracts them instead.
 
 ## In place, for a nearly full disk
 

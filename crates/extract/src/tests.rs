@@ -19,6 +19,7 @@ fn run(
         tool: find_7zip(),
         hatchzip: None,
         in_place: false,
+        runs: None,
         on_file: &mut on_file,
         cancel: None,
     };
@@ -198,6 +199,7 @@ fn limits_stop_a_bomb() {
         tool: None,
         hatchzip: None,
         in_place: false,
+        runs: None,
         on_file: &mut on_file,
         cancel: None,
     };
@@ -309,6 +311,7 @@ fn no_7zip_says_so() {
             tool: None,
             hatchzip: None,
             in_place: false,
+            runs: None,
             on_file: &mut on_file,
             cancel: None,
         };
@@ -412,14 +415,15 @@ fn external_7zip_goes_through_the_same_checks() {
     assert!(r.folder.join("x").join("two.txt").is_file());
 }
 
-/// Like [`run`], with HatchZip and in place as given (7-Zip as installed unless `no_7zip`).
+/// Like [`run`], with HatchZip and in place as given (7-Zip as installed unless `no_7zip`),
+/// MDM's records of its runs in `runs`.
 fn run_hz(
     archive: &Path,
     dest: &Path,
     password: Option<&str>,
     hatchzip: Option<PathBuf>,
     in_place: bool,
-    no_7zip: bool,
+    runs: &Path,
 ) -> (Result<Report, Error>, usize) {
     let mut seen = 0;
     let mut on_file = |_: &Path| seen += 1;
@@ -428,9 +432,10 @@ fn run_hz(
         subfolder: Subfolder::Smart,
         password: password.map(str::to_owned),
         limits: Limits::default(),
-        tool: if no_7zip { None } else { find_7zip() },
+        tool: find_7zip(),
         hatchzip,
         in_place,
+        runs: Some(runs.to_path_buf()),
         on_file: &mut on_file,
         cancel: None,
     };
@@ -455,9 +460,10 @@ fn hatchzip_in_place_removes_the_archive_and_places_as_ours() {
         return;
     };
     let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
     let a = t.path().join("game.zip");
     zip_of(&a, &[("one.txt", b"1"), ("data/two.txt", b"22")], None);
-    let (r, seen) = run_hz(&a, t.path(), None, Some(hz), true, false);
+    let (r, seen) = run_hz(&a, t.path(), None, Some(hz), true, runs.path());
     let r = r.unwrap();
     // Several things at its top: a folder named after it, as our own extractions do.
     assert_eq!(r.folder, t.path().join("game"));
@@ -470,6 +476,11 @@ fn hatchzip_in_place_removes_the_archive_and_places_as_ours() {
     );
     no_work_folder(t.path());
     no_staging(t.path());
+    assert_eq!(
+        std::fs::read_dir(runs.path()).unwrap().count(),
+        0,
+        "run forgotten"
+    );
 }
 
 #[test]
@@ -479,58 +490,42 @@ fn hatchzip_in_place_wrong_passwords_change_nothing() {
         return;
     };
     let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
     let a = t.path().join("locked.zip");
     zip_of(&a, &[("x.txt", b"secret")], Some("pw"));
     let before = std::fs::read(&a).unwrap();
-    let (r, _) = run_hz(&a, t.path(), None, Some(hz.clone()), true, false);
+    let (r, _) = run_hz(&a, t.path(), None, Some(hz.clone()), true, runs.path());
     assert!(matches!(r, Err(Error::NeedsPassword)), "{r:?}");
-    let (r, _) = run_hz(&a, t.path(), Some("bad"), Some(hz.clone()), true, false);
+    let (r, _) = run_hz(
+        &a,
+        t.path(),
+        Some("bad"),
+        Some(hz.clone()),
+        true,
+        runs.path(),
+    );
     assert!(matches!(r, Err(Error::WrongPassword)), "{r:?}");
     assert_eq!(std::fs::read(&a).unwrap(), before, "untouched");
     no_work_folder(t.path());
-    let (r, _) = run_hz(&a, t.path(), Some("pw"), Some(hz), true, false);
+    let (r, _) = run_hz(&a, t.path(), Some("pw"), Some(hz), true, runs.path());
     r.unwrap();
     assert_eq!(std::fs::read(t.path().join("x.txt")).unwrap(), b"secret");
     assert!(!a.exists());
 }
 
-#[test]
-fn without_7zip_hatchzip_extracts_7z_and_keeps_it() {
-    let (Some(hz), Some(sz)) = (find_hatchzip(), find_7zip()) else {
-        eprintln!("HatchZip or 7-Zip (to make the 7z) not found: skipped");
-        return;
-    };
-    let t = tempfile::tempdir().unwrap();
-    let src = t.path().join("src");
-    std::fs::create_dir_all(src.join("a")).unwrap();
-    std::fs::write(src.join("a/f.txt"), b"seven").unwrap();
-    let a = t.path().join("out/pack.7z");
-    std::fs::create_dir_all(a.parent().unwrap()).unwrap();
-    seven_of(&sz, &src, &a, &[]);
-    let dest = a.parent().unwrap();
-    let (r, _) = run_hz(&a, dest, None, Some(hz), false, true);
-    let r = r.unwrap();
-    assert!(!r.in_place);
-    assert!(a.exists(), "kept: in place wasn't asked for");
-    assert_eq!(std::fs::read(dest.join("a/f.txt")).unwrap(), b"seven");
-    no_staging(dest);
-}
-
-/// A stand-in for HatchZip: writes `<out>/got.txt`, records its arguments beside the archive,
-/// and exits with `code`.
+/// A stand-in for HatchZip: records its arguments beside the archive, runs `body` (`$out` its
+/// folder, `$archive` the archive) and exits with `code`.
 #[cfg(unix)]
-fn fake_hatchzip(dir: &Path, code: i32, writes: bool) -> PathBuf {
+fn fake_hatchzip(dir: &Path, code: i32, body: &str) -> PathBuf {
     use std::os::unix::fs::PermissionsExt;
-    let p = dir.join(format!("fake-hatchzip-{code}"));
-    let write = if writes {
-        "printf x > \"$4/got.txt\""
-    } else {
-        ":"
-    };
+    static N: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let p = dir.join(format!("fake-hatchzip-{code}-{n}"));
     std::fs::write(
         &p,
         format!(
-            "#!/bin/sh\nmkdir -p \"$4\"\necho \"$@\" > \"$2.args\"\n{write}\necho 'error: it stopped' >&2\nexit {code}\n"
+            "#!/bin/sh\nout=\"${{2#--output=}}\"\narchive=\"$6\"\nmkdir -p \"$out\"\n\
+             echo \"$@\" > \"$archive.args\"\n{body}\necho 'error: it stopped' >&2\nexit {code}\n"
         ),
     )
     .unwrap();
@@ -539,9 +534,67 @@ fn fake_hatchzip(dir: &Path, code: i32, writes: bool) -> PathBuf {
 }
 
 #[cfg(unix)]
+const WRITES: &str = "printf x > \"$out/got.txt\"";
+
+#[cfg(unix)]
+#[test]
+fn hatchzip_gets_its_paths_after_a_double_dash() {
+    let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
+    let a = t.path().join("-y.zip");
+    zip_of(&a, &[("one.txt", b"1")], None);
+    let (r, _) = run_hz(
+        &a,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 0, WRITES)),
+        true,
+        runs.path(),
+    );
+    r.unwrap();
+    let args = std::fs::read_to_string(t.path().join("-y.zip.args")).unwrap();
+    let out = t.path().join("-y.hatchzip-out");
+    assert_eq!(
+        args.trim(),
+        format!(
+            "extract --output={} -y -q -- {}",
+            out.display(),
+            a.display()
+        )
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn without_7zip_hatchzip_is_used_only_when_asked() {
+    let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
+    let a = t.path().join("x.7z");
+    std::fs::write(&a, [b'7', b'z', 0xBC, 0xAF, 0x27, 0x1C, 0, 4]).unwrap();
+    let mut on_file = |_: &Path| {};
+    let mut policy = Policy {
+        dest: t.path().to_path_buf(),
+        subfolder: Subfolder::Smart,
+        password: None,
+        limits: Limits::default(),
+        tool: None,
+        hatchzip: Some(fake_hatchzip(t.path(), 0, WRITES)),
+        in_place: false,
+        runs: Some(runs.path().to_path_buf()),
+        on_file: &mut on_file,
+        cancel: None,
+    };
+    let r = extract(&a, &mut policy);
+    assert!(matches!(r, Err(Error::NoTool)), "{r:?}");
+    assert!(!t.path().join("x.7z.args").exists(), "HatchZip wasn't run");
+    assert!(a.exists());
+}
+
+#[cfg(unix)]
 #[test]
 fn a_stop_partway_in_place_keeps_what_came_out() {
     let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
     let a = t.path().join("big.zip");
     zip_of(&a, &[("one.txt", b"1")], None);
     // Stopped after writing a file: that folder stays, named, never removed.
@@ -549,9 +602,9 @@ fn a_stop_partway_in_place_keeps_what_came_out() {
         &a,
         t.path(),
         None,
-        Some(fake_hatchzip(t.path(), 1, true)),
+        Some(fake_hatchzip(t.path(), 1, WRITES)),
         true,
-        false,
+        runs.path(),
     );
     let Err(Error::Partial(folder)) = r else {
         panic!("{r:?}")
@@ -564,9 +617,9 @@ fn a_stop_partway_in_place_keeps_what_came_out() {
         &a,
         t.path(),
         None,
-        Some(fake_hatchzip(t.path(), 3, false)),
+        Some(fake_hatchzip(t.path(), 3, ":")),
         true,
-        false,
+        runs.path(),
     );
     assert!(
         matches!(r, Err(Error::NoRoom(ref s)) if s == "it stopped"),
@@ -578,9 +631,9 @@ fn a_stop_partway_in_place_keeps_what_came_out() {
         &a,
         t.path(),
         None,
-        Some(fake_hatchzip(t.path(), 4, false)),
+        Some(fake_hatchzip(t.path(), 4, ":")),
         true,
-        false,
+        runs.path(),
     );
     assert!(
         matches!(r, Err(Error::Damaged(ref s)) if s == "it stopped"),
@@ -591,24 +644,149 @@ fn a_stop_partway_in_place_keeps_what_came_out() {
 
 #[cfg(unix)]
 #[test]
-fn an_unfinished_extraction_in_place_is_finished_by_hatchzip() {
+fn a_run_mdm_started_is_finished_by_hatchzip() {
     let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
     let a = t.path().join("half.zip");
     zip_of(&a, &[("one.txt", b"1")], None);
-    // Its progress file: HatchZip stopped partway before. In place is off now; it still goes
-    // to HatchZip, in place, into the same folder.
-    std::fs::write(t.path().join("half.zip.hatchzip"), b"").unwrap();
+    // MDM starts it in place; HatchZip stops partway and keeps its progress beside the archive.
+    let stops = "printf x > \"$out/one.txt\"\n: > \"$archive.hatchzip\"";
     let (r, _) = run_hz(
         &a,
         t.path(),
         None,
-        Some(fake_hatchzip(t.path(), 0, true)),
-        false,
-        false,
+        Some(fake_hatchzip(t.path(), 1, stops)),
+        true,
+        runs.path(),
     );
-    r.unwrap();
+    assert!(matches!(r, Err(Error::Partial(_))), "{r:?}");
+    // In place is off now: it still goes to HatchZip, in place, into the same folder.
+    let ends = "printf y > \"$out/two.txt\"\nrm \"$archive.hatchzip\"";
+    let (r, _) = run_hz(
+        &a,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 0, ends)),
+        false,
+        runs.path(),
+    );
+    let r = r.unwrap();
+    assert!(r.in_place);
     let args = std::fs::read_to_string(t.path().join("half.zip.args")).unwrap();
     assert!(args.contains("half.hatchzip-out"), "{args}");
-    assert!(!args.contains("--keep-archive"), "{args}");
-    assert!(t.path().join("got.txt").exists(), "placed as ours");
+    assert!(t.path().join("half/one.txt").exists(), "placed as ours");
+    assert!(t.path().join("half/two.txt").exists());
+    no_work_folder(t.path());
+    assert_eq!(
+        std::fs::read_dir(runs.path()).unwrap().count(),
+        0,
+        "run forgotten"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_progress_file_mdm_didnt_write_starts_nothing() {
+    // A download (or a torrent) that comes with HatchZip's progress file beside the archive.
+    for in_place in [false, true] {
+        let t = tempfile::tempdir().unwrap();
+        let runs = tempfile::tempdir().unwrap();
+        let a = t.path().join("x.zip");
+        zip_of(&a, &[("one.txt", b"1")], None);
+        std::fs::write(t.path().join("x.zip.hatchzip"), b"").unwrap();
+        let (r, _) = run_hz(
+            &a,
+            t.path(),
+            None,
+            Some(fake_hatchzip(t.path(), 0, WRITES)),
+            in_place,
+            runs.path(),
+        );
+        let r = r.unwrap();
+        // Extracted as usual: the archive is kept, HatchZip never ran.
+        assert!(!r.in_place);
+        assert!(a.exists(), "the archive is kept");
+        assert!(!t.path().join("x.zip.args").exists(), "HatchZip wasn't run");
+        assert_eq!(std::fs::read(t.path().join("one.txt")).unwrap(), b"1");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn entries_left_out_in_place_stay_in_its_folder() {
+    let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
+    let a = t.path().join("links.zip");
+    zip_of(&a, &[("one.txt", b"1")], None);
+    let body = "printf 1 > \"$out/one.txt\"\nmkdir \"$out/sub\"\nprintf 2 > \"$out/sub/two.txt\"\n\
+                ln -s /etc/hostname \"$out/top-link\"\nln -s /etc \"$out/sub/dir-link\"";
+    let (r, seen) = run_hz(
+        &a,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 0, body)),
+        true,
+        runs.path(),
+    );
+    let r = r.unwrap();
+    let out = t.path().join("links.hatchzip-out");
+    assert_eq!((r.files, seen), (2, 2));
+    assert_eq!(
+        std::fs::read(t.path().join("links/sub/two.txt")).unwrap(),
+        b"2"
+    );
+    let mut skipped: Vec<_> = r.skipped.iter().map(|(n, w)| (n.as_str(), *w)).collect();
+    skipped.sort();
+    assert_eq!(skipped, [("sub/dir-link", "link"), ("top-link", "link")]);
+    // Never deleted: still where HatchZip put them, and the report says where.
+    assert_eq!(r.left.as_deref(), Some(out.as_path()));
+    assert!(
+        out.join("top-link")
+            .symlink_metadata()
+            .unwrap()
+            .is_symlink()
+    );
+    assert!(
+        out.join("sub/dir-link")
+            .symlink_metadata()
+            .unwrap()
+            .is_symlink()
+    );
+    assert!(!out.join("one.txt").exists() && !out.join("sub/two.txt").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_failed_move_in_place_keeps_every_file() {
+    use std::os::unix::fs::PermissionsExt;
+    let t = tempfile::tempdir().unwrap();
+    let runs = tempfile::tempdir().unwrap();
+    let a = t.path().join("stuck.zip");
+    zip_of(&a, &[("one.txt", b"1")], None);
+    // `z` holds a link (left out), so its files are moved one by one; it can't be written to
+    // (a file held open, say), so moving `z/c.txt` out of it fails after `a.txt` went.
+    let body = "printf a > \"$out/a.txt\"\nmkdir \"$out/z\"\nprintf c > \"$out/z/c.txt\"\n\
+                ln -s /etc \"$out/z/link\"\nchmod 555 \"$out/z\"";
+    let (r, _) = run_hz(
+        &a,
+        t.path(),
+        None,
+        Some(fake_hatchzip(t.path(), 0, body)),
+        true,
+        runs.path(),
+    );
+    let out = t.path().join("stuck.hatchzip-out");
+    let back = || std::fs::set_permissions(out.join("z"), std::fs::Permissions::from_mode(0o755));
+    let Err(Error::Unplaced { to, left, .. }) = r else {
+        back().unwrap();
+        panic!("{r:?}")
+    };
+    back().unwrap();
+    assert_eq!(to, t.path().join("stuck"));
+    assert_eq!(left, out);
+    // What moved stays where it went, the rest where HatchZip put it: nothing deleted.
+    assert_eq!(std::fs::read(to.join("a.txt")).unwrap(), b"a");
+    assert_eq!(std::fs::read(out.join("z/c.txt")).unwrap(), b"c");
+    assert!(out.join("z/link").symlink_metadata().unwrap().is_symlink());
+    assert!(!out.join("a.txt").exists());
 }

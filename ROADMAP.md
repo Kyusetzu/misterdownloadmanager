@@ -290,7 +290,7 @@ Everything below ships together, in version 0.5.0.
   files says "Checking 42%"; a finished torrent that isn't shared lets go of its files; a
   `.torrent` file's web address opens Add torrent ([#39](https://github.com/anefzaoui/misterdownloadmanager/issues/39))
 - ✅ Link grabber: links in packages, looked up for name and size; archives (zip and tar
-  built in; 7z and RAR need 7-Zip or HatchZip) extracted when they are downloaded, in place
+  built in; 7z and RAR need 7-Zip) extracted when they are downloaded, in place
   with HatchZip when asked ([#37](https://github.com/anefzaoui/misterdownloadmanager/issues/37));
   collecting copied links comes later
 - ✅ Image galleries with gallery-dl: Wikimedia Commons, Flickr, DeviantArt and many more,

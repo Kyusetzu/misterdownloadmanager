@@ -1,25 +1,29 @@
 //! HatchZip (hatchzip.dev, MIT or Apache-2.0), run as its own program like 7-Zip: an optional
-//! second extractor. It reads ZIP, 7z, RAR and tar, and can extract *in place*: it cuts each
-//! finished part off the archive as it goes, so a large download needs free space for its files
-//! only, not for the archive and its files at once.
+//! extractor, used only when Options asks for it. It reads ZIP, 7z, RAR and tar, and extracts
+//! *in place*: it cuts each finished part off the archive as it goes, so a large download needs
+//! free space for its files only, not for the archive and its files at once.
 //!
-//! Only its documented command line is used (`hatchzip extract <archive> -o <folder> -y -q`,
-//! `--keep-archive`, the `HATCHZIP_PASSWORD` variable and the exit status of its README):
-//! 0 done, 1 failed (progress saved), 3 not enough free space (nothing changed), 4 damaged
-//! (nothing deleted), 5 password missing or wrong, 130 paused.
+//! Only its documented command line is used (`hatchzip extract --output=<folder> -y -q --
+//! <archive>`, the `HATCHZIP_PASSWORD` variable and the exit status of its README): 0 done,
+//! 1 failed (progress saved), 3 not enough free space (nothing changed), 4 damaged (nothing
+//! deleted), 5 password missing or wrong, 130 paused.
 //!
 //! In place, what is already extracted is no longer in the archive. So it is never extracted
 //! into a staging folder that a failure would remove: it goes into a folder of its own beside the
 //! archive ([`work_folder`]), which stays when HatchZip stops partway. Running it again with the
 //! same folder continues where it stopped (HatchZip keeps its progress next to the archive).
+//!
+//! MDM continues only a run it started itself: it writes a record of it in its own data
+//! ([`Runs`]) before HatchZip starts. HatchZip's progress file beside an archive (one that came
+//! with a download or a torrent, say) is never enough.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use crate::Error;
-use crate::safe;
 
 /// HatchZip's command line program on the PATH (its installers and packages put `hatchzip`
 /// there; the desktop app alone, `hatchzip-gui`, isn't enough).
@@ -35,8 +39,8 @@ pub fn find_hatchzip() -> Option<PathBuf> {
 }
 
 /// The folder an extraction in place goes into before it is put where the settings say:
-/// `<archive's name>.hatchzip-out` beside the archive. The same every time for one archive, so a
-/// second run continues the first.
+/// `<archive's name>.hatchzip-out` beside the archive (numbered when that name is taken). The
+/// record of the run keeps it, so a second run continues the first in the same folder.
 pub fn work_folder(dest: &Path, base: &str) -> PathBuf {
     let name = mdm_engine::naming::sanitize(base);
     let name = if name.is_empty() {
@@ -44,38 +48,91 @@ pub fn work_folder(dest: &Path, base: &str) -> PathBuf {
     } else {
         name
     };
-    dest.join(format!("{name}.hatchzip-out"))
+    let folder = dest.join(format!("{name}.hatchzip-out"));
+    if std::fs::symlink_metadata(&folder).is_ok() {
+        crate::safe::numbered(&folder)
+    } else {
+        folder
+    }
 }
 
-/// Whether HatchZip has an unfinished extraction of `archive` (its progress file beside it).
-pub fn unfinished(archive: &Path) -> bool {
+/// Whether HatchZip's progress file is beside `archive` (an unfinished extraction, whoever
+/// started it).
+pub fn progress(archive: &Path) -> bool {
     let mut p = archive.as_os_str().to_owned();
     p.push(".hatchzip");
-    Path::new(&p).exists()
+    std::fs::symlink_metadata(Path::new(&p)).is_ok()
 }
 
-/// Extract `archive` into `out` (made if missing). `keep`: leave the archive as it is (a normal
-/// extraction); otherwise in place. The password goes through the environment, never the
-/// command line (which other programs can read). `cancel` stops it: HatchZip is safe to stop
-/// at any moment. Returns what was left out of what it wrote (links, unsafe names).
+/// The extractions in place MDM started, one small file each in a folder of MDM's own data:
+/// the archive's full path and the folder its files go into. Written before HatchZip starts,
+/// removed once its progress file is gone (finished, or nothing changed).
+pub struct Runs {
+    dir: PathBuf,
+}
+
+impl Runs {
+    pub fn new(dir: PathBuf) -> Runs {
+        Runs { dir }
+    }
+
+    /// One file per archive, named after its path (FNV-1a: the same in every MDM version).
+    fn file(&self, archive: &Path) -> PathBuf {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        for b in archive.as_os_str().as_encoded_bytes() {
+            h = (h ^ u64::from(*b)).wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        self.dir.join(format!("{h:016x}.run"))
+    }
+
+    /// The folder of the run MDM started for `archive`, if it recorded one.
+    pub fn find(&self, archive: &Path) -> Option<PathBuf> {
+        let text = std::fs::read_to_string(self.file(archive)).ok()?;
+        let mut lines = text.lines();
+        let (path, out) = (lines.next()?, lines.next()?);
+        (Path::new(path) == archive && !out.is_empty()).then(|| PathBuf::from(out))
+    }
+
+    /// Record that MDM starts extracting `archive` in place into `out`. Paths that aren't
+    /// Unicode can't be written down, so they are never extracted in place.
+    pub fn start(&self, archive: &Path, out: &Path) -> std::io::Result<()> {
+        let (Some(a), Some(o)) = (archive.to_str(), out.to_str()) else {
+            return Err(std::io::Error::other("not a Unicode path"));
+        };
+        if a.contains('\n') || o.contains('\n') {
+            return Err(std::io::Error::other("a line break in a path"));
+        }
+        std::fs::create_dir_all(&self.dir)?;
+        std::fs::write(self.file(archive), format!("{a}\n{o}\n"))
+    }
+
+    /// After a run: forgotten when HatchZip has nothing left to continue.
+    pub fn end(&self, archive: &Path) {
+        if !progress(archive) {
+            let _ = std::fs::remove_file(self.file(archive));
+        }
+    }
+}
+
+/// Extract `archive` in place into `out` (made if missing). The password goes through the
+/// environment, never the command line (which other programs can read). `cancel` stops it:
+/// HatchZip is safe to stop at any moment. What it wrote is checked by the caller.
 pub fn extract(
     tool: &Path,
     archive: &Path,
     out: &Path,
     password: Option<&str>,
-    keep: bool,
     cancel: Option<&AtomicBool>,
-) -> Result<Vec<(String, &'static str)>, Error> {
+) -> Result<(), Error> {
     std::fs::create_dir_all(out)?;
+    let mut output = OsString::from("--output=");
+    output.push(out);
     let mut cmd = Command::new(tool);
+    // `--`: the archive's name is never read as an option, whatever it starts with.
     cmd.arg("extract")
-        .arg(archive)
-        .arg("-o")
-        .arg(out)
-        .args(["-y", "-q"]);
-    if keep {
-        cmd.arg("--keep-archive");
-    }
+        .arg(output)
+        .args(["-y", "-q", "--"])
+        .arg(archive);
     cmd.env_remove("HATCHZIP_PASSWORD");
     if let Some(pw) = password {
         cmd.env("HATCHZIP_PASSWORD", pw);
@@ -91,14 +148,9 @@ pub fn extract(
     }
     // The password is never logged.
     tracing::info!(
-        "extract: {} extract {}{}",
+        "extract: {} extract {} (in place)",
         tool.display(),
-        archive.display(),
-        if keep {
-            " --keep-archive"
-        } else {
-            " (in place)"
-        }
+        archive.display()
     );
     let mut child = cmd.spawn()?;
     // stderr is read on its own thread so a long message can't fill the pipe and stall it.
@@ -145,6 +197,5 @@ pub fn extract(
         Some(130) => return Err(Error::Cancelled),
         _ => return Err(Error::Damaged(first())),
     }
-    // What it wrote is checked as our own entries are (no links leading out, no deep trees).
-    Ok(safe::check_tree(out, 64)?)
+    Ok(())
 }

@@ -302,6 +302,16 @@ impl Extracts {
                 .to_owned(),
             );
         }
+        if let Some(left) = &report.left {
+            note(
+                items,
+                crate::i18n::fmt(
+                    // i18n: in a download's log, after HatchZip (a program's name) extracted in place: the entries left out (links, unsafe names) were not deleted, they are still in {folder}
+                    crate::i18n::t("The entries left out are still in {folder}"),
+                    &[("folder", &crate::i18n::ltr(&left.display().to_string()))],
+                ),
+            );
+        }
         if let Some(gone) = trashed {
             let text = match (gone, cfg!(windows)) {
                 // i18n: in a download's log: the downloaded archive, after it was extracted
@@ -431,6 +441,17 @@ fn failed(name: &str, e: &Error) -> String {
             ),
             &[("folder", &crate::i18n::ltr(&folder.display().to_string()))],
         ),
+        Error::Unplaced { to, left, why } => crate::i18n::fmt(
+            // i18n: why an archive wasn't extracted in place (after "Couldn't extract {name}: "); HatchZip took its files out (the archive is gone), but moving them stopped: {to} holds those moved, {left} the others, {error} the system's reason
+            crate::i18n::t(
+                "its files came out, but moving them stopped ({error}). Those moved are in {to}, the others still in {left}; nothing was deleted",
+            ),
+            &[
+                ("error", why.as_str()),
+                ("to", &crate::i18n::ltr(&to.display().to_string())),
+                ("left", &crate::i18n::ltr(&left.display().to_string())),
+            ],
+        ),
         // i18n: why an archive wasn't extracted (after "Couldn't extract {name}: ")
         Error::Unsupported => crate::i18n::t("it is not an archive MDM extracts").to_owned(),
         // i18n: why an archive wasn't extracted (after "Couldn't extract {name}: ")
@@ -505,6 +526,7 @@ fn run(job: &Job, cancel: &AtomicBool) -> Result<Report, Error> {
         tool: seven_zip(),
         hatchzip: hatch_zip(),
         in_place: job.in_place,
+        runs: mdm_ipc::data_dir().map(|d| d.join("hatchzip-runs")),
         on_file: &mut on_file,
         cancel: Some(cancel),
     };

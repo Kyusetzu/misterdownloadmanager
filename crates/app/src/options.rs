@@ -2164,19 +2164,21 @@ impl OptionsDialog {
             o.x + 400.0,
             13.0,
         );
-        let (rar, ink) = match (&self.seven_zip, &self.hatch_zip) {
+        // HatchZip only when asked for (in place); without it, 7z and RAR need 7-Zip.
+        let hatch = self.hatch_zip.as_ref().filter(|_| s.extract_in_place);
+        let (rar, ink) = match (hatch, &self.seven_zip) {
             (Some(path), _) => (
                 crate::i18n::fmt(
-                    // i18n: Options → Archives: {path} is where 7-Zip's program is
-                    crate::i18n::t("7z and RAR archives are extracted by 7-Zip ({path})."),
+                    // i18n: Options → Archives, when Extract in place with HatchZip (a program's name) is on: {path} is where its program is
+                    crate::i18n::t("7z and RAR archives are extracted by HatchZip ({path})."),
                     &[("path", &crate::i18n::ltr(&path.display().to_string()))],
                 ),
                 LIGHT_TEXT(),
             ),
             (None, Some(path)) => (
                 crate::i18n::fmt(
-                    // i18n: Options → Archives, when 7-Zip isn't installed but HatchZip (a program's name) is: {path} is where its program is
-                    crate::i18n::t("7z and RAR archives are extracted by HatchZip ({path})."),
+                    // i18n: Options → Archives: {path} is where 7-Zip's program is
+                    crate::i18n::t("7z and RAR archives are extracted by 7-Zip ({path})."),
                     &[("path", &crate::i18n::ltr(&path.display().to_string()))],
                 ),
                 LIGHT_TEXT(),
