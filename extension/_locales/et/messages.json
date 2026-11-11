@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Ei saa aru, mis video see on: ava video enda leht ja proovi seal"
   },
+  "video_looking": {
+    "message": "Kvaliteetide otsimine…"
+  },
+  "video_open_mdm": {
+    "message": "Ava rakenduses Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Siin pole allalaaditavat videot"
+  },
+  "video_playlist": {
+    "message": "Videode loend: valige need rakenduses Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager vajab selle video jaoks programmi yt-dlp"
+  },
+  "video_too_long": {
+    "message": "Otsimine võttis liiga kaua aega"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager on teiste videotega hõivatud"
+  },
+  "video_queued": {
+    "message": "Lisatud järjekorda"
+  },
+  "video_failed_lookup": {
+    "message": "Otsimine ebaõnnestus"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Heli"
+  },
+  "video_open_post": {
+    "message": "Ava postitus, siis kasuta sealset nuppu"
+  },
   "popup_send_to": {
     "message": "Saada allalaadimised asukohta"
   },

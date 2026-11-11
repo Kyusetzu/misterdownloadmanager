@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "ይህ የትኛው ቪዲዮ እንደሆነ ማወቅ አልተቻለም፦ የራሱን ገጽ ከፍተው እዚያ ይሞክሩ"
   },
+  "video_looking": {
+    "message": "ጥራቶችን በመፈለግ ላይ…"
+  },
+  "video_open_mdm": {
+    "message": "በMister Download Manager ውስጥ ክፈት…"
+  },
+  "video_no_choices": {
+    "message": "እዚህ የሚወርድ ቪዲዮ የለም"
+  },
+  "video_playlist": {
+    "message": "የቪዲዮዎች ዝርዝር፦ በMister Download Manager ውስጥ ይምረጧቸው"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager ለዚህ ቪዲዮ yt-dlp ይፈልጋል"
+  },
+  "video_too_long": {
+    "message": "መፈለጉ በጣም ረጅም ጊዜ ወሰደ"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager በሌሎች ቪዲዮዎች ተጠምዷል"
+  },
+  "video_queued": {
+    "message": "ወደ ወረፋው ታክሏል"
+  },
+  "video_failed_lookup": {
+    "message": "መፈለግ አልተቻለም"
+  },
+  "video_tab_video": {
+    "message": "ቪዲዮ"
+  },
+  "video_tab_audio": {
+    "message": "ኦዲዮ"
+  },
+  "video_open_post": {
+    "message": "ልጥፉን ይክፈቱ፣ ከዚያ እዚያ ያለውን አዝራር ይጠቀሙ"
+  },
   "popup_send_to": {
     "message": "ውርዶችን ወደ"
   },

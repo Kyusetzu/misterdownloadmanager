@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Det går inte att avgöra vilken video det här är: öppna videons egen sida och försök där"
   },
+  "video_looking": {
+    "message": "Söker efter kvaliteter…"
+  },
+  "video_open_mdm": {
+    "message": "Öppna i Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Ingen video att hämta här"
+  },
+  "video_playlist": {
+    "message": "En lista med videor: välj dem i Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager behöver yt-dlp för den här videon"
+  },
+  "video_too_long": {
+    "message": "Sökningen tog för lång tid"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager är upptaget med andra videor"
+  },
+  "video_queued": {
+    "message": "Tillagd i kön"
+  },
+  "video_failed_lookup": {
+    "message": "Det gick inte att söka"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Ljud"
+  },
+  "video_open_post": {
+    "message": "Öppna inlägget och använd sedan knappen där"
+  },
   "popup_send_to": {
     "message": "Skicka nedladdningar till"
   },

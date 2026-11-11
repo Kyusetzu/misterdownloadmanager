@@ -75,9 +75,9 @@ And on the other desktops it was checked on:
 
 `sudo apt remove misterdownloadmanager` (or `sudo dnf remove misterdownloadmanager`) removes the
 programs, and the small files that tell your browsers where MDM's helper is: the .deb and .rpm
-install those for everyone (in `/etc` and `/usr/lib`), for Chrome, Chromium, Edge, Brave, Vivaldi
-and Firefox (the Snap too), so MDM doesn't write them in your home folder. For the AppImage or the
-tar.gz, delete the file or the folder.
+install those for everyone (in `/etc` and `/usr/lib`), for Chrome, Chromium, Edge, Brave, Vivaldi,
+Helium and Firefox (the Snap too), so MDM doesn't write them in your home folder. For the AppImage
+or the tar.gz, delete the file or the folder.
 
 What MDM keeps in your home folder stays, as with any package: your list and settings
 (`~/.local/share/misterdownloadmanager`), the AppImage's and the tar.gz's browser files, and
@@ -168,7 +168,7 @@ From top to bottom:
   - **Tasks** — add downloads, torrents, magnet links, batch downloads and videos from a page; **Torrent settings**; **Link grabber**; **RSS feeds**; show the drop target; import and export the list; exit.
   - **File** — the selected download: **Stop Download**, **Remove**, **Download Now**, **Redownload**.
   - **Downloads** — **Pause All**, **Stop All**, **Delete All Completed**, **Find**, the **Scheduler**, queues, the **Speed Limiter** and **Options**.
-  - **View** — show or hide the categories, sort the list (**Arrange files**), **Dark Mode support**, **Always dark**, **Theme**, **Interface size** (every window larger, 100 % to 200 %; **Ctrl +**, **Ctrl −** and **Ctrl 0** too), **Draw with** (OpenGL, or Direct3D on Windows, Vulkan on Linux, Metal on macOS) and **Language**.
+  - **View** — show or hide the categories, sort the list (**Arrange files**), **Dark Mode support**, **Always dark**, **Theme**, **Interface size** (every window larger, 100 % to 200 %; **Ctrl +**, **Ctrl −** and **Ctrl 0** too), **Text** (Windows: smooth or classic letters), **Draw with** (OpenGL, or Direct3D on Windows, Vulkan on Linux, Metal on macOS) and **Language**.
   - **Help** — help pages and tutorials (on the website, in your language when it has it), **Keyboard shortcuts**, **Report a problem**, **Check for updates**, **About**, **Tell a friend** and **Support MDM** (its creator's GitHub Sponsors page: optional, nothing in MDM changes).
 - **Toolbar.** **Add URL**, **Add Torrent**, **Resume**, **Stop**, **Stop All**, **Delete**, **Delete Completed**, **Options**, **Scheduler**, **Start Queue**, **Stop Queue**. The small arrow next to **Add Torrent**, **Start Queue** and **Stop Queue** opens more choices.
 - **Categories** (left). Choose what the list shows: **All Downloads**, **Unfinished**, **Finished** and **Queues**, each with its categories. Drag the gap between the pane and the list to make it wider.
@@ -210,8 +210,11 @@ MDM follows your system: when Windows (or your desktop's light/dark preference o
 - **Aqua**: Mac OS X's look: gel buttons round at the ends (the default one blue), glossy check
   boxes, a blue focus ring, a blue gel progress bar, a grey title bar with small round buttons
   (on Windows), and icons drawn for MDM in that manner.
+- **Emerald**: a white canvas with one near-black ink and a ladder of
+  neutral greys for structure, emerald fills that always carry near-black text rather than white,
+  6-point corners on every control, and Metro's one-colour icons.
 
-![View → Theme open: Classic, Native, High contrast, Metro, Adwaita, Breeze, Luna, Aero and Aqua, and Open themes folder](images/help/view-theme.webp)
+![View → Theme open: Classic, Native, High contrast, Metro, Adwaita, Breeze, Luna, Aero, Aqua and Emerald, and Open themes folder](images/help/view-theme.webp)
 *View → Theme switches at once, keeping the layout.*
 
 <!-- pictures -->

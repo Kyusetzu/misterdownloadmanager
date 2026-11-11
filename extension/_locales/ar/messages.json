@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "تعذّر تحديد هذا الفيديو: افتح صفحته الخاصة وحاول من هناك"
   },
+  "video_looking": {
+    "message": "يجري البحث عن الجودات…"
+  },
+  "video_open_mdm": {
+    "message": "فتح في Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "لا يوجد فيديو للتنزيل هنا"
+  },
+  "video_playlist": {
+    "message": "قائمة فيديوهات: اختر منها في Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "يحتاج Mister Download Manager إلى yt-dlp لهذا الفيديو"
+  },
+  "video_too_long": {
+    "message": "استغرق البحث وقتا طويلا"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager مشغول بفيديوهات أخرى"
+  },
+  "video_queued": {
+    "message": "تمت الإضافة إلى قائمة الانتظار"
+  },
+  "video_failed_lookup": {
+    "message": "تعذر البحث"
+  },
+  "video_tab_video": {
+    "message": "فيديو"
+  },
+  "video_tab_audio": {
+    "message": "صوت"
+  },
+  "video_open_post": {
+    "message": "افتح المنشور، ثم استخدم الزر هناك"
+  },
   "popup_send_to": {
     "message": "إرسال التنزيلات إلى"
   },

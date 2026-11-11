@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Tidak bisa diketahui video mana ini: buka halamannya sendiri dan coba di sana"
   },
+  "video_looking": {
+    "message": "Mencari kualitas…"
+  },
+  "video_open_mdm": {
+    "message": "Buka di Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Tidak ada video untuk diunduh di sini"
+  },
+  "video_playlist": {
+    "message": "Daftar video: pilih di Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager memerlukan yt-dlp untuk video ini"
+  },
+  "video_too_long": {
+    "message": "Pencarian memakan waktu terlalu lama"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager sedang sibuk dengan video lain"
+  },
+  "video_queued": {
+    "message": "Ditambahkan ke antrean"
+  },
+  "video_failed_lookup": {
+    "message": "Gagal mencarinya"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Buka postingan, lalu gunakan tombol di sana"
+  },
   "popup_send_to": {
     "message": "Kirim unduhan ke"
   },

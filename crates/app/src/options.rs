@@ -223,6 +223,9 @@ pub struct OptionsDialog {
     /// Sites Logins → Cookies for video sites (#229): the browser in the list (an index into
     /// `mdm_tools::proc::cookie_browsers`), kept while Off is chosen.
     cookie_browser: usize,
+    /// Downloads → User-Agent → Automatic (#668): the default browser's, the box then shows it;
+    /// unticked, the box's own text (empty is automatic again when the window opens next).
+    ua_auto: bool,
 }
 
 impl OptionsDialog {
@@ -299,6 +302,7 @@ impl OptionsDialog {
             port: settings.remote_port.to_string(),
             device_rows: Default::default(),
             cookie_browser: cookie_browser_at(settings),
+            ua_auto: settings.own_user_agent().is_none(),
         }
     }
 
@@ -978,10 +982,15 @@ impl OptionsDialog {
         let Some(&cat) = cats.get(self.category) else {
             return;
         };
-        let default = display_dir(&cat.default_folder(downloads));
+        let base = if cat == Category::General {
+            std::borrow::Cow::Borrowed(downloads)
+        } else {
+            crate::model::default_downloads(downloads, &self.s.category_dirs)
+        };
+        let default = display_dir(&cat.default_folder(&base));
         let typed = self.cat_dir.trim();
         let own = (!typed.is_empty()
-            && typed.trim_end_matches('\\') != default.trim_end_matches('\\'))
+            && typed.trim_end_matches(['\\', '/']) != default.trim_end_matches(['\\', '/']))
         .then(|| typed.to_owned());
         self.s.set_category_dir(cat, own);
     }
@@ -1095,20 +1104,7 @@ impl OptionsDialog {
             s.duplicate_action = i as u8;
         }
         winui::etched_h(&p, o.x + 21.0, o.y + 367.0, 381.0);
-        text(
-            &p,
-            o.x + 21.0,
-            o.y + 388.0,
-            crate::i18n::t("User-Agent for manually added downloads:"),
-            LIGHT_TEXT(),
-        );
-        winui::edit_light(
-            ui,
-            r(o, 21.0, 398.0, 381.0, 23.0),
-            &mut s.user_agent,
-            true,
-            false,
-        );
+        self.user_agent(ui, o);
         winui::etched_h(&p, o.x + 21.0, o.y + 426.0, 381.0);
         winui::text_right(
             &p,
@@ -1125,6 +1121,67 @@ impl OptionsDialog {
             ButtonKind::Disabled,
             false,
         );
+    }
+
+    /// "User-Agent for manually added downloads" (#668): Automatic, the default browser's (the
+    /// box shows it, read-only), or the one typed in the box.
+    fn user_agent(&mut self, ui: &mut Ui, o: Pos2) {
+        let p = ui.painter().clone();
+        let s = &mut self.s;
+        // The checkbox ends where the box does; the label before it gives way ("...") if need be.
+        let auto_x = 402.0 - (winui::checkbox_caption_end(&p, 0.0, "Automatic") + 2.0);
+        let label = crate::i18n::t("User-Agent for manually added downloads:");
+        let (rect, cut) = winui::label_into(
+            &p,
+            o.x + 21.0,
+            o.y + 388.0,
+            label,
+            LIGHT_TEXT(),
+            o.x + auto_x - 6.0,
+            o.x + 21.0,
+        );
+        if cut {
+            winui::full_on_hover(ui, rect, "opt-user-agent", label);
+        }
+        let agent = mdm_engine::agent::automatic();
+        let tip = match mdm_engine::agent::automatic_browser() {
+            Some(browser) => crate::i18n::fmt(
+                // i18n: tooltip; {browser} is a browser and its version, e.g. "Brave 157"
+                crate::i18n::t("Your default browser's User-Agent: {browser}"),
+                &[("browser", &browser)],
+            ),
+            None if mdm_engine::agent::looked_for() => crate::i18n::t(
+                "Your default browser isn't one MDM knows: a current Chrome's User-Agent",
+            )
+            .to_owned(),
+            None => crate::i18n::t("Looking for your default browser...").to_owned(),
+        };
+        let tip = format!("{tip}\n{agent}");
+        let was = self.ua_auto;
+        winui::checkbox_light(
+            ui,
+            o + vec2(auto_x, 378.0),
+            &mut self.ua_auto,
+            // i18n: checkbox: the User-Agent is the default browser's, which MDM finds itself
+            "Automatic",
+            true,
+        )
+        .on_hover_text(&tip);
+        if self.ua_auto != was {
+            // Ticked: the automatic one. Unticked: the box starts from it, to be changed.
+            s.user_agent = if self.ua_auto {
+                String::new()
+            } else {
+                agent.clone()
+            };
+        }
+        let rc = r(o, 21.0, 398.0, 381.0, 23.0);
+        if self.ua_auto {
+            let mut shown = agent;
+            winui::edit_light(ui, rc, &mut shown, false, false).on_hover_text(&tip);
+        } else {
+            winui::edit_light(ui, rc, &mut s.user_agent, true, false);
+        }
     }
 
     fn connection(&mut self, ui: &mut Ui, o: Pos2) {
@@ -3342,7 +3399,10 @@ impl OptionsDialog {
                     "opt-account",
                     // i18n: window title: adding a debrid service account (Real-Debrid…)
                     "Add an account",
-                    [420.0, 300.0],
+                    [
+                        420.0,
+                        300.0 + crate::dialogs::grow_extra(ctx, "opt-account"),
+                    ],
                     false,
                     LIGHT_BG(),
                     |ui, o| account_dialog(ui, o, &mut e),
@@ -3821,11 +3881,22 @@ fn dns_dialog(ui: &mut Ui, o: Pos2, e: &mut DnsEdit) -> Outcome<()> {
 }
 
 /// Accounts → Add...: the service, a token typed in, and the sign-in on its thread (#44).
-#[derive(Default)]
 struct AccountEdit {
     service: mdm_debrid::ServiceKind,
     token: String,
     signin: crate::debrid::SignIn,
+}
+
+/// It starts on the first service Options lists (not `ServiceKind`'s default, Real-Debrid,
+/// which saved accounts fall back to).
+impl Default for AccountEdit {
+    fn default() -> Self {
+        AccountEdit {
+            service: mdm_debrid::ServiceKind::ALL[0],
+            token: String::new(),
+            signin: Default::default(),
+        }
+    }
 }
 
 /// Accounts → Add...: sign in by code in the browser (Real-Debrid's device flow, AllDebrid's PIN),
@@ -3836,6 +3907,8 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
     let ctx = ui.ctx().clone();
     let state = e.signin.get();
     let busy = matches!(state, S::Starting | S::Waiting { .. } | S::Checking);
+    // What the sign-in text took beyond its three lines: everything under it moves down.
+    let extra = crate::dialogs::grow_extra(&ctx, "opt-account");
     // i18n: Options → Add an account: label before the choice of debrid service
     text(
         &p,
@@ -3887,15 +3960,17 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
     if let S::Waiting { code, page, until } = &state {
         // The code, large, to type at the service's page.
         let code_font = egui::FontId::monospace(crate::theme::metrics().font_code);
+        let code_w = winui::text_width_font(&p, code_font.clone(), code);
+        // At the leading edge: mirrored in a right-to-left interface, as the buttons are.
         p.text(
-            o + vec2(14.0, 78.0),
+            winui::at(o + vec2(14.0, 78.0), code_w),
             egui::Align2::LEFT_TOP,
             code,
-            code_font.clone(),
+            code_font,
             LIGHT_TEXT(),
         );
         // The buttons as wide as their labels in this language (#192), short of the code.
-        let code_end = 14.0 + winui::text_width_font(&p, code_font, code);
+        let code_end = 14.0 + code_w;
         let [copy_at, open_at] = winui::button_row(
             &p,
             &[("Copy code", 200.0, 90.0), ("Open the page", 296.0, 110.0)],
@@ -3932,7 +4007,7 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
         let left = until
             .saturating_duration_since(std::time::Instant::now())
             .as_secs();
-        winui::paragraph(
+        let lines = winui::paragraph(
             &p,
             o.x + 14.0,
             o.y + 120.0,
@@ -3950,7 +4025,11 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
             o.x + 406.0,
             14.0,
         );
+        // Three lines fit above the token's label; a longer page or language grows the dialog.
+        crate::dialogs::grow_px(&ctx, "opt-account", lines.saturating_sub(3) as f32 * 14.0);
         ctx.request_repaint_after(std::time::Duration::from_secs(1));
+    } else {
+        crate::dialogs::grow_px(&ctx, "opt-account", 0.0);
     }
     let label = if by_code {
         // i18n: Options → Add an account: label before the field for the service's API token (the other way to sign in)
@@ -3959,20 +4038,20 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
         // i18n: Options → Add an account: label before the field for the service's API key (Premiumize: the only way to sign in; the key is on the service's Account page)
         crate::i18n::t("Paste your API key (from the service's Account page):")
     };
-    text(&p, o.x + 14.0, o.y + 178.0, label, LIGHT_TEXT());
+    text(&p, o.x + 14.0, o.y + 178.0 + extra, label, LIGHT_TEXT());
     // As wide as its label in this language (#192); the box ends 6 px before it.
     let (use_x, use_w) =
         winui::buttons_to_right(&p, 406.0, 0.0, &[("Use the token", 106.0)], 200.0)[0];
     winui::password_light(
         ui,
-        r(o, 14.0, 186.0, use_x - 6.0 - 14.0, 21.0),
+        r(o, 14.0, 186.0 + extra, use_x - 6.0 - 14.0, 21.0),
         &mut e.token,
         !busy,
     );
     // i18n: button: sign in with the token typed in
     if winui::button_light(
         ui,
-        r(o, use_x, 186.0, use_w, 21.0),
+        r(o, use_x, 186.0 + extra, use_w, 21.0),
         "Use the token",
         kind(!busy && !e.token.trim().is_empty()),
         false,
@@ -3987,7 +4066,7 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
         r(
             o,
             14.0,
-            212.0,
+            212.0 + extra,
             winui::button_fit_width(&p, "Find my token", 160.0, 392.0),
             21.0,
         ),
@@ -4021,7 +4100,7 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
     let (rect, cut) = winui::label_into(
         &p,
         o.x + 14.0,
-        o.y + 252.0,
+        o.y + 252.0 + extra,
         &line,
         color,
         o.x + 406.0,
@@ -4031,7 +4110,7 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
         winui::full_on_hover(ui, rect, "opt-account-state", &line);
     }
     let done = matches!(state, S::Done { .. });
-    match ok_cancel(ui, o, 252.0, 266.0, done) {
+    match ok_cancel(ui, o, 252.0, 266.0 + extra, done) {
         Outcome::Done(()) => match state {
             S::Done {
                 user,

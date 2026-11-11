@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "Nu se poate stabili ce videoclip este: deschideți pagina proprie a videoclipului și încercați acolo"
   },
+  "video_looking": {
+    "message": "Se caută calitățile…"
+  },
+  "video_open_mdm": {
+    "message": "Deschideți în Mister Download Manager…"
+  },
+  "video_no_choices": {
+    "message": "Nu există niciun videoclip de descărcat aici"
+  },
+  "video_playlist": {
+    "message": "O listă de videoclipuri: alegeți-le în Mister Download Manager"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager are nevoie de yt-dlp pentru acest videoclip"
+  },
+  "video_too_long": {
+    "message": "Căutarea a durat prea mult"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager este ocupat cu alte videoclipuri"
+  },
+  "video_queued": {
+    "message": "Adăugat la coadă"
+  },
+  "video_failed_lookup": {
+    "message": "Căutarea nu a reușit"
+  },
+  "video_tab_video": {
+    "message": "Video"
+  },
+  "video_tab_audio": {
+    "message": "Audio"
+  },
+  "video_open_post": {
+    "message": "Deschideți postarea, apoi utilizați butonul de acolo"
+  },
   "popup_send_to": {
     "message": "Trimite descărcările la"
   },

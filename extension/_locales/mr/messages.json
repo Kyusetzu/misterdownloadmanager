@@ -188,6 +188,42 @@
   "video_unnamed": {
     "message": "हा कोणता व्हिडिओ आहे ते कळत नाही: त्याचे स्वतःचे पृष्ठ उघडून तिथे प्रयत्न करा"
   },
+  "video_looking": {
+    "message": "गुणवत्ता शोधत आहे…"
+  },
+  "video_open_mdm": {
+    "message": "Mister Download Manager मध्ये उघडा…"
+  },
+  "video_no_choices": {
+    "message": "येथे डाउनलोड करण्यासाठी व्हिडिओ नाही"
+  },
+  "video_playlist": {
+    "message": "व्हिडिओंची सूची: ते Mister Download Manager मध्ये निवडा"
+  },
+  "video_no_ytdlp": {
+    "message": "या व्हिडिओसाठी Mister Download Manager ला yt-dlp आवश्यक आहे"
+  },
+  "video_too_long": {
+    "message": "शोधण्यास खूप वेळ लागला"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager इतर व्हिडिओंमध्ये व्यस्त आहे"
+  },
+  "video_queued": {
+    "message": "रांगेत जोडले"
+  },
+  "video_failed_lookup": {
+    "message": "शोधता आले नाही"
+  },
+  "video_tab_video": {
+    "message": "व्हिडिओ"
+  },
+  "video_tab_audio": {
+    "message": "ऑडिओ"
+  },
+  "video_open_post": {
+    "message": "पोस्ट उघडा, नंतर तेथील बटण वापरा"
+  },
   "popup_send_to": {
     "message": "डाउनलोड्स येथे पाठवा"
   },

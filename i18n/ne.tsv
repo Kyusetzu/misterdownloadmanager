@@ -187,6 +187,10 @@
 #. Options → Accounts: what these accounts are, and the services' rule against sharing
 #, machine
 	A debrid service downloads a file host's link with your own paid account and gives MDM a direct link. Use only your own account: sharing an account or its links breaks the services' terms and can get it suspended. Downloads the browser already started stay as they are.	एक डिब्रिड सेवाले तपाईंको आफ्नै सशुल्क खाता प्रयोग गरेर फाइल होस्टको लिङ्क डाउनलोड गर्छ र MDM लाई सिधा लिङ्क दिन्छ। आफ्नो मात्र खाता प्रयोग गर्नुहोस्: खाता वा यसका लिङ्कहरू साझेदारी गर्दा सेवाका सर्तहरू उल्लङ्घन हुन्छ र यसलाई निलम्बन गर्न सकिन्छ। ब्राउजरले पहिले नै सुरु गरिसकेका डाउनलोडहरू जस्ताको तस्तै रहन्छन्।
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name ends with a period
+#, machine
+	A file name cannot end with a dot	फाइलको नाम थोप्लोमा टुङ्गिन सक्दैन
 #. text in errors.rs
 #. a torrent through a debrid service: one of its files has a name that would be written outside its folder; nothing was written. {name} the file's name as the service gave it
 #. {name} = a file name (keep the braces as they are)
@@ -216,6 +220,10 @@
 #. an error: a server on this computer redirected the download to the internet, which would not go through the chosen network adapter; {adapter} its name
 #, machine
 	a server on this computer sent the download elsewhere, which would not go through {adapter}	यस कम्प्युटरमा रहेको सर्भरले डाउनलोडलाई अन्यत्र पठायो, जुन {adapter} मार्फत जाँदैनथ्यो
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box for a single-file torrent
+#, machine
+	A single-file torrent keeps its name	एकल-फाइल टोरेन्टले आफ्नो नाम कायम राख्छ
 #. text in the Add torrent window
 #. Add trackers: MDM never contacts a tracker on this computer or the local network
 #, machine
@@ -572,6 +580,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Austria	अस्ट्रिया
+#. checkbox in the Options window; text in the Options window
+#. checkbox: the User-Agent is the default browser's, which MDM finds itself
+#, machine
+	Automatic	स्वचालित
 #. text in remote.rs
 #. remote control page (on a phone): category choice: the category follows the file's type
 #, machine
@@ -951,6 +963,10 @@
 #. Options → DNS settings: NextDNS's own configuration ID (optional)
 #, machine
 	Configuration ID:	कन्फिगरेसन ID:
+#. text in a download's progress window
+#. verb: button that saves the deferred rename in the progress window
+#, machine
+	Confirm	पुष्टि गर्नुहोस्
 #. text in the Options window
 #, machine
 	Confirm before deleting downloads	डाउनलोडहरू मेटाउनु अघि पुष्टि गर्नुहोस्
@@ -1515,7 +1531,7 @@
 #. Options → Accounts: a note that the debrid services' support (Real-Debrid, AllDebrid, Premiumize) is new and not yet tried with real paid accounts
 #, machine
 	Experimental: built from the services' public API documentation, not yet confirmed with real accounts.	प्रयोगात्मक: सेवाहरूको सार्वजनिक API कागजातबाट निर्मित, वास्तविक खाताहरूसँग अझै पुष्टि भएको छैन।
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Export	निर्यात गर्नुहोस्
 #. text in the Options window
@@ -1992,7 +2008,7 @@
 #. checkbox in the Options window
 #, machine
 	Ignore file modification time changes when resuming a download	डाउनलोड पुनः सुरु गर्दा फाइल परिमार्जन समय परिवर्तनहरूलाई बेवास्ता गर्नुहोस्
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #, machine
 	Import	आयात गर्नुहोस्
 #. value in a column's filter list in the download list
@@ -2369,6 +2385,10 @@
 #. crash report window: looking on GitHub for an issue about the same problem
 #, machine
 	Looking for this problem on GitHub…	GitHub मा यो समस्या खोज्दै…
+#. text in the Options window
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Looking for your default browser...	तपाईंको पूर्वनिर्धारित ब्राउजर खोज्दै...
 #. text in the Download video window
 #. the trailing ... means it is still going on: keep it
 #, machine
@@ -3471,6 +3491,10 @@
 #. {name} = a file name (keep the braces as they are)
 #, machine
 	Remove {name} from the list?	सूचीबाट {name} हटाउने?
+#. text in a download's progress window
+#. noun: label before the deferred new file or folder name in the progress window
+#, machine
+	Rename	पुनः नामाकरण
 #. text in the Batch download window
 #. group box title: what the * in the address is replaced with (numbers or letters)
 #, machine
@@ -3604,6 +3628,10 @@
 #. RSS feeds window, Download rules: the folder the rule's torrents go to
 #, machine
 	Save to:	यसमा बचत गर्नुहोस्:
+#. text in a download's progress window
+#. status shown in green beside the Rename box once the new name is saved
+#, machine
+	Saved	बचत गरियो
 #. text in a download's progress window
 #. label before the folder the torrent is saved in
 #, machine
@@ -3764,6 +3792,11 @@
 #. event log entry, past tense: a finished torrent stopped being shared to others because its share ratio (sent ÷ received) reached the limit set in Torrent settings; {ratio} = e.g. 2.00
 #, machine
 	Sharing stopped: the share ratio reached {ratio}	साझेदारी रोकियो: साझेदारी अनुपात {ratio} मा पुग्यो
+#. message or event log entry in the main window
+#. event log entry on a finished torrent when re-attaching it to keep sharing failed; {error} = why
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	Sharing stopped: {error}	साझेदारी रोकियो: {error}
 #. text in the download list
 #, machine
 	Show	देखाउनुहोस्
@@ -3958,6 +3991,10 @@
 #. window title in a dialog box
 #, machine
 	Speed Limiter settings	गति सीमितकर्ता सेटिङहरू
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the file is one part of a split archive (.part1.rar, .7z.001…)
+#, machine
+	Split archive volumes keep their names for extraction	विभाजित संग्रहका खण्डहरूले निकाल्नका लागि आफ्ना नाम कायम राख्छन्
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -4330,7 +4367,7 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be moved: {error}	फाइल सार्न सकिएन: {error}
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The file could not be read: {error}	फाइल पढ्न सकिएन: {error}
@@ -4379,13 +4416,17 @@
 #. a check of Test browser integration: the browsers are set up, but the small helper program they start (misterdownloadmanager-nmhost) is gone
 #, machine
 	The helper program the browsers start is missing	ब्राउजरहरूले सुरु गर्ने सहयोगी कार्यक्रम हराइरहेको छ
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in the Options window
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	The list could not be saved: {error}	सूची बचत गर्न सकिएन: {error}
 #. text in whereis.rs
 #, machine
 	the local network	स्थानीय नेटवर्क
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name exceeds the length limit
+#, machine
+	The name is too long	नाम धेरै लामो छ
 #. text in errors.rs; text in torrent downloads
 #. an error: the network adapter chosen in Options (a VPN's, usually) is off or gone; {adapter} its name
 #, machine
@@ -4526,6 +4567,9 @@
 #. in the empty download list, under its title
 #, machine
 	This category or queue holds no downloads yet.	यो श्रेणी वा लाममा अहिलेसम्म कुनै डाउनलोड छैन।
+#. text in a download's progress window
+#, machine
+	This character is not allowed in a file name	फाइलको नाममा यो वर्ण प्रयोग गर्न अनुमति छैन
 #. text in the Options window
 #. Options → Remote → Pair a device: the code ran out (10 minutes, or 5 wrong tries)
 #, machine
@@ -4569,6 +4613,14 @@
 #. text in a dialog box
 #, machine
 	This folder does not exist:	यो फोल्डर अवस्थित छैन:
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder already holds files this download did not write
+#, machine
+	This folder holds files from outside this download	यस फोल्डरमा यस डाउनलोड बाहिरका फाइलहरू छन्
+#. message or event log entry in the main window
+#. tooltip on the disabled Rename box when the folder holds another download or is a save/category folder
+#, machine
+	This folder is shared with another download or save folder	यो फोल्डर अर्को डाउनलोड वा सेभ फोल्डरसँग साझा गरिएको छ
 #. text in errors.rs
 #. a download's error: a Google Drive file that isn't shared with everyone
 #, machine
@@ -4596,6 +4648,10 @@
 #. a magnet link's lookup, after 30 seconds: it can't find any peer at all
 #, machine
 	This magnet link names no trackers and the DHT is off, so no peer can be found.	यो म्याग्नेट लिङ्कले कुनै ट्र्याकरहरू नाम गर्दैन र DHT बन्द छ, त्यसैले कुनै पियर फेला पार्न सकिँदैन।
+#. text in a download's progress window
+#. reason shown on the Rename box when the entered name is a reserved device name on Windows (CON, NUL, COM1…)
+#, machine
+	This name is reserved by Windows	यो नाम Windows द्वारा सुरक्षित गरिएको छ
 #. tooltip (why a control is greyed) in the Download video window
 #. why "Put them into the video" is greyed: ffmpeg (a helper program) is not installed
 #, machine
@@ -5217,6 +5273,13 @@
 #. a row of the browser extension's window when no browser was found by name
 #, machine
 	Your browser	तपाईंको ब्राउजर
+#. text in the Options window
+#, machine
+	Your default browser isn't one MDM knows: a current Chrome's User-Agent	तपाईंको पूर्वनिर्धारित ब्राउजर MDM ले चिनेको छैन: हालको Chrome को User-Agent
+#. text in the Options window
+#. tooltip; {browser} is a browser and its version, e.g. "Brave 157"
+#, machine
+	Your default browser's User-Agent: {browser}	तपाईंको पूर्वनिर्धारित ब्राउजरको User-Agent: {browser}
 #. text in the settings
 #. Options → DNS: the name of a DNS the user typed in, in messages: "your DNS (DNS over TLS)"
 #, machine
@@ -5330,6 +5393,11 @@
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
 	{done} of {size}	{size} को {done}
+#. text in deferred_rename.rs
+#. appended to an OS error when a case-only rename could not move the temporary file back to its original name; {error} = first OS error, {path} = temporary path left on disk, {rollback_error} = second OS error
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	{error} (left as {path}: {rollback_error})	{error} ({path} को रूपमा छोडियो: {rollback_error})
 #. text in a download's Properties window
 #. a kind of file, by its extension: {ext} = "ZIP", "PDF"…
 #, machine
@@ -5598,6 +5666,10 @@ column	Upload speed	अपलोड गति
 #, machine
 extension	Another Mister Download Manager (a server)	अर्को Mister Download Manager (सर्भर)
 #. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that are sound only (MP3, Opus and the like); short, one word
+#, machine
+extension	Audio	अडियो
+#. text in the browser extension
 #. the name this browser gets in the other MDM's list of paired devices
 #, machine
 extension	Browser extension	ब्राउजर एक्सटेन्सन
@@ -5775,6 +5847,9 @@ extension	Open its address once and accept its certificate, then enter a code fr
 #. button in the toolbar button's popup; keep the name Mister Download Manager as it is
 #, machine
 extension	Open Mister Download Manager	Mister Download Manager खोल्नुहोस्
+#. shown briefly on the download button over a video in a feed (a social site's home page, a timeline) when nothing in the feed gives that video's own address, so nothing was sent: the user should open the post the video belongs to and click the button on that page; short
+#, machine
+extension	Open the post, then use the button there	पोस्ट खोल्नुहोस्, त्यसपछि त्यहाँको बटन प्रयोग गर्नुहोस्
 #. text in the browser extension
 #. button in the toolbar button's popup: open the app's Options
 #. the trailing ... means it is still going on: keep it
@@ -5868,6 +5943,10 @@ extension	Update Mister Download Manager to use everything this extension offers
 #. why a download stayed with the browser: the app's setting 'Use advanced browser integration' is off; keep the setting's name as the app shows it
 #, machine
 extension	Use advanced browser integration is off in Options → General.	विकल्पहरू → सामान्यमा उन्नत ब्राउजर एकीकरण प्रयोग गर्नुहोस् बन्द छ।
+#. text in the browser extension
+#. tab above the list of qualities in the menu under the download button over a video: the choices that include picture (video with sound); short, one word
+#, machine
+extension	Video	भिडियो
 #. text in the browser extension
 #. pairing failed: codes tried too fast
 #, machine

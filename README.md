@@ -6,6 +6,8 @@
 
 <h3 align="center">Downloads faster than IDM. Free, forever.</h3>
 
+<p align="center">🌐 <a href="https://misterdownloadmanager.com"><b>misterdownloadmanager.com</b></a>: the official website, with the downloads, help and news</p>
+
 <p align="center">
   <a href="https://github.com/anefzaoui/misterdownloadmanager/releases/latest"><img src="https://img.shields.io/badge/Download%20for-Windows-2a78d6?style=flat-square&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDMuNWw4LjUtMS4ydjguMkgyek0xMS41IDIuMkwyMiAuOHY5LjdIMTEuNXpNMiAxMS41aDguNXY4LjJMMiAxOC41ek0xMS41IDExLjVIMjJ2OS43bC0xMC41LTEuNHoiLz48L3N2Zz4%3D" alt="Download for Windows" height="34"></a>
   <a href="https://github.com/anefzaoui/misterdownloadmanager/releases/latest"><img src="https://img.shields.io/badge/Download%20for-macOS-2a78d6?style=flat-square&logo=apple&logoColor=white" alt="Download for macOS" height="34"></a>
@@ -19,7 +21,7 @@
   <sub>The Chrome Web Store's is for
   <img src="docs/images/browsers/edge.png" width="16" height="16" alt=""> Edge,
   <img src="docs/images/browsers/brave.png" width="16" height="16" alt=""> Brave,
-  <img src="docs/images/browsers/opera.png" width="16" height="16" alt=""> Opera and Vivaldi too (<a href="docs/browser-integration.md">how</a>).</sub>
+  <img src="docs/images/browsers/opera.png" width="16" height="16" alt=""> Opera, Vivaldi and Helium too (<a href="docs/browser-integration.md">how</a>).</sub>
 </p>
 
 <p align="center">
@@ -275,14 +277,14 @@ right-to-left window.
 - **Speeds up every download** by fetching parts of the file at the same time, and keeps
   re-balancing until the last byte.
 - **Resumes** after a crash, a restart or a dropped connection, without starting over.
-- **Catches downloads from Firefox, Chrome, Edge, Brave, Opera and Vivaldi** (the extension is
-  on Firefox Add-ons and the Chrome Web Store), and gives them back to the browser when MDM isn't
-  running.
+- **Catches downloads from Firefox, Chrome, Edge, Brave, Opera, Vivaldi and Helium** (the
+  extension is on Firefox Add-ons and the Chrome Web Store), and gives them back to the browser
+  when MDM isn't running.
 - **Downloads videos** from web pages (a button appears over the video; playlists, subtitles,
   the sound alone), **image galleries** with gallery-dl, and **torrents and magnet links**
   (sequential order, RSS feeds, sharing limits).
 - **Many links at once**: the Link grabber sorts them into packages and extracts the archives
-  (zip, 7z, rar) when they're in. Debrid accounts (Real-Debrid, AllDebrid, Premiumize; experimental) download
+  (zip, 7z, rar) when they're in. Debrid accounts (Real-Debrid, AllDebrid, Premiumize, TorBox; experimental) download
   file-host links through your own account.
 - **Downloads overnight** with queues and a scheduler that can wake the computer, then shuts it
   down if you like.
@@ -353,7 +355,12 @@ working, not a copy of anyone's software.
 <details>
 <summary><b>Build from source</b></summary>
 
-Requires Rust stable 1.95 or later (the MSVC toolchain on Windows).
+Requires Rust stable 1.98 or later (the MSVC toolchain on Windows), and for the engine's
+browser-like connection (BoringSSL, built from source): CMake, LLVM's libclang and, on Windows,
+NASM (`winget install Kitware.CMake LLVM.LLVM NASM.NASM`; on Linux `cmake` and
+`libclang-dev`; on macOS Xcode's command line tools and `cmake`).
+`cargo build -p mdm-app --no-default-features` builds the app without it (a site that refuses MDM's
+own connection then stays refused).
 
 ```
 cargo build --release

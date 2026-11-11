@@ -13,7 +13,7 @@ How Mister Download Manager's pieces fit together.
 | `crates/remote` | `mdm-remote` | The remote control (#141): the HTTPS server a paired phone or computer on the local network uses (its page, pairing codes, device tokens, the self-signed certificate); every request becomes an automation API command the app answers |
 | `crates/nmhost` | `mdm-nmhost` | The browser's native messaging host: takes captured downloads from the extension and hands them to the app |
 | `crates/ipc` | `mdm-ipc` | The single-instance channel (a token-protected local socket), the data folder, and the capture rules shared by the app and the host |
-| `crates/debrid` | `mdm-debrid` | Debrid accounts (#44): the services' official APIs (Real-Debrid, AllDebrid, Premiumize) turn a file host's link into a direct one the engine downloads |
+| `crates/debrid` | `mdm-debrid` | Debrid accounts (#44): the services' official APIs (Real-Debrid, AllDebrid, Premiumize, TorBox) turn a file host's link into a direct one the engine downloads |
 | `crates/extract` | `mdm-extract` | Archive extraction (#37): zip, tar, gz and xz in process; 7z and RAR through an installed 7-Zip, run as its own program |
 | `crates/geo` | `mdm-geo` | Where a download's server is (#140): an IP-to-country range table built from DB-IP's Lite data (`tools/geo/build.py`), looked up on this computer only, and the countries' flags |
 | `crates/tools` | `mdm-tools` | Video pages through yt-dlp and ffmpeg, image galleries through gallery-dl (run as separate programs); while a network adapter is chosen, their connections go through a proxy of MDM's on 127.0.0.1 that binds them to it (`relay.rs`) |
@@ -67,9 +67,10 @@ toolbar, key and IPC commands into actions. Each dialog is its own module and re
 their Linux and macOS counterparts to `unix.rs` (starting with the session, the browsers' host,
 sounds, show in folder, the crash handler); every other file is safe, portable Rust. Fonts come from the system:
 Windows' Fonts folder, macOS's system fonts, fontconfig on Linux (`theme.rs`). On Windows, Latin,
-Greek and Cyrillic text is drawn by DirectWrite in GDI-classic mode (`win32.rs`, through egui's
-glyph rasterizer hook), so each letter's hinted shape and whole-pixel width come together; other
-scripts are shaped and drawn by egui.
+Greek and Cyrillic text is drawn by DirectWrite (`win32.rs`, through egui's glyph rasterizer hook):
+View → Text → Smooth in its natural mode, anti-aliased at the size asked for and placed at quarter
+pixels with the font's own advances; Classic (the default) in GDI-classic mode, so each letter's
+hinted shape and whole-pixel width come together. Other scripts are shaped and drawn by egui.
 
 ### Themes
 
@@ -88,8 +89,8 @@ light and a dark palette, metrics, control styles and an icon style (`palette.rs
   accent).
 - **Control styles.** `palette::Controls` names each control's shape (text boxes, check boxes,
   buttons, progress bars, scroll bars, the focus mark, the title bar); the style themes (Metro,
-  Adwaita, Breeze, Luna, Aero, Aqua) pick theirs, and on Windows MDM then draws the title bar
-  itself (the `caption.*` roles).
+  Adwaita, Breeze, Luna, Aero, Aqua, Emerald) pick theirs, and on Windows MDM then draws the
+  title bar itself (the `caption.*` roles).
 - **Theme files.** `themefile.rs` reads TOML or JSON from the data folder's `themes` (one file,
   or `<id>/theme.toml` with icons beside it). A file names only what it changes; the rest comes
   from the theme it `inherits` (a built-in's id or another file, the classic look by default),

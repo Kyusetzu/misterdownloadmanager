@@ -241,6 +241,54 @@
     "message": "Can't tell which video this is: open its own page and try there",
     "description": "shown briefly on the download button when nothing on the page says which video the player is playing, so nothing was sent"
   },
+  "video_looking": {
+    "message": "Looking up the qualities…",
+    "description": "in the menu that opens from the download button over a video, while the app finds which qualities (resolutions, formats) the video can be downloaded in"
+  },
+  "video_open_mdm": {
+    "message": "Open in Mister Download Manager…",
+    "description": "last command of the menu of qualities under the download button over a video: opens the app's Download video window for this video instead; keep the name Mister Download Manager as it is"
+  },
+  "video_no_choices": {
+    "message": "No video to download here",
+    "description": "in the menu under the download button over a video: the app found no quality of the video it could download"
+  },
+  "video_playlist": {
+    "message": "A list of videos: choose them in Mister Download Manager",
+    "description": "in the menu under the download button over a video: the page is a list of videos (a playlist), whose videos are chosen in the app's window; keep the name Mister Download Manager as it is"
+  },
+  "video_no_ytdlp": {
+    "message": "Mister Download Manager needs yt-dlp for this video",
+    "description": "in the menu under the download button over a video: the app needs the yt-dlp tool (a program's name, keep it as it is) to find this video's qualities, and it isn't installed; keep the name Mister Download Manager as it is"
+  },
+  "video_too_long": {
+    "message": "Looking up took too long",
+    "description": "in the menu under the download button over a video: the app took more than a minute to find the video's qualities, so the menu stopped waiting"
+  },
+  "video_busy": {
+    "message": "Mister Download Manager is busy with other videos",
+    "description": "in the menu under the download button over a video: the app is already looking up other videos and can't look this one up now; keep the name Mister Download Manager as it is"
+  },
+  "video_queued": {
+    "message": "Added to the queue",
+    "description": "shown briefly on the download button over a video after a quality was picked: the download was added to the app's download queue, to start later"
+  },
+  "video_failed_lookup": {
+    "message": "Could not look it up",
+    "description": "in the menu under the download button over a video: finding the video's qualities failed; the app's own explanation follows on the next line"
+  },
+  "video_tab_video": {
+    "message": "Video",
+    "description": "tab above the list of qualities in the menu under the download button over a video: the choices that include picture (video with sound); short, one word"
+  },
+  "video_tab_audio": {
+    "message": "Audio",
+    "description": "tab above the list of qualities in the menu under the download button over a video: the choices that are sound only (MP3, Opus and the like); short, one word"
+  },
+  "video_open_post": {
+    "message": "Open the post, then use the button there",
+    "description": "shown briefly on the download button over a video in a feed (a social site's home page, a timeline) when nothing in the feed gives that video's own address, so nothing was sent: the user should open the post the video belongs to and click the button on that page; short"
+  },
   "popup_send_to": {
     "message": "Send downloads to",
     "description": "heading in the toolbar button's popup, above the choice of where downloads go"
