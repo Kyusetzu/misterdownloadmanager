@@ -144,14 +144,19 @@ pub fn extract(
     cancel: Option<&AtomicBool>,
 ) -> Result<(), Error> {
     std::fs::create_dir_all(out)?;
+    // Full paths: HatchZip runs in its output folder, MDM's own and writable, never in the
+    // folder MDM was started in (its install folder from the Start menu), as 7-Zip does (#845).
+    let full = |p: &Path| std::path::absolute(p).unwrap_or_else(|_| p.to_owned());
+    let (out, archive) = (full(out), full(archive));
     let mut output = OsString::from("--output=");
-    output.push(out);
+    output.push(&out);
     let mut cmd = Command::new(tool);
     // `--`: the archive's name is never read as an option, whatever it starts with.
     cmd.arg("extract")
         .arg(output)
         .args(["-y", "-q", "--"])
-        .arg(archive);
+        .arg(&archive)
+        .current_dir(&out);
     cmd.env_remove("HATCHZIP_PASSWORD");
     if let Some(pw) = password {
         cmd.env("HATCHZIP_PASSWORD", pw);

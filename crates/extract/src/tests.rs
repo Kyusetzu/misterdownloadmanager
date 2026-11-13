@@ -543,17 +543,24 @@ fn hatchzip_gets_its_paths_after_a_double_dash() {
     let runs = tempfile::tempdir().unwrap();
     let a = t.path().join("-y.zip");
     zip_of(&a, &[("one.txt", b"1")], None);
+    let body = format!("{WRITES}\npwd -P > \"$archive.cwd\"");
     let (r, _) = run_hz(
         &a,
         t.path(),
         None,
-        Some(fake_hatchzip(t.path(), 0, WRITES)),
+        Some(fake_hatchzip(t.path(), 0, &body)),
         true,
         runs.path(),
     );
     r.unwrap();
     let args = std::fs::read_to_string(t.path().join("-y.zip.args")).unwrap();
     let out = t.path().join("-y.hatchzip-out");
+    // It runs in its output folder, not in the folder MDM was started in (#845).
+    let cwd = std::fs::read_to_string(t.path().join("-y.zip.cwd")).unwrap();
+    assert_eq!(
+        Path::new(cwd.trim()),
+        t.path().canonicalize().unwrap().join("-y.hatchzip-out")
+    );
     assert_eq!(
         args.trim(),
         format!(
