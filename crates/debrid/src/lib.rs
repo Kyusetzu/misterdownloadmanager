@@ -77,9 +77,9 @@ impl ServiceKind {
 
     /// Whether it signs in by code in the browser (Real-Debrid's device flow, AllDebrid's PIN,
     /// TorBox's device code). Premiumize's needs a client registered by MDM's maintainer: its API
-    /// key is pasted.
+    /// key is pasted. Mega-Debrid has none: its user name and password, or its API key.
     pub fn signs_in_by_code(self) -> bool {
-        matches!(self, ServiceKind::RealDebrid | ServiceKind::AllDebrid)
+        !matches!(self, ServiceKind::Premiumize | ServiceKind::MegaDebrid)
     }
 
     /// Whether it signs in with the user name and password (Mega-Debrid's `connectUser`), the
@@ -1151,6 +1151,29 @@ pub mod signin {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_services_with_a_browser_sign_in_keep_it() {
+        // Options' "Sign in in the browser" button: Real-Debrid, AllDebrid and TorBox.
+        let by_code: Vec<_> = ServiceKind::ALL
+            .into_iter()
+            .filter(|s| s.signs_in_by_code())
+            .collect();
+        assert_eq!(
+            by_code,
+            [
+                ServiceKind::TorBox,
+                ServiceKind::RealDebrid,
+                ServiceKind::AllDebrid
+            ]
+        );
+        // Mega-Debrid alone by user name and password; every service also by a pasted key.
+        let by_password: Vec<_> = ServiceKind::ALL
+            .into_iter()
+            .filter(|s| s.signs_in_with_password())
+            .collect();
+        assert_eq!(by_password, [ServiceKind::MegaDebrid]);
+    }
 
     #[test]
     fn hosts_match_their_domains_and_subdomains_only() {
