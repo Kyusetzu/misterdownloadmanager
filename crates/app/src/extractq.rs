@@ -628,7 +628,7 @@ pub struct PasswordDialog {
     job: Job,
     wrong: bool,
     password: String,
-    /// "Remember it in Options → Archives" (on until unticked).
+    /// "Remember it in Options → Archives": unticked until the user ticks it.
     remember: bool,
     focused: bool,
 }
