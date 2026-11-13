@@ -116,6 +116,12 @@ struct Message {
     src: Option<String>,
     /// The page's title (`video`).
     title: Option<String>,
+    /// The button over a plain file (`src`, #703): it is downloaded as any file, at once.
+    direct: bool,
+    /// The button's "Show": the main window with the newest download of this address selected.
+    show_download: Option<String>,
+    /// The button's "Turn on": show it on this site (a host name) again.
+    show_site: Option<String>,
     /// The button's menu: keep it off this site (a host name).
     hide_site: Option<String>,
     /// The button's menu: open its settings in Options (`page`: the toolbar button's popup asks
@@ -138,6 +144,47 @@ struct Message {
     video_lookup: Option<LookupAsk>,
     video_poll: Option<PollAsk>,
     video_pick: Option<PickAsk>,
+    /// With `video` and `videoLookup`: what the browser sent with `src` as its page's player
+    /// asked for it (#900), sent again with it and each of its pieces. An older extension sends
+    /// none: the page is the stream's Referer then, as before.
+    fetched_with: FetchedWith,
+}
+
+/// The headers the browser sent with a stream (`Message::fetched_with`): its Referer and Origin.
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(default)]
+struct FetchedWith {
+    referer: Option<String>,
+    origin: Option<String>,
+}
+
+impl FetchedWith {
+    /// The Referer for `src` (some) fetched from `page`: the one the browser sent, else the page.
+    /// None without `src` (the page itself is looked up).
+    fn referer(&self, src: Option<&str>, page: &str) -> Option<String> {
+        src?;
+        Some(
+            web_header(self.referer.as_deref())
+                .unwrap_or(page)
+                .to_owned(),
+        )
+    }
+
+    /// The Origin the browser sent with `src`, if any (only with `src`).
+    fn origin(&self, src: Option<&str>) -> Option<String> {
+        src?;
+        web_header(self.origin.as_deref()).map(str::to_owned)
+    }
+}
+
+/// `v` when it is a web address fit for a header (http or https, no space or control character,
+/// at most 8 KB): what the extension takes from the browser's own request.
+fn web_header(v: Option<&str>) -> Option<&str> {
+    v.map(str::trim).filter(|v| {
+        (v.starts_with("http://") || v.starts_with("https://"))
+            && v.len() <= 8192
+            && !v.chars().any(|c| c.is_whitespace() || c.is_control())
+    })
 }
 
 /// The quality menu's look-up: the video's page (as the button's click sends it), the video's
@@ -319,9 +366,29 @@ fn answer(m: Message, rules: &mdm_ipc::capture::CaptureRules) -> Reply {
         .as_deref()
         .map(str::trim)
         .filter(|h| !h.is_empty());
+    let show_site = m
+        .show_site
+        .as_deref()
+        .map(str::trim)
+        .filter(|h| !h.is_empty());
+    let show_download = m
+        .show_download
+        .as_deref()
+        .map(str::trim)
+        .filter(|a| a.starts_with("http://") || a.starts_with("https://"));
     let panel_cmd = if let Some(host) = hide {
         Some(mdm_ipc::Command {
             panel_hide_site: Some(host.to_owned()),
+            ..Default::default()
+        })
+    } else if let Some(host) = show_site {
+        Some(mdm_ipc::Command {
+            panel_show_site: Some(host.to_owned()),
+            ..Default::default()
+        })
+    } else if let Some(address) = show_download {
+        Some(mdm_ipc::Command {
+            show_download: Some(address.to_owned()),
             ..Default::default()
         })
     } else if m.open_options {
@@ -488,14 +555,23 @@ fn video_command(
         .src
         .clone()
         .filter(|s| s.starts_with("http://") || s.starts_with("https://"));
+    // A stream or file of the page's, fetched as the browser fetched it (#900): with the Referer
+    // and Origin its player sent, else from the page.
     let referer = match &src {
-        Some(_) => Some(m.url.clone()),
+        Some(s) => m.fetched_with.referer(Some(s), &m.url),
         None => m.referrer.clone().filter(|r| !r.is_empty()),
     };
+    let origin = m.fetched_with.origin(src.as_deref());
+    // The button over a plain file (#703): that file, as a file.
+    let direct = m.direct && src.is_some();
     Ok(mdm_ipc::Command {
+        video_direct: direct,
+        // The type the plain file's server said when the tab loaded it (#800).
+        mime: m.mime.clone().filter(|t| direct && !t.trim().is_empty()),
         video_page: Some(src.unwrap_or_else(|| m.url.clone())),
         video_title: m.title.clone().filter(|t| !t.trim().is_empty()),
         referer,
+        origin,
         cookies: m.cookies.clone().filter(|c| !c.is_empty()),
         cookie_jar: m.cookie_jar.clone(),
         user_agent: m.user_agent.clone(),
@@ -561,9 +637,10 @@ fn menu_command(
             // knows only by its address is named by it, #345).
             let src = l.src.clone().filter(|s| web(s));
             let referer = match &src {
-                Some(_) => Some(l.page.clone()),
+                Some(s) => m.fetched_with.referer(Some(s), &l.page),
                 None => l.referrer.clone().filter(|r| !r.is_empty()),
             };
+            let origin = m.fetched_with.origin(src.as_deref());
             let title = l
                 .title
                 .as_deref()
@@ -577,6 +654,7 @@ fn menu_command(
                     store_id: store(&l.store_id),
                 }),
                 referer,
+                origin,
                 cookies: m.cookies.clone().filter(|c| !c.is_empty()),
                 cookie_jar: m.cookie_jar.clone(),
                 user_agent: m.user_agent.clone(),
@@ -811,6 +889,14 @@ fn to_command(m: Message) -> mdm_ipc::Command {
         user_agent: m.user_agent,
         size: m.size.filter(|s| *s > 0),
         mime: some(m.mime),
+        // A page's media from the toolbar button's list (#800): its page's title names a file
+        // whose address names nothing.
+        video_title: m
+            .title
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(|t| t.chars().take(TITLE_MAX).collect()),
         post_type: m.post.as_ref().and(some(m.post_type)),
         post: m.post,
         private: m.private,
@@ -1594,6 +1680,49 @@ mod tests {
         assert_eq!(m.hide_site.as_deref(), Some("tube.test"));
     }
 
+    #[test]
+    fn the_buttons_file_show_and_turn_on_reach_the_app() {
+        let ua = "Mozilla/5.0 (Windows NT 10.0) Chrome/141.0.0.0 Safari/537.36";
+        let rules = mdm_ipc::capture::CaptureRules::default();
+        // #703: a plain file is downloaded as one, its page the referrer.
+        let m: Message = serde_json::from_str(&format!(
+            r#"{{"video":true,"url":"https://videos.test/p","src":"https://cdn.test/a.mp4","direct":true,"userAgent":"{ua}"}}"#
+        ))
+        .unwrap();
+        let cmd = video_command(&m, &rules, browser(&m)).unwrap();
+        assert!(cmd.video_direct);
+        assert_eq!(cmd.video_page.as_deref(), Some("https://cdn.test/a.mp4"));
+        assert_eq!(cmd.referer.as_deref(), Some("https://videos.test/p"));
+        assert_eq!(cmd.mime, None);
+        // #800: with the type its server said, which names a script's answer at once.
+        let m: Message = serde_json::from_str(&format!(
+            r#"{{"video":true,"url":"https://videos.test/p","src":"https://cdn.test/stream.php?id=1","direct":true,"mime":"video/mp4","title":"Talk","userAgent":"{ua}"}}"#
+        ))
+        .unwrap();
+        let cmd = video_command(&m, &rules, browser(&m)).unwrap();
+        assert_eq!(
+            (cmd.mime.as_deref(), cmd.video_title.as_deref()),
+            (Some("video/mp4"), Some("Talk"))
+        );
+        // `direct` without a file of its own is the page, as before.
+        let m: Message = serde_json::from_str(&format!(
+            r#"{{"video":true,"url":"https://videos.test/p","direct":true,"userAgent":"{ua}"}}"#
+        ))
+        .unwrap();
+        assert!(!video_command(&m, &rules, browser(&m)).unwrap().video_direct);
+        // "Show" and "Turn on": no `url`, so an older host refuses them and does nothing.
+        let m: Message = serde_json::from_str(
+            r#"{"showDownload":"https://videos.test/watch?v=1","showSite":"videos.test"}"#,
+        )
+        .unwrap();
+        assert!(m.url.is_empty() && !m.video);
+        assert_eq!(m.show_site.as_deref(), Some("videos.test"));
+        assert_eq!(
+            m.show_download.as_deref(),
+            Some("https://videos.test/watch?v=1")
+        );
+    }
+
     /// `hello` and `rules` say the host and its app have the quality menu; nothing else does.
     #[test]
     fn the_quality_menu_is_announced() {
@@ -1628,6 +1757,58 @@ mod tests {
             !json.contains("videoLookup") && !json.contains("lookup"),
             "{json}"
         );
+    }
+
+    /// #900: a stream goes with the Referer and Origin its page's player sent for it (the
+    /// extension's `fetchedWith`), in the menu's look-up and the window's click alike; without
+    /// them (an older extension), or with what isn't a web address, the page is its Referer and
+    /// no Origin goes. Only for a stream or file: a page looked up keeps its own referrer.
+    #[test]
+    fn a_stream_goes_with_the_referer_and_origin_the_browser_sent() {
+        let rules = mdm_ipc::capture::CaptureRules::default();
+        let page = "https://anime.test/watch/12";
+        let src = "https://cdn.video.test/manifest/x.m3u8?sec=abc";
+        let fetched = r#""fetchedWith":{"referer":"https://player.video.test/","origin":"https://player.video.test"}"#;
+        let lookup = |extra: &str, src: &str| -> mdm_ipc::Command {
+            let m: Message = serde_json::from_str(&format!(
+                r#"{{"videoLookup":{{"page":"{page}","src":"{src}","referrer":"https://search.test/"}}{extra}}}"#
+            ))
+            .unwrap();
+            menu_command(MenuAsk::Lookup, &m, &rules, "").unwrap()
+        };
+        let click = |extra: &str, src: &str| -> mdm_ipc::Command {
+            let m: Message = serde_json::from_str(&format!(
+                r#"{{"video":true,"url":"{page}","src":"{src}","referrer":"https://search.test/"{extra}}}"#
+            ))
+            .unwrap();
+            video_command(&m, &rules, "").unwrap()
+        };
+        for cmd in [
+            lookup(&format!(",{fetched}"), src),
+            click(&format!(",{fetched}"), src),
+        ] {
+            assert_eq!(cmd.referer.as_deref(), Some("https://player.video.test/"));
+            assert_eq!(cmd.origin.as_deref(), Some("https://player.video.test"));
+        }
+        // An older extension: from the page, no Origin.
+        for cmd in [lookup("", src), click("", src)] {
+            assert_eq!(cmd.referer.as_deref(), Some(page));
+            assert_eq!(cmd.origin, None);
+        }
+        // Not web addresses (a header's line break, the browser's "null" origin): left out.
+        let odd = r#","fetchedWith":{"referer":"https://x.test/\r\nX-Evil: 1","origin":"null"}"#;
+        for cmd in [lookup(odd, src), click(odd, src)] {
+            assert_eq!(cmd.referer.as_deref(), Some(page));
+            assert_eq!(cmd.origin, None);
+        }
+        // No stream (a player playing from blob:): the page is looked up, with its own referrer.
+        for cmd in [
+            lookup(&format!(",{fetched}"), "blob:https://anime.test/1"),
+            click(&format!(",{fetched}"), "blob:https://anime.test/1"),
+        ] {
+            assert_eq!(cmd.referer.as_deref(), Some("https://search.test/"));
+            assert_eq!(cmd.origin, None);
+        }
     }
 
     /// The quality menu's three messages, as the extension sends them (camelCase, no `url` of
@@ -2229,6 +2410,25 @@ mod tests {
         );
         assert!(!c.later && !c.silent);
         assert_eq!((c.proxy, c.proxy_pac, c.proxy_login), (None, None, false));
+        assert_eq!(c.video_title, None);
+    }
+
+    /// #800: a page's media from the toolbar button's list goes with its page's title (for a
+    /// file whose address names nothing), trimmed and cut; a blank one is none.
+    #[test]
+    fn a_media_files_page_title_goes_with_it() {
+        let m: Message = serde_json::from_str(
+            r#"{"url":"https://x/remote_control.php?id=1","mime":"video/mp4","title":"  A talk  "}"#,
+        )
+        .unwrap();
+        let c = to_command(m);
+        assert_eq!(c.video_title.as_deref(), Some("A talk"));
+        assert_eq!(c.mime.as_deref(), Some("video/mp4"));
+        let long = format!(r#"{{"url":"https://x/a","title":"{}"}}"#, "t".repeat(400));
+        let c = to_command(serde_json::from_str(&long).unwrap());
+        assert_eq!(c.video_title.unwrap().len(), TITLE_MAX);
+        let blank: Message = serde_json::from_str(r#"{"url":"https://x/a","title":" "}"#).unwrap();
+        assert_eq!(to_command(blank).video_title, None);
     }
 
     #[test]

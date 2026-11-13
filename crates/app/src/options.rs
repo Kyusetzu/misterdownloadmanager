@@ -226,6 +226,11 @@ pub struct OptionsDialog {
     /// Downloads → User-Agent → Automatic (#668): the default browser's, the box then shows it;
     /// unticked, the box's own text (empty is automatic again when the window opens next).
     ua_auto: bool,
+    /// Download complete snoozed (#741), as the app has it now (set before each frame): the
+    /// Downloads page says until when, with Resume now.
+    pub snoozed_until: Option<crate::finish::Until>,
+    /// Resume now was clicked: the app ends the snooze (at once, not on OK).
+    pub resume_snooze: bool,
 }
 
 impl OptionsDialog {
@@ -304,6 +309,8 @@ impl OptionsDialog {
             device_rows: Default::default(),
             cookie_browser: cookie_browser_at(settings),
             ua_auto: settings.own_user_agent().is_none(),
+            snoozed_until: None,
+            resume_snooze: false,
         }
     }
 
@@ -900,8 +907,7 @@ impl OptionsDialog {
         {
             let (title, from) = (dir_line.clone(), self.cat_dir.clone());
             winui::start_pick(ui.ctx(), "options-category-folder", move || {
-                rfd::FileDialog::new()
-                    .set_title(title)
+                crate::winui::file_dialog(&title)
                     .set_directory(from)
                     .pick_folder()
             });
@@ -927,16 +933,41 @@ impl OptionsDialog {
             "Set file creation date as provided by the server",
             true,
         );
-        group(ui, o, 21.0, 334.0, 380.0, 118.0, "Temporary directory");
+        // #813: the Mark of the Web (macOS' quarantine): like the date, what the file carries.
+        #[cfg(windows)]
+        let tip = crate::i18n::t(
+            // i18n: tooltip of "Mark downloaded files as coming from the internet" on Windows
+            "Windows checks the files marked this way: SmartScreen before a program first runs, Office's Protected View before a document opens. Unticked, or under Windows' policy \"Do not preserve zone information in file attachments\", no download is marked.",
+        );
+        #[cfg(target_os = "macos")]
+        let tip = crate::i18n::t(
+            // i18n: tooltip of "Mark downloaded files as coming from the internet" on macOS
+            "macOS checks the files marked this way: Gatekeeper before a program first opens. Unticked, no download is marked.",
+        );
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let tip = crate::i18n::t(
+            // i18n: tooltip of "Mark downloaded files as coming from the internet" on Linux
+            "File managers show where the files marked this way came from. Unticked, no download is marked.",
+        );
+        winui::checkbox_light(
+            ui,
+            o + vec2(33.0, 329.0),
+            &mut self.s.mark_downloads,
+            "Mark downloaded files as coming from the internet",
+            true,
+        )
+        .on_hover_text(tip);
+        // Down by the row above it; its empty bottom shortened by as much.
+        group(ui, o, 21.0, 356.0, 380.0, 96.0, "Temporary directory");
         // D-004: no temporary directory — parts are written next to the file, so there is
         // nothing to assemble at the end.
         let none = crate::i18n::t("Not used: file parts are written next to the file");
         let (browse_x, browse_w) =
             winui::buttons_to_right(&p, 390.0, 0.0, &[("Browse", 73.0)], 160.0)[0];
-        readonly(ui, r(o, 30.0, 349.0, browse_x - 6.0 - 30.0, 23.0), none);
+        readonly(ui, r(o, 30.0, 371.0, browse_x - 6.0 - 30.0, 23.0), none);
         winui::button_light(
             ui,
-            r(o, browse_x, 350.0, browse_w, 21.0),
+            r(o, browse_x, 372.0, browse_w, 21.0),
             // i18n: verb: choose a folder
             "Browse",
             ButtonKind::Disabled,
@@ -945,7 +976,7 @@ impl OptionsDialog {
         winui::paragraph(
             &p,
             o.x + 30.0,
-            o.y + 387.0,
+            o.y + 409.0,
             crate::i18n::t(
                 "Mister Download Manager writes every connection straight into the final\nfile (a sparse part file next to it), so no temporary directory and no\nassembling step are needed.",
             ),
@@ -1050,13 +1081,22 @@ impl OptionsDialog {
             "Show download complete dialog",
             true,
         );
-        text(
-            &p,
-            o.x + 31.0,
-            o.y + 191.0,
-            crate::i18n::t("Note: These settings don't relate to queue processing"),
-            LIGHT_TEXT(),
-        );
+        // Download complete snoozed (#741): until when, and Resume now, in the note's place
+        // while it lasts (the note comes back after).
+        if let Some(until) = self.snoozed_until {
+            if snooze_line(ui, &p, o, until) {
+                self.resume_snooze = true;
+                ui.ctx().request_repaint();
+            }
+        } else {
+            text(
+                &p,
+                o.x + 31.0,
+                o.y + 191.0,
+                crate::i18n::t("Note: These settings don't relate to queue processing"),
+                LIGHT_TEXT(),
+            );
+        }
         winui::etched_h(&p, o.x + 21.0, o.y + 198.0, 381.0);
         winui::checkbox_light(
             ui,
@@ -2115,7 +2155,7 @@ impl OptionsDialog {
         {
             let title = pick_title.to_owned();
             winui::start_pick(ui.ctx(), "options-cookie-profile", move || {
-                rfd::FileDialog::new().set_title(title).pick_folder()
+                crate::winui::file_dialog(&title).pick_folder()
             });
         }
         if let Some(dir) = winui::picked(ui.ctx(), "options-cookie-profile") {
@@ -2598,8 +2638,7 @@ impl OptionsDialog {
                 // i18n: the kind of file the Open dialog lists (sound files)
                 let kind = crate::i18n::t("Sounds").to_owned();
                 winui::start_pick(ui.ctx(), &format!("sound-{i}"), move || {
-                    rfd::FileDialog::new()
-                        .set_title(title)
+                    crate::winui::file_dialog(&title)
                         .add_filter(kind, &["wav"])
                         .pick_file()
                 });
@@ -3286,8 +3325,7 @@ impl OptionsDialog {
                         {
                             let title = crate::i18n::t("Export").to_owned();
                             winui::start_pick(ui.ctx(), "opt-panels-export", move || {
-                                rfd::FileDialog::new()
-                                    .set_title(title)
+                                crate::winui::file_dialog(&title)
                                     .add_filter("TXT", &["txt"])
                                     .set_file_name("sites.txt")
                                     .save_file()
@@ -3304,8 +3342,7 @@ impl OptionsDialog {
                         {
                             let title = crate::i18n::t("Import").to_owned();
                             winui::start_pick(ui.ctx(), "opt-panels-import", move || {
-                                rfd::FileDialog::new()
-                                    .set_title(title)
+                                crate::winui::file_dialog(&title)
                                     .add_filter("TXT", &["txt"])
                                     .pick_file()
                             });
@@ -4084,12 +4121,9 @@ fn account_dialog(ui: &mut Ui, o: Pos2, e: &mut AccountEdit) -> Outcome<settings
     }
 }
 
-/// Open a service's web page in the browser; never in an off-screen test run (MDM_OFFSCREEN),
-/// whose clicks come from scripts, not from a person at the browser.
+/// Open a service's web page in the browser (never in an off-screen test run).
 fn open_page(url: &str) {
-    if !crate::offscreen() {
-        crate::launch::open(url);
-    }
+    crate::launch::open_page(url);
 }
 
 /// A list of sites from a file (Download panels' Import, #424): text, and no more than a list
@@ -4667,6 +4701,47 @@ fn kept_text(kept: crate::secrets::Kept) -> Option<&'static str> {
             "No system keyring answered, so sign-ins and passwords are kept in MDM's settings, which only you can read.",
         ),
     })
+}
+
+/// "Download complete is snoozed until 14:30 · Resume now" (Options, Downloads, #741), on the
+/// note's row under "Show download complete dialog". True when Resume now is clicked.
+fn snooze_line(ui: &mut Ui, p: &egui::Painter, o: Pos2, until: crate::finish::Until) -> bool {
+    let line = match until {
+        crate::finish::Until::At(t) => {
+            use chrono::Timelike;
+            let at = crate::clock::local_at(t)
+                .map(|t| crate::regional::clock_time(t.hour(), t.minute()))
+                .unwrap_or_default();
+            crate::i18n::fmt(
+                // i18n: Options, Downloads, under "Show download complete dialog": {time} when the snooze ends, like "14:30"
+                crate::i18n::t("Download complete is snoozed until {time}"),
+                &[("time", &crate::i18n::ltr(&at))],
+            )
+        }
+        crate::finish::Until::Restart => {
+            // i18n: Options, Downloads, under "Show download complete dialog": snoozed with "Until MDM restarts"
+            crate::i18n::t("Download complete is snoozed until MDM restarts").to_owned()
+        }
+    };
+    // i18n: link after "Download complete is snoozed until 14:30": ends the snooze now
+    let resume = crate::i18n::mark("Resume now");
+    let link_w = winui::text_width(p, crate::i18n::t(resume));
+    // The link keeps its room; the sentence gives way ("...", whole on hover).
+    let right = 402.0 - link_w - 14.0;
+    let (rc, cut) = winui::text_fit(p, o.x + 31.0, o.y + 191.0, &line, LIGHT_TEXT(), o.x + right);
+    if cut {
+        winui::full_on_hover(ui, rc, "snooze-line", &line);
+    }
+    let after = 31.0 + rc.width() + 6.0;
+    let dot = winui::separator_dot(p, o.x + after, o.y + 191.0, winui::MUTED());
+    winui::link(
+        ui,
+        p,
+        o.x + after + dot.width() + 5.0,
+        o.y + 191.0,
+        resume,
+        "snooze-resume",
+    )
 }
 
 #[cfg(test)]

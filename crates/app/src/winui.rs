@@ -31,7 +31,7 @@ crate::theme::themed! {
 /// Tahoma −11 ("MS Shell Dlg 2", 8 pt): every dialog body text.
 pub fn tahoma() -> FontId {
     FontId::new(
-        crate::theme::metrics().font_dialog,
+        crate::theme::font_size(crate::theme::metrics().font_dialog),
         FontFamily::Name("tahoma".into()),
     )
 }
@@ -39,7 +39,7 @@ pub fn tahoma() -> FontId {
 /// Tahoma Bold −13: the Options pages' header titles.
 pub fn tahoma_bold() -> FontId {
     FontId::new(
-        crate::theme::metrics().font_dialog_bold,
+        crate::theme::font_size(crate::theme::metrics().font_dialog_bold),
         FontFamily::Name("tahoma-bold".into()),
     )
 }
@@ -47,7 +47,7 @@ pub fn tahoma_bold() -> FontId {
 /// Tahoma Bold −16: a window's headline (the browser extension's, the helpers').
 pub fn tahoma_title() -> FontId {
     FontId::new(
-        crate::theme::metrics().font_title,
+        crate::theme::font_size(crate::theme::metrics().font_title),
         FontFamily::Name("tahoma-bold".into()),
     )
 }
@@ -338,13 +338,13 @@ fn name_from_caption(resp: &Response) {
 
 /// Segoe UI −12: menu bar, toolbar labels.
 pub fn segoe() -> FontId {
-    FontId::proportional(crate::theme::metrics().font_ui)
+    FontId::proportional(crate::theme::font_size(crate::theme::metrics().font_ui))
 }
 
 /// Arial Bold −13: the Categories close "x".
 pub fn arial_bold() -> FontId {
     FontId::new(
-        crate::theme::metrics().font_ui_bold,
+        crate::theme::font_size(crate::theme::metrics().font_ui_bold),
         FontFamily::Name("arial-bold".into()),
     )
 }
@@ -592,8 +592,9 @@ pub fn ellipsize_middle(p: &Painter, font: &FontId, s: &str, max: f32) -> String
     cut(lo)
 }
 
-/// [`text`] that never runs past `right`: cut with "..." when too long. Returns the drawn
-/// rect and whether the text was cut (then show it whole with [`full_on_hover`]).
+/// [`text`] on one line that never runs past `right`: cut with "..." when too long, line breaks
+/// shown as spaces. Returns the drawn rect and whether the text was cut (then show it whole with
+/// [`full_on_hover`]).
 pub fn text_fit(
     p: &Painter,
     x: f32,
@@ -602,7 +603,17 @@ pub fn text_fit(
     color: Color32,
     right: f32,
 ) -> (Rect, bool) {
-    let shown = ellipsize(p, &tahoma(), s, (right - x).max(0.0));
+    // A one-line label, though the text may come from elsewhere (a site's title, an error): a
+    // line break is a space here, not another row drawn down over the window. Cut means the
+    // whole original, line breaks and all, is shown on hover.
+    let flat;
+    let line = if s.contains(['\n', '\r']) {
+        flat = s.replace("\r\n", " ").replace(['\n', '\r'], " ");
+        flat.as_str()
+    } else {
+        s
+    };
+    let shown = ellipsize(p, &tahoma(), line, (right - x).max(0.0));
     let cut = shown != s;
     (text(p, x, baseline, &shown, color), cut)
 }
@@ -1555,6 +1566,43 @@ pub fn link(ui: &Ui, p: &Painter, x: f32, baseline: f32, label: &str, salt: &str
     resp.clicked()
 }
 
+/// A note (`s`, translated already) from `x` to `right` on at most two lines `line_h` apart,
+/// first baseline `baseline`, with a [`link`] after it (`label`, English, translated here): on
+/// the note's line when they fit together, else the note wraps and the link ends its second
+/// line. A note longer than that is cut, and shown whole on hover. True when the link is
+/// clicked; `salt` tells notes apart.
+#[allow(clippy::too_many_arguments)]
+pub fn note_with_link(
+    ui: &Ui,
+    p: &Painter,
+    x: f32,
+    baseline: f32,
+    line_h: f32,
+    s: &str,
+    color: Color32,
+    right: f32,
+    label: &str,
+    salt: &str,
+) -> bool {
+    const GAP: f32 = 8.0;
+    let link_w = text_width(p, crate::i18n::t(label));
+    if text_width(p, s) + GAP + link_w <= right - x {
+        text(p, x, baseline, s, color);
+        return link(ui, p, x + text_width(p, s) + GAP, baseline, label, salt);
+    }
+    let lines = wrap_lines(p, s, (right - x).max(1.0));
+    let first = lines.first().map_or("", String::as_str);
+    let first_rect = text(p, x, baseline, first, color);
+    let rest = lines.get(1..).unwrap_or_default().join(" ");
+    let second = baseline + line_h;
+    let (rest_rect, cut) = text_fit(p, x, second, &rest, color, right - GAP - link_w);
+    if cut {
+        full_on_hover(ui, first_rect.union(rest_rect), (salt, "note"), s);
+    }
+    let rest_w = text_width(p, &rest).min(right - GAP - link_w - x);
+    link(ui, p, x + rest_w + GAP, second, label, salt)
+}
+
 /// A disabled control says why on hover: `reason` (English, translated here) while `disabled`.
 pub fn why_disabled(resp: Response, disabled: bool, reason: &str) -> Response {
     if disabled {
@@ -1876,9 +1924,14 @@ pub fn field_frame(p: &Painter, rc: Rect, look: FieldLook) {
 /// How far along something is, as IDM shows a download: its green fill on a track (themed: the
 /// track was light in dark mode too), the controls' rounded corners. `fraction` in 0..=1.
 pub fn meter(p: &Painter, rc: Rect, fraction: f32) {
+    meter_in(p, rc, fraction, crate::theme::colors().meter_fill);
+}
+
+/// [`meter`] filled in `fill` (the progress window's check or merge after the last byte, #736).
+pub fn meter_in(p: &Painter, rc: Rect, fraction: f32, fill: Color32) {
     let radius = control_radius().min(rc.height() / 4.0).floor();
     let c = crate::theme::colors();
-    if era_bar(p, rc, 0.0, fraction.clamp(0.0, 1.0), c.meter_fill, false) {
+    if era_bar(p, rc, 0.0, fraction.clamp(0.0, 1.0), fill, false) {
         return;
     }
     let border = crate::theme::metrics().border;
@@ -1887,7 +1940,7 @@ pub fn meter(p: &Painter, rc: Rect, fraction: f32) {
     let w = (fraction.clamp(0.0, 1.0) * inner.width()).floor();
     if w > 0.0 {
         let done = Rect::from_min_size(inner.min, vec2(w, inner.height()));
-        p.rect_filled(done, (radius - border).max(0.0), c.meter_fill);
+        p.rect_filled(done, (radius - border).max(0.0), fill);
     }
     p.rect_stroke(
         rc,
@@ -2244,15 +2297,7 @@ fn edit_text_with(
     name_from_caption(&resp);
     // Tab into a box selects its text, as in Windows (a click places the caret instead).
     if resp.gained_focus() && !ui.input(|i| i.pointer.any_down()) {
-        let mut state = egui::text_edit::TextEditState::load(ui.ctx(), edit_id).unwrap_or_default();
-        let n = value.chars().count();
-        state
-            .cursor
-            .set_char_range(Some(egui::text::CCursorRange::two(
-                egui::text::CCursor::new(0),
-                egui::text::CCursor::new(n),
-            )));
-        state.store(ui.ctx(), edit_id);
+        select_all_text(ui.ctx(), edit_id, value);
     }
     if value.is_empty() && ui.data(|d| d.get_temp::<bool>(was_empty)).is_none() {
         ui.data_mut(|d| d.insert_temp(was_empty, true));
@@ -2261,6 +2306,40 @@ fn edit_text_with(
         edit_menu(&resp, value, password, false);
     }
     resp
+}
+
+/// A text box's right-click menu, each item enabled or not.
+fn edit_entries(
+    undo: bool,
+    copy: bool,
+    paste: bool,
+    delete: bool,
+    select_all: bool,
+) -> Vec<crate::chrome::MenuEntry<EditCmd>> {
+    use crate::chrome::MenuEntry;
+    vec![
+        MenuEntry::Item("&Undo", EditCmd::Undo, undo, false),
+        MenuEntry::Sep,
+        MenuEntry::Item("Cu&t", EditCmd::Cut, copy, false),
+        MenuEntry::Item("&Copy", EditCmd::Copy, copy, false),
+        MenuEntry::Item("&Paste", EditCmd::Paste, paste, false),
+        MenuEntry::Item("&Delete", EditCmd::Delete, delete, false),
+        MenuEntry::Sep,
+        MenuEntry::Item("Select &all", EditCmd::SelectAll, select_all, false),
+    ]
+}
+
+/// A text box's right-click menu, for the access keys' test (app.rs).
+#[cfg(test)]
+pub fn text_box_menu() -> Vec<crate::chrome::MenuEntry<()>> {
+    use crate::chrome::MenuEntry;
+    edit_entries(true, true, true, true, true)
+        .into_iter()
+        .map(|e| match e {
+            MenuEntry::Item(l, _, en, on) => MenuEntry::Item(l, (), en, on),
+            _ => MenuEntry::Sep,
+        })
+        .collect()
 }
 
 #[derive(Clone, Copy)]
@@ -2387,7 +2466,7 @@ fn readonly_with_icon(
 }
 
 pub fn edit_menu(resp: &Response, value: &mut String, password: bool, multiline: bool) {
-    use crate::chrome::{MenuEntry, PopupResult};
+    use crate::chrome::PopupResult;
     use egui::text::{CCursor, CCursorRange};
     use egui::text_edit::TextEditState;
     let ctx = resp.ctx.clone();
@@ -2438,16 +2517,13 @@ pub fn edit_menu(resp: &Response, value: &mut String, password: bool, multiline:
     // egui's own undo history (Ctrl+Z uses it too).
     let mut undoer = state.undoer();
     let now = (state.cursor.char_range().unwrap_or_default(), value.clone());
-    let entries = vec![
-        MenuEntry::Item("&Undo", EditCmd::Undo, undoer.has_undo(&now), false),
-        MenuEntry::Sep,
-        MenuEntry::Item("Cu&t", EditCmd::Cut, has && !password, false),
-        MenuEntry::Item("&Copy", EditCmd::Copy, has && !password, false),
-        MenuEntry::Item("&Paste", EditCmd::Paste, clip.is_some(), false),
-        MenuEntry::Item("&Delete", EditCmd::Delete, has, false),
-        MenuEntry::Sep,
-        MenuEntry::Item("Select &all", EditCmd::SelectAll, n > 0, false),
-    ];
+    let entries = edit_entries(
+        undoer.has_undo(&now),
+        has && !password,
+        clip.is_some(),
+        has,
+        n > 0,
+    );
     let cmd = match crate::chrome::popup(
         &ctx,
         crate::chrome::MenuKind::Context,
@@ -2517,6 +2593,19 @@ pub fn edit_menu(resp: &Response, value: &mut String, password: bool, multiline:
     state.set_undoer(undoer);
     state.store(&ctx, id);
     ctx.memory_mut(|m| m.request_focus(id));
+}
+
+/// The whole text of the box `id` (`value`) selected, so what is typed next replaces it (a box
+/// given the keys by its window as it opens, as Tab into a box does).
+pub fn select_all_text(ctx: &egui::Context, id: egui::Id, value: &str) {
+    let mut state = egui::text_edit::TextEditState::load(ctx, id).unwrap_or_default();
+    state
+        .cursor
+        .set_char_range(Some(egui::text::CCursorRange::two(
+            egui::text::CCursor::new(0),
+            egui::text::CCursor::new(value.chars().count()),
+        )));
+    state.store(ctx, id);
 }
 
 /// A dark edit with right-aligned text (numbers, e.g. the Speed Limiter value).
@@ -4833,6 +4922,12 @@ pub fn pass_focus_on(ui: &Ui, resp: &Response, enabled: bool) {
     }
 }
 
+/// A system file or folder dialog titled `title`, for [`start_pick`]: the system draws the title,
+/// so it goes without isolates (#919).
+pub fn file_dialog(title: &str) -> rfd::FileDialog {
+    rfd::FileDialog::new().set_title(crate::i18n::os_text(title))
+}
+
 /// A system file or folder dialog's answer, from its thread.
 type PickSlot = std::sync::Arc<std::sync::Mutex<Option<Option<std::path::PathBuf>>>>;
 
@@ -5428,6 +5523,102 @@ pub fn combo_light(
     }
     ui.data_mut(|d| d.insert_temp(key, open));
     chosen
+}
+
+/// A button that opens a menu (Download complete's Snooze, #741): its label and a chevron on a
+/// drop-down's face, in the current theme. A click, Space, Alt+Down or F4 opens `items` (English,
+/// translated here) under it, in the shared popup; Enter stays the window's default button's.
+/// Returns the item picked this frame.
+pub fn menu_button(ui: &mut Ui, rc: Rect, label: &str, items: &[&str], id: &str) -> Option<usize> {
+    let key = widget_id(ui, ("menu-button", id));
+    let resp = ui.interact(rc, key.with("button"), Sense::click());
+    pass_focus_on(ui, &resp, true);
+    let resp = opener_click(ui, resp);
+    focus_on_press(&resp);
+    let mut open = ui.data(|d| d.get_temp::<bool>(key).unwrap_or(false));
+    let popup_id = format!("menu-button-{}", key.short_debug_format());
+    let enter = ui.input(|i| i.key_pressed(egui::Key::Enter));
+    if resp.clicked() && !enter {
+        open = !open;
+    }
+    if resp.has_focus() && !open {
+        let opener = ui.input_mut(|i| {
+            i.consume_key(egui::Modifiers::ALT, egui::Key::ArrowDown)
+                || i.consume_key(egui::Modifiers::NONE, egui::Key::F4)
+        });
+        if opener {
+            open = true;
+            crate::chrome::start_at(ui.ctx(), &popup_id, 0);
+        }
+    }
+    let p = ui.painter().clone();
+    dropdown_frame_light(&p, rc, State::of(&resp, true).open_if(open));
+    let shown = crate::i18n::t(label);
+    expose(&resp, egui::Role::Button, shown, true, None);
+    let text = ellipsize(&p, &tahoma(), shown, rc.width() - 8.0 - 19.0);
+    text_start(
+        &p,
+        tahoma(),
+        lead(rc) + 8.0 * fwd(),
+        rc.top() + 14.0,
+        &text,
+        TEXT(),
+    );
+    let chevron_x = if rtl() {
+        rc.left() + 6.0
+    } else {
+        rc.right() - 14.0
+    };
+    chevron_light(&p, pos2(chevron_x, rc.top() + 8.0), true);
+    show_focus(ui, &resp, rc.shrink(3.0));
+    let mut chosen = None;
+    if open {
+        use crate::chrome::{MenuEntry, PopupResult, label as menu_label};
+        let entries: Vec<MenuEntry<usize>> = items
+            .iter()
+            .enumerate()
+            .map(|(i, s)| {
+                let shown = crate::i18n::t(s).replace('&', "&&");
+                MenuEntry::Item(menu_label(&shown), i, true, false)
+            })
+            .collect();
+        // Under the button from its leading edge (a menu's top-right in right to left).
+        let at = if rtl() {
+            rc.right_bottom()
+        } else {
+            rc.left_bottom()
+        };
+        match crate::chrome::popup(
+            ui.ctx(),
+            crate::chrome::MenuKind::Context,
+            &popup_id,
+            at,
+            &entries,
+            &|_| None,
+        ) {
+            PopupResult::Chosen(i) => {
+                open = false;
+                chosen = Some(i);
+            }
+            PopupResult::Dismissed => {
+                open = false;
+                resp.request_focus();
+            }
+            PopupResult::Open | PopupResult::Neighbor(_) => {}
+        }
+        // The keys went to the menu: the window's default button doesn't take Enter too.
+        take_key(ui, egui::Key::Enter);
+    }
+    ui.data_mut(|d| d.insert_temp(key, open));
+    chosen
+}
+
+/// A [`menu_button`]'s width for `label` in this language: its text, its chevron and their
+/// margins, between `min` and `max`.
+pub fn menu_button_width(p: &Painter, label: &str, min: f32, max: f32) -> f32 {
+    (text_width(p, crate::i18n::t(label)) + 8.0 + 22.0)
+        .round()
+        .clamp(min, max)
 }
 
 /// A spin box's arrows in `zone` ([`spin_zone`]): up and down halves inside the box, without
@@ -6285,6 +6476,44 @@ mod tests {
             }
         });
         out.textures_delta.clear();
+    }
+
+    #[test]
+    fn a_single_line_label_never_grows_another_row() {
+        with_painter(|p| {
+            // A title that fits is drawn as it is, with nothing to hover.
+            let (rc, cut) = text_fit(p, 11.0, 70.0, "A short title", TEXT(), 489.0);
+            assert!(!cut);
+            assert!(rc.right() <= 489.0);
+            // An empty one draws nothing and is not a cut.
+            let (rc, cut) = text_fit(p, 11.0, 70.0, "", TEXT(), 489.0);
+            assert!(!cut);
+            assert_eq!(rc.width(), 0.0);
+            // A column with room for the "..." alone stays in its column.
+            let right = 11.0 + text_width(p, "...") + 1.0;
+            let (rc, cut) = text_fit(p, 11.0, 70.0, "A title", TEXT(), right);
+            assert!(cut);
+            assert!(rc.right() <= right);
+            // A long title stays one row, whatever it has in it: unbroken, wide Unicode, and
+            // line breaks (a site's title). A cut says the whole original is shown on hover.
+            let cases = [
+                "W".repeat(2000),
+                "日本語".repeat(500),
+                "مرحبا بالعالم ".repeat(100),
+                "🎬".repeat(500),
+                "Short\ntitle".to_owned(),
+                "Short\rtitle".to_owned(),
+                "Long title\r\nwith more than one line\nand a third".to_owned(),
+                "\n".to_owned(),
+                "a\n".repeat(100),
+            ];
+            for s in cases {
+                let (rc, cut) = text_fit(p, 11.0, 70.0, &s, TEXT(), 489.0);
+                assert!(cut, "not cut, so no whole text on hover: {s:?}");
+                assert!(rc.right() <= 489.0, "past its right edge: {s:?}");
+                assert!(rc.height() <= 20.0, "more than one row: {s:?}");
+            }
+        });
     }
 
     #[test]

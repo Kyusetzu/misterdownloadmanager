@@ -9,6 +9,11 @@ pub struct Faults {
     /// Per-response speed cap, bytes/s.
     #[serde(deserialize_with = "size_opt")]
     pub rate: Option<u64>,
+    /// With a rate: a link rather than a quota. A response the client stopped reading catches
+    /// up with at most this much at once (what a real link's buffers hold), then goes on at the
+    /// rate; by default it is paced from its start, so it sends everything it fell behind by.
+    #[serde(deserialize_with = "size_opt")]
+    pub burst: Option<u64>,
     /// Every Nth request is throttled to `slow_rate` (simulates one slow connection).
     pub slow_every: Option<u64>,
     #[serde(deserialize_with = "size_opt")]
@@ -33,6 +38,17 @@ pub struct Faults {
     /// Answer with a small web page (a login wall) instead of the file.
     #[serde(deserialize_with = "flag_opt")]
     pub html: Option<bool>,
+    /// With `html`: the page's `Content-Type` instead of `text/html` (`none`: no type at all),
+    /// a page that sniffs as one without saying so (#701).
+    pub html_type: Option<String>,
+    /// With `html`: the page under the file's own name (`Content-Disposition: attachment` with
+    /// the path's name), as a file host's script sends it (#701).
+    #[serde(deserialize_with = "flag_opt")]
+    pub html_cd: Option<bool>,
+    /// The first N requests for this path and query get the file, every later one the web page
+    /// (`html`'s, with `html_type` and `html_cd`): a link that leads to a waiting page once
+    /// the download is resumed (#701).
+    pub html_after: Option<u64>,
     /// ETag / Last-Modified change every N requests (resume validation).
     pub etag_change_every: Option<u64>,
     /// ETag style: `weak` (W/"…"), `per-request` (a new strong ETag on every answer, same file,
@@ -88,6 +104,7 @@ impl Faults {
     pub fn overridden_by(&self, over: &Faults) -> Faults {
         Faults {
             rate: over.rate.or(self.rate),
+            burst: over.burst.or(self.burst),
             slow_every: over.slow_every.or(self.slow_every),
             slow_rate: over.slow_rate.or(self.slow_rate),
             max_conns: over.max_conns.or(self.max_conns),
@@ -98,6 +115,9 @@ impl Faults {
             no_range: over.no_range.or(self.no_range),
             no_range_every: over.no_range_every.or(self.no_range_every),
             html: over.html.or(self.html),
+            html_type: over.html_type.clone().or(self.html_type.clone()),
+            html_cd: over.html_cd.or(self.html_cd),
+            html_after: over.html_after.or(self.html_after),
             etag_change_every: over.etag_change_every.or(self.etag_change_every),
             etag: over.etag.clone().or(self.etag.clone()),
             latency_ms: over.latency_ms.or(self.latency_ms),
@@ -184,6 +204,10 @@ mod tests {
     fn flags_and_refusals() {
         let f = Faults::parse("once=1&html=0&no_range=true&require_cookie=sid=1&browser_only=1")
             .unwrap();
+        let page = Faults::parse("html_type=none&html_cd=1&html_after=2").unwrap();
+        assert_eq!(page.html_type.as_deref(), Some("none"));
+        assert_eq!(page.html_cd, Some(true));
+        assert_eq!(page.html_after, Some(2));
         assert_eq!(f.once, Some(true));
         assert_eq!(f.browser_only, Some(true));
         assert_eq!(f.html, Some(false));

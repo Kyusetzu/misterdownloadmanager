@@ -158,6 +158,23 @@ pub struct VideoLookupAnswer {
     /// `failed` with [`lookup::ERROR`]: why, in MDM's words and language.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// `ready` (and `failed` with [`lookup::NO_CHOICES`]): what the look-up lacked and how to
+    /// mend it, shown with the choices (#852: YouTube's qualities need a JavaScript runtime).
+    /// None from an app older than the field.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notice: Option<VideoNotice>,
+}
+
+/// A word in the browser's quality menu on what the look-up lacked (#852), in MDM's language.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(default)]
+pub struct VideoNotice {
+    /// What is wrong and what to do ("YouTube needs a JavaScript runtime…").
+    pub text: String,
+    /// The link's words ("How to install one").
+    pub link: String,
+    /// The help page it opens, on MDM's website.
+    pub url: String,
 }
 
 /// One quality the browser's quality menu offers.
@@ -168,11 +185,36 @@ pub struct VideoChoice {
     pub label: String,
     /// The file's type (`mp4`, `mp3`).
     pub ext: String,
-    /// Bytes, exact or estimated; null when unknown.
+    /// Bytes, exact or estimated (`approx`); null when unknown.
     pub size: Option<u64>,
     /// Only the sound (an audio file, a conversion to MP3, Opus or FLAC): the menu lists these
     /// apart from the videos. False from an app older than the field.
     pub audio: bool,
+    /// The picture's height in pixels (the button's chip: 1080p, 4K); none for the sound, or a
+    /// file known only by its type.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<u32>,
+    /// Frames a second, rounded (an app older than #755 said it only above 31).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fps: Option<u32>,
+    /// The sound's bitrate in kbit/s, for the sound as the site has it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kbps: Option<u32>,
+    /// The sound as the site sends it (not converted): the button's list says "original".
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub original: bool,
+    /// The picture's codec as people name it: `AV1`, `VP9`, `H.264`, `H.265`… (#755). None
+    /// from an app older than the field.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub codec: Option<String>,
+    /// The picture's dynamic range when worth saying: `HDR`, `Dolby Vision`, or `SDR` beside an
+    /// HDR choice of the same height (#755).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub range: Option<String>,
+    /// `size` is an estimate (a stream's bitrate times its length, a conversion's), shown as
+    /// about ("~532 MB"); otherwise it is the bytes of exactly the streams this downloads (#801).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub approx: bool,
 }
 
 /// [`VideoLookupAnswer::state`]'s values, and [`VideoLookupAnswer::reason`]'s.
@@ -344,12 +386,14 @@ mod tests {
                     ext: "mp4".into(),
                     size: Some(187_500_000),
                     audio: false,
+                    ..Default::default()
                 },
                 VideoChoice {
                     label: "Audio only mp3".into(),
                     ext: "mp3".into(),
                     size: None,
                     audio: true,
+                    ..Default::default()
                 },
             ],
             ..VideoLookupAnswer::of(lookup::READY)

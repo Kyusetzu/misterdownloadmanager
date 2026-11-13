@@ -40,6 +40,16 @@
 #, machine
 @plural	Matches {n} article now (it adds new ones only):|Matches {n} articles now (it adds new ones only):	ກົງກັບບົດຄວາມ {n} ລາຍການໃນຕອນນີ້ (ເພີ່ມສະເພາະບົດຄວາມໃໝ່):
 #. count in a dialog box
+#. Cancel in Download File Info with downloads waiting behind it
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	There is {n} more download waiting. Cancel it too?|There are {n} more downloads waiting. Cancel them too?	ຍັງມີອີກ {n} ລາຍການດາວໂຫຼດທີ່ກຳລັງລໍຖ້າຢູ່. ຕ້ອງການຍົກເລີກນຳບໍ?
+#. count in a dialog box
+#. under the first failed downloads in the summary of a group of downloads: {n} more failed (Show in list shows them all)
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	and {n} more|and {n} more	ແລະ ອີກ {n} ລາຍການ
+#. count in a dialog box
 #. "files already there" question, under the first path: {n} = how many more
 #. {n} = a number (keep the braces as they are)
 #, machine
@@ -61,6 +71,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	{n} download|{n} downloads	{n} ດາວໂຫຼດ
+#. count in a dialog box
+#. the summary of downloads added together (the Downloads complete window; the tip of the tray icon): {n} of them finished
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	{n} download finished|{n} downloads finished	{n} ການດາວໂຫຼດສຳເລັດແລ້ວ
 #. count in the main window
 #. {n} = a number (keep the braces as they are)
 #, machine
@@ -70,6 +85,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	{n} entry was left out (a link, or a name leading outside the folder)|{n} entries were left out (links, or names leading outside the folder)	ປະ {n} ລາຍການໄວ້ (ລິ້ງ ຫຼືຊື່ທີ່ນຳໄປນອກໂຟນເດີ)
+#. count in a dialog box
+#. the summary of downloads added together; after "12 downloads finished": {n} of them failed
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	{n} failed|{n} failed	{n} ລາຍການລົ້ມເຫຼວ
 #. count in the Batch download window; count in the Link grabber window; count in the Add torrent window; count in torrentfiles.rs
 #. how many files the pattern gives in all
 #. Link grabber: a package's row: {n} is its number of links
@@ -95,6 +115,14 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	{n} selected|{n} selected	ເລືອກແລ້ວ {n} ລາຍການ
+#. count in the Options window
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	{n} site added from the file.|{n} sites added from the file.	ເພີ່ມ {n} ເວັບໄຊຈາກໄຟລ໌.
+#. count in the Options window
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	{n} site saved to the file.|{n} sites saved to the file.	ບັນທຶກ {n} ເວັບໄຊລົງໃນໄຟລ໌.
 #. count in the main window
 #. event log entry: trackers were added to the torrent
 #. {n} = a number (keep the braces as they are)
@@ -169,6 +197,9 @@
 #. window title: 7-Zip (a program's name) must be installed
 #, machine
 	7-Zip needed	ຕ້ອງຕິດຕັ້ງ 7-Zip
+#. tab in the main window
+#, machine
+	720p	720p
 #. text in the Options window
 #. Options → Archives: {path} is where 7-Zip's program is
 #, machine
@@ -196,6 +227,11 @@
 #. {name} = a file name (keep the braces as they are)
 #, machine
 	A file of this torrent can't be saved safely: {name}	ບໍ່ສາມາດບັນທຶກໄຟລ໌ຂອງ torrent ນີ້ຢ່າງປອດໄພໄດ້: {name}
+#. message or event log entry in the main window
+#. Link grabber added a magnet link whose torrent could not be found; {error} says why
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	A magnet link's files could not be looked up: {error}	ບໍ່ສາມາດດຶງລາຍຊື່ໄຟລ໌ຂອງລິ້ງແມັກເນັດໄດ້: {error}
 #. text in the settings
 #. Options → DNS: the NextDNS configuration ID typed isn't one
 #, machine
@@ -239,6 +275,11 @@
 #. a download's server's round trip: {ms} a number of milliseconds, {reach} near, medium or far
 #, machine
 	about {ms} ms ({reach})	ປະມານ {ms} ມິນລິວິນາທີ ({reach})
+#. text in the Download video window
+#. a file size that is only an estimate, as a screen reader says it in the Download video window's list of qualities; {size} is "532 MB"
+#. {size} = a file size such as "4.2 MB" (keep the braces as they are)
+#, machine
+	about {size}	ປະມານ {size}
 #. checkbox in the Add torrent window
 #. Torrent settings: other peers may connect to this computer
 #, machine
@@ -270,6 +311,10 @@
 #. text in the tray icon's menu
 #, machine
 	Add batch download	ເພີ່ມການດາວໂຫຼດເປັນຊຸດ
+#. message or event log entry in the main window; text in the tray icon's menu
+#. title of the note when Tasks → Add batch download from clipboard finds nothing to download
+#, machine
+	Add batch download from clipboard	ເພີ່ມການດາວໂຫຼດເປັນຊຸດຈາກຄລິບບອດ
 #. text in the Options window
 #. the trailing ... means it is still going on: keep it
 #, machine
@@ -829,6 +874,11 @@
 #. check box in the update window: look for a new version every time MDM starts
 #, machine
 	Check for updates at every start	ກວດສອບການອັບເດດທຸກຄັ້ງທີ່ເລີ່ມຕົ້ນ
+#. text in errors.rs
+#. what to do when the proxy set in Options didn't let a helper's download connect; {proxy} = the Options tab Proxy / Socks; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Check the proxy in Options → {proxy}, or download {name} yourself and choose it in {helpers} → {other}.	ກວດສອບພຣັອກຊີໃນຕົວເລືອກ → {proxy}, ຫຼືດາວໂຫຼດ {name} ເອງ ແລະເລືອກມັນໃນ {helpers} → {other}.
 #. text in helpers.rs
 #, machine
 	Check your connection, then try again, or get them later from the video window.	ກວດສອບການເຊື່ອມຕໍ່ຂອງທ່ານ, ແລ້ວລອງໃໝ່ອີກຄັ້ງ, ຫຼືເອົາພວກມັນພາຍຫຼັງຈາກໜ້າຕ່າງວິດີໂອ.
@@ -870,7 +920,7 @@
 #, machine
 	Checking {name} ({n} of {total})...	ກຳລັງກວດສອບ {name} ({n} ຈາກ {total})...
 #. text in the download list (sizes, speeds, status)
-#. a torrent's status while its files are read and checked; {percent} is how much is checked, e.g. "42%"
+#. the list's Status column while a torrent's files or a finished file are checked (against the torrent's hashes or a checksum); {percent} how much is checked, e.g. "42%". One short word: the column is narrow
 #, machine
 	Checking {percent}	ກຳລັງກວດສອບ {percent}
 #. text in the Checksum window; text in the Link grabber window
@@ -915,6 +965,10 @@
 #. column title: the peer's torrent program
 #, machine
 	Client	ລູກຄ້າ
+#. message or event log entry in the main window
+#. Link grabber: where the links came from: the clipboard (Tasks → Add batch download from clipboard)
+#, machine
+	Clipboard	ຄລິບບອດ
 #. text in the Options window
 #, machine
 	Clock:	ໂມງ:
@@ -1029,6 +1083,20 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	Could not be read: {error}	ບໍ່ສາມາດອ່ານໄດ້: {error}
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: the proxy set in Options ({proxy}, its address) didn't let MDM connect
+#, machine
+	could not connect through the proxy {proxy}	ບໍ່ສາມາດເຊື່ອມຕໍ່ຜ່ານພຣັອກຊີ {proxy}
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: its server ({host}) couldn't be reached
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	could not reach {host}	ບໍ່ສາມາດເຂົ້າເຖິງ {host} ໄດ້
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: its server ({host}) couldn't be reached, for the system's reason {cause}
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	could not reach {host} ({cause})	ບໍ່ສາມາດເຂົ້າເຖິງ {host} ໄດ້ ({cause})
 #. text in extracting archives (a download's log, the Archive password window)
 #. in a download's log: {name} is the archive's file name, {why} the reason
 #. {name} = a file name (keep the braces as they are)
@@ -1249,6 +1317,15 @@
 #, machine
 	Download complete	ດາວໂຫຼດສຳເລັດ
 #. text in the Options window
+#. Options, Downloads, under "Show download complete dialog": snoozed with "Until MDM restarts"
+#, machine
+	Download complete is snoozed until MDM restarts	ການແຈ້ງດາວໂຫຼດສຳເລັດຖືກພັກໄວ້ຈົນກວ່າ MDM ຈະເລີ່ມໃໝ່
+#. text in the Options window
+#. Options, Downloads, under "Show download complete dialog": {time} when the snooze ends, like "14:30"
+#. {time} = a time of day (keep the braces as they are)
+#, machine
+	Download complete is snoozed until {time}	ການແຈ້ງດາວໂຫຼດສຳເລັດຖືກພັກໄວ້ຈົນກວ່າຈະຮອດ {time}
+#. text in the Options window
 #, machine
 	Download failed	ດາວໂຫຼດລົ້ມເຫຼວ
 #. window title in a dialog box
@@ -1292,6 +1369,9 @@
 #. Options → Accounts: checkbox: links of the file hosts these services support are downloaded through the accounts
 #, machine
 	Download supported file-host links through these accounts	ດາວໂຫຼດລິ້ງໂຮສໄຟລ໌ທີ່ຮອງຮັບຜ່ານບັນຊີເຫຼົ່ານີ້
+#. what a keyboard shortcut does in the Help menu's windows (About, updates, shortcuts, Tell a friend)
+#, machine
+	Download the links in the clipboard (Add batch download from clipboard)	ດາວໂຫຼດລິ້ງໃນຄລິບບອດ (ເພີ່ມການດາວໂຫຼດເປັນຊຸດຈາກຄລິບບອດ)
 #. text in a dialog box
 #. Download File Info: a check box, ticked when the download goes through the user's debrid account; {service} the service and the account, "Real-Debrid (labuser)". Unticked: downloaded directly
 #, machine
@@ -1343,6 +1423,11 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Downloading and verifying yt-dlp...	ກຳລັງດາວໂຫຼດ ແລະກວດສອບ yt-dlp...
+#. text in helpers.rs
+#. Video helpers: MDM's own yt-dlp is being downloaded
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Downloading MDM's own copy...	ກຳລັງດາວໂຫຼດສຳເນົາຂອງ MDM ເອງ...
 #. text in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #. Check for updates, while Update now downloads; {percent} like "42%"
 #, machine
@@ -1356,6 +1441,10 @@
 #. tab title: download settings
 #, machine
 	Downloads	ການດາວໂຫຼດ
+#. window title in a dialog box
+#. title of the window that sums up downloads added together (a playlist, a batch) once all are done
+#, machine
+	Downloads complete	ການດາວໂຫຼດສຳເລັດ
 #. text in the tray icon's menu
 #. tray menu: a submenu of the downloads now running; choosing one shows its progress window
 #, machine
@@ -1379,6 +1468,12 @@
 #. tooltip of the handle in Download complete: drag it to drop the downloaded file somewhere
 #, machine
 	Drag the file into a folder or an app	ລາກໄຟລ໌ໃສ່ໂຟນເດີ ຫຼື ແອັບ
+#. message or event log entry in the main window
+#, machine
+	Dragged out of Download complete and moved to a place MDM couldn't learn	ລາກອອກຈາກ “ດາວໂຫຼດສຳເລັດ” ແລະຍ້າຍໄປບ່ອນທີ່ MDM ບໍ່ສາມາດລະບຸໄດ້
+#. message or event log entry in the main window
+#, machine
+	Dragged out of Download complete and moved to {folder}	ລາກອອກຈາກ “ດາວໂຫຼດສຳເລັດ” ແລະ ຍ້າຍໄປທີ່ {folder}
 #. message or event log entry in the main window
 #. in Import, where the addresses came from: dragged onto the window
 #, machine
@@ -1428,6 +1523,10 @@
 #. button in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #, machine
 	Email	ອີເມວ
+#. text in the Download video window
+#. checkbox in Download video: the chapters a video's page lists (YouTube's, for one) go into the video file, where players show them and skip between them
+#, machine
+	Embed chapters	ຝັງບົດຕ່າງໆ
 #. text in gallerydlg.rs
 #. in Download a gallery, after the "Files at most" box
 #, machine
@@ -1468,7 +1567,7 @@
 #. a country's name (where a download's server is)
 #, machine
 	Eritrea	ເອຣີເທຣຍ
-#. text in a dialog box; item in the Categories tree in the download list; value in a column's filter list in the download list; text in the download list (sizes, speeds, status); text in remote.rs
+#. text in a dialog box; item in the Categories tree in the download list; value in a column's filter list in the download list; text in the download list (sizes, speeds, status); text in a download's progress window; text in remote.rs
 #. in Download File Info, where the size goes: the address didn't answer
 #. a download's status (state it is in, not a command)
 #. a download's status (state it is in, not a command): it failed
@@ -1534,6 +1633,10 @@
 #. message or event log entry in the main window; text in the Options window
 #, machine
 	Export	ສົ່ງອອກ
+#. button in the Options window
+#. the trailing ... means it opens a window: keep it
+#, machine
+	Export...	ສົ່ງອອກ...
 #. text in the Options window
 #, machine
 	Extend the availability of Manifest 2 Chrome extensions	ຂະຫຍາຍໄລຍະເວລາໃຊ້ງານຂອງສ່ວນຂະຫຍາຍ Chrome Manifest 2
@@ -1561,6 +1664,10 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Extracting...	ກຳລັງແຍກໄຟລ໌...
+#. text in a dialog box
+#. label over the list of the downloads of the group that failed
+#, machine
+	Failed:	ລົ້ມເຫຼວ:
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -1604,6 +1711,10 @@
 #. noun: a file of no known type
 #, machine
 	File	ໄຟລ໌
+#. text in the Options window
+#. tooltip of "Mark downloaded files as coming from the internet" on Linux
+#, machine
+	File managers show where the files marked this way came from. Unticked, no download is marked.	ຕົວຈັດການໄຟລ໌ສະແດງບ່ອນທີ່ໄຟລ໌ທີ່ໝາຍໄວ້ແບບນີ້ມາຈາກໃສ. ຖ້າບໍ່ໄດ້ໝາຍ, ຈະບໍ່ມີການດາວໂຫຼດໃດໆຖືກໝາຍ.
 #. text in the Scheduler window
 #, machine
 	File Name	ຊື່ໄຟລ໌
@@ -1682,6 +1793,11 @@
 #. remote control page (on a phone): tab: downloads finished
 #, machine
 	Finished	ສຳເລັດແລ້ວ
+#. text in a download's progress window
+#. a download's status: every byte is in, the file is being written out and given its name
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Finishing...	ກຳລັງສຳເລັດ...
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -1699,6 +1815,18 @@
 #. text in categories.rs
 #, machine
 	Folder:	ໂຟນເດີ:
+#. text in finish.rs
+#. Snooze menu of the Download complete window: show no Download complete window for this long
+#, machine
+	For 1 hour	ເປັນເວລາ 1 ຊົ່ວໂມງ
+#. text in finish.rs
+#. Snooze menu of the Download complete window: show no Download complete window for this long
+#, machine
+	For 30 minutes	ເປັນເວລາ 30 ນາທີ
+#. text in finish.rs
+#. Snooze menu of the Download complete window: show no Download complete window for this long
+#, machine
+	For 8 hours	ເປັນເວລາ 8 ຊົ່ວໂມງ
 #. text in the Batch download window
 #. {address} = an example web address with a * in the file name
 #, machine
@@ -1928,7 +2056,7 @@
 #. window title: where MDM takes its helper programs (yt-dlp, ffmpeg, gallery-dl) from
 #, machine
 	Helpers	ຕົວຊ່ວຍ
-#. button in gallerydlg.rs; button in the Download video window
+#. text in errors.rs; button in gallerydlg.rs; button in the Download video window
 #. button in Download video: where MDM takes yt-dlp and ffmpeg from
 #. the trailing ... means it opens a window: keep it
 #, machine
@@ -1978,6 +2106,11 @@
 #. button in Test browser integration: open the help page's section for the problem
 #, machine
 	How to fix it	ວິທີແກ້ໄຂ
+#. text in the Download video window; text in videolookup.rs
+#. link after the note that YouTube needs a JavaScript runtime: opens the help page that says how to install Node.js or Deno
+#. link in the browser's video menu, after the note that YouTube needs a JavaScript runtime: opens the help page that says how to install Node.js or Deno
+#, machine
+	How to install one	ວິທີຕິດຕັ້ງ
 #. checkbox in the Options window
 #, machine
 	http	http
@@ -2005,12 +2138,21 @@
 #. Options → DNS settings: checkbox: when the chosen DNS can't be reached, use the system's instead
 #, machine
 	If it can't be reached, use the system's DNS	ຖ້າເຂົ້າເຖິງບໍ່ໄດ້, ໃຫ້ໃຊ້ DNS ຂອງລະບົບ
+#. text in errors.rs
+#. what to do when a helper's server couldn't be reached; {proxy} = the Options tab Proxy / Socks; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	If you use a proxy, set it in Options → {proxy}. Or download {name} yourself and choose it in {helpers} → {other}.	ຖ້າທ່ານໃຊ້ພຣັອກຊີ, ໃຫ້ຕັ້ງຄ່າໃນຕົວເລືອກ → {proxy}. ຫຼື ດາວໂຫຼດ {name} ດ້ວຍຕົນເອງ ແລະ ເລືອກມັນໃນ {helpers} → {other}.
 #. checkbox in the Options window
 #, machine
 	Ignore file modification time changes when resuming a download	ບໍ່ສົນໃຈການປ່ຽນແປງເວລາແກ້ໄຂໄຟລ໌ເມື່ອດາວໂຫຼດຕໍ່
 #. message or event log entry in the main window; text in the Options window
 #, machine
 	Import	ນຳເຂົ້າ
+#. button in the Options window
+#. the trailing ... means it opens a window: keep it
+#, machine
+	Import...	ນຳເຂົ້າ...
 #. value in a column's filter list in the download list
 #, machine
 	In a queue	ຢູ່ໃນຄິວ
@@ -2147,6 +2289,16 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	its files could not be written: {error}	ບໍ່ສາມາດຂຽນໄຟລ໌ຂອງມັນໄດ້: {error}
+#. text in the download list (sizes, speeds, status)
+#. why a video download failed: ffmpeg couldn't join its picture and sound into one file; {error} = ffmpeg's reason, in English
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	its picture and sound couldn't be joined into one file ({error})	ບໍ່ສາມາດລວມວິດີໂອ ແລະ ສຽງເຂົ້າເປັນໄຟລ໌ດຽວໄດ້ ({error})
+#. text in the download list (sizes, speeds, status)
+#. why a video download failed: ffmpeg couldn't join its picture and sound into one file; {error} = ffmpeg's reason, in English; {files} = the downloaded parts' file names, kept in the download folder; "Also delete the file from disk" is the Delete box's choice
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	its picture and sound couldn't be joined into one file ({error}). What was downloaded stays in the folder for Resume to join again ({files}); deleting the download with "Also delete the file from disk" removes it	ບໍ່ສາມາດລວມຮູບພາບ ແລະ ສຽງເຂົ້າເປັນໄຟລ໌ດຽວໄດ້ ({error}). ສິ່ງທີ່ດາວໂຫຼດແລ້ວຈະຢູ່ໃນໂຟນເດີເພື່ອໃຫ້ Resume ລວມອີກຄັ້ງ ({files}); ການລຶບການດາວໂຫຼດດ້ວຍ “ລຶບໄຟລ໌ອອກຈາກແຜ່ນດິດນຳ” ຈະລຶບມັນອອກ
 #. text in errors.rs
 #, machine
 	its release information is not as expected: {detail}	ຂໍ້ມູນການປ່ອຍຂອງມັນບໍ່ເປັນໄປຕາມທີ່ຄາດໄວ້: {detail}
@@ -2308,7 +2460,7 @@
 #. Torrent settings: an upload speed limit for all torrents together, followed by a box with the speed and "KBytes/sec"
 #, machine
 	Limit uploading for all torrents to	ຈຳກັດການອັບໂຫຼດສຳລັບທຸກ torrents ໄປທີ່
-#. window title in the Link grabber window; group box title in the Options window
+#. message or event log entry in the main window; window title in the Link grabber window; group box title in the Options window
 #. Options → Archives: group box title
 #, machine
 	Link grabber	ຕົວດຶງລິ້ງ
@@ -2401,10 +2553,18 @@
 #. a country's name (where a download's server is)
 #, machine
 	Macau	ມາເກົ້າ
+#. text in the Options window
+#. tooltip of "Mark downloaded files as coming from the internet" on macOS
+#, machine
+	macOS checks the files marked this way: Gatekeeper before a program first opens. Unticked, no download is marked.	macOS ກວດສອບໄຟລ໌ທີ່ໝາຍໄວ້ແບບນີ້: Gatekeeper ກ່ອນໂປຣແກຣມຈະເປີດຄັ້ງທຳອິດ. ຖ້າບໍ່ໄດ້ໝາຍ, ຈະບໍ່ມີການດາວໂຫຼດໃດໆຖືກໝາຍ.
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
 	Madagascar	ມາດາກາສກາ
+#. text in the Link grabber window
+#. Link grabber, a link's status: a magnet link (a torrent, its files looked up once it is added)
+#, machine
+	Magnet link	ລິ້ງແມັກເນັດ
 #. message or event log entry in the main window
 #, machine
 	Main download queue	ຄິວການດາວໂຫຼດຫຼັກ
@@ -2448,6 +2608,9 @@
 #. text in the Scheduler window
 #, machine
 	March	ມີນາ
+#. checkbox in the Options window
+#, machine
+	Mark downloaded files as coming from the internet	ໝາຍໄຟລ໌ທີ່ດາວໂຫຼດມາວ່າເປັນໄຟລ໌ທີ່ມາຈາກອິນເຕີເນັດ
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -2529,6 +2692,19 @@
 #. how far a download's server is, by its round trip (60 to 150 ms)
 #, machine
 	medium	ປານກາງ
+#. text in the download list (sizes, speeds, status)
+#. the list's Status column while a video's picture and sound are joined into one file (ffmpeg); {percent} how far, e.g. "45%". One short word: the column is narrow
+#, machine
+	Merging {percent}	ກຳລັງລວມ {percent}
+#. text in the download list (sizes, speeds, status)
+#. a video's status while its picture and sound are joined into one file (ffmpeg)
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Merging...	ກຳລັງລວມ...
+#. text in the download list (sizes, speeds, status)
+#. a video's status while its picture and sound are joined into one file (ffmpeg); {percent} how far, e.g. "45%"
+#, machine
+	Merging... ({percent})	ກຳລັງລວມ... ({percent})
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -2686,6 +2862,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Mozambique	ໂມຊຳບິກ
+#. text in the Download video window
+#. why "Embed chapters" is greyed in Download video: the choice is a sound converted to MP3, Opus or FLAC, which MDM saves without chapters
+#, machine
+	MP3, Opus and FLAC files are saved without chapters	ໄຟລ໌ MP3, Opus ແລະ FLAC ຖືກບັນທຶກໂດຍບໍ່ມີບົດຕ່າງໆ
 #. text in errors.rs
 #, machine
 	much slower than the other connections; reconnecting	ຊ້າກວ່າການເຊື່ອມຕໍ່ອື່ນໆຫຼາຍ; ກຳລັງເຊື່ອມຕໍ່ໃໝ່
@@ -2827,6 +3007,9 @@
 #. tooltip on the Scheduler's weekdays when none is ticked
 #, machine
 	No day is ticked: the queue will not start	ບໍ່ໄດ້ໝາຍວັນໃດ: ຄິວຈະບໍ່ເລີ່ມ
+#. message or event log entry in the main window
+#, machine
+	No download links were found in the clipboard. Copy a text with http, https, ftp or magnet links in it, and try again.	ບໍ່ພົບລິ້ງດາວໂຫຼດໃນຄລິບບອດ. ກະລຸນາສຳເນົາຂໍ້ຄວາມທີ່ມີລິ້ງ http, https, ftp ຫຼື magnet, ແລ້ວລອງໃໝ່ອີກຄັ້ງ.
 #. message or event log entry in the main window
 #. title in the empty download list (this category or queue has no downloads)
 #, machine
@@ -3102,11 +3285,16 @@
 #. verb: opens the file
 #, machine
 	Open	ເປີດ
-#. button in crashui.rs; button in a dialog box; button in torrentfiles.rs
+#. button in crashui.rs; button in a dialog box; text in a dialog box; button in torrentfiles.rs
 #. crash report window button: show the report's file in its folder
+#. title of the message when the folder of a downloaded file can't be shown
 #. button that opens the torrent's containing folder in the file manager
 #, machine
 	Open folder	ເປີດໂຟນເດີ
+#. text in a download's progress window
+#. button in a download's progress window when the site sent a web page (a waiting page, a captcha) instead of the file: opens the download's link in the web browser
+#, machine
+	Open in browser	ເປີດໃນບຣາວເຊີ
 #. checkbox in the Add torrent window
 #, machine
 	Open magnet links and .torrent files with Mister Download Manager	ເປີດລິ້ງ magnet ແລະ ໄຟລ໌ .torrent ດ້ວຍ Mister Download Manager
@@ -3344,7 +3532,7 @@
 #. text in a download's progress window
 #, machine
 	Property	ຄຸນສົມບັດ
-#. text in the Options window
+#. text in errors.rs; text in the Options window
 #. tab title
 #, machine
 	Proxy / Socks	ພຣັອກຊີ / SOCKS
@@ -3414,6 +3602,11 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Reading the torrent...	ກຳລັງອ່ານ torrent...
+#. message or event log entry in the main window
+#. the status strip while Tasks → Import reads a file; {file} is its name
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Reading {file}...	ກຳລັງອ່ານ {file}...
 #. text in helpers.rs
 #, machine
 	Reads a page and lists every quality the site offers, up to 4K, from YouTube, Vimeo and over a thousand other sites.	ອ່ານໜ້າເວັບ ແລະລາຍຊື່ຄຸນນະພາບທັງໝົດທີ່ເວັບໄຊສະເໜີ, ສູງສຸດ 4K, ຈາກ YouTube, Vimeo ແລະຫຼາຍກວ່າໜຶ່ງພັນເວັບໄຊອື່ນໆ.
@@ -3518,6 +3711,10 @@
 #. label: whether the server lets a stopped download continue (Yes / No)
 #, machine
 	Resume capability	ຄວາມສາມາດໃນການສືບຕໍ່
+#. text in the Options window
+#. link after "Download complete is snoozed until 14:30": ends the snooze now
+#, machine
+	Resume now	ສືບຕໍ່ດຽວນີ້
 #. message or event log entry in the main window
 #. event log entry, past tense: the download resumed (just now)
 #, machine
@@ -3632,7 +3829,8 @@
 #. status shown in green beside the Rename box once the new name is saved
 #, machine
 	Saved	ບັນທຶກແລ້ວ
-#. text in a download's progress window
+#. text in a dialog box; text in a download's progress window
+#. label over the folder the downloads were saved in
 #. label before the folder the torrent is saved in
 #, machine
 	Saved in	ບັນທຶກໄວ້ໃນ
@@ -3823,6 +4021,10 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	ສະແດງກ່ອງໂຕ້ຕອບການດາວໂຫຼດສຳເລັດ
+#. button in a dialog box
+#. button: shows these downloads in MDM's list, selected
+#, machine
+	Show in list	ສະແດງໃນລາຍການ
 #. text in extension.rs
 #. button in the browser extension's window: open the tutorial that adds the extension
 #, machine
@@ -3908,6 +4110,7 @@
 #, machine
 	Size	ຂະໜາດ
 #. text in the Download video window
+#. the video's file size is not known
 #, machine
 	size unknown	ບໍ່ຮູ້ຂະໜາດ
 #. text in a download's Properties window
@@ -3930,6 +4133,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Slovenia	ສະໂລເວເນຍ
+#. text in a dialog box
+#. button in the Download complete window: opens a menu of how long no Download complete window shows (30 minutes, 1 hour...)
+#, machine
+	Snooze	ພັກການແຈ້ງເຕືອນ
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -4111,6 +4318,10 @@
 #, machine
 	Stopped: the network adapter changed; starting again	ຢຸດແລ້ວ: ອະແດັບເຕີເຄືອຂ່າຍປ່ຽນແປງ; ກໍາລັງເລີ່ມຕົ້ນໃໝ່
 #. message or event log entry in the main window
+#. event log entry: a video or gallery download stopped to start again at the new speed limit (its helper program takes a limit only as it starts)
+#, machine
+	Stopped: the speed limit changed; starting again with it	ຢຸດ: ຄວາມໄວຈຳກັດປ່ຽນແລ້ວ; ກຳລັງເລີ່ມໃໝ່ດ້ວຍຄວາມໄວນີ້
+#. message or event log entry in the main window
 #. event log entry: the download stopped because the chosen network adapter (a VPN's, usually) went away; {adapter} its name
 #, machine
 	Stopped: {adapter} is not connected; it goes on when it is back	ຢຸດແລ້ວ: {adapter} ບໍ່ໄດ້ເຊື່ອມຕໍ່; ມັນຈະສືບຕໍ່ເມື່ອມັນກັບມາ
@@ -4273,6 +4484,9 @@
 #. Options → Remote → Status: the settings were changed; they apply on OK
 #, machine
 	The changes apply when you click OK.	ການປ່ຽນແປງຈະຖືກນຳໃຊ້ເມື່ອທ່ານຄລິກ ຕົກລົງ.
+#. message or event log entry in the main window
+#, machine
+	The clipboard holds no text. Copy some links, or a text with links in it, and try again.	ຄລິບບອດບໍ່ມີຂໍ້ຄວາມ. ກະລຸນາສຳເນົາບາງລິ້ງ, ຫຼືຂໍ້ຄວາມທີ່ມີລິ້ງ, ແລ້ວລອງໃໝ່ອີກຄັ້ງ.
 #. text in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #. Tell a friend: Copy failed (another program holds the clipboard)
 #, machine
@@ -4314,6 +4528,11 @@
 #, machine
 	the connection closed before the part was complete	ການເຊື່ອມຕໍ່ປິດກ່ອນທີ່ພາກສ່ວນຈະສຳເລັດ
 #. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: the connection to its server ({host}) was cut as it opened
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	the connection to {host} was cut: a firewall, or a network that blocks it	ການເຊື່ອມຕໍ່ຫາ {host} ຖືກຕັດ: ໄຟວໍ, ຫຼື ເຄືອຂ່າຍທີ່ບລັອກມັນ
+#. text in errors.rs
 #, machine
 	the connection was lost while receiving data	ການເຊື່ອມຕໍ່ຫຼຸດລົງໃນຂະນະທີ່ກຳລັງຮັບຂໍ້ມູນ
 #. text in the Add torrent window
@@ -4323,6 +4542,11 @@
 #. text in errors.rs
 #, machine
 	the disk is full	ດິສກ໌ເຕັມ
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: the connection to its server ({host}) closed before all of it came
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	the download from {host} was cut short	ການດາວໂຫຼດຈາກ {host} ຖືກຕັດກ່ອນກຳນົດ
 #. tooltip (why a control is greyed) in a download's Properties window
 #. tooltip of the greyed Open button in File Properties
 #, machine
@@ -4464,6 +4688,11 @@
 #. an FTPS (or other TLS) connection could not be secured
 #, machine
 	the secure connection failed	ການເຊື່ອມຕໍ່ທີ່ປອດໄພລົ້ມເຫຼວ
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: the secure connection to its server ({host}) failed, usually because an antivirus or a proxy reads secure (HTTPS) connections with a certificate of its own
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	the secure connection to {host} failed: an antivirus's web filter or a proxy may be reading HTTPS	ການເຊື່ອມຕໍ່ທີ່ປອດໄພຫາ {host} ລົ້ມເຫຼວ: ຕົວກອງເວັບຂອງແອນຕີໄວຣັສ ຫຼື ພຣັອກຊີອາດຈະກຳລັງອ່ານ HTTPS ຢູ່
 #. text in a dialog box
 #. \\n starts a new line: break lines where they fit the translation
 #, machine
@@ -4485,10 +4714,11 @@
 	the server is busy ({status}); try again later	ເຊີບເວີບໍ່ຫວ່າງ ({status}); ລອງໃໝ່ອີກຄັ້ງພາຍຫຼັງ
 #. text in errors.rs
 #, machine
-	the server sent a web page instead of the file (sign-in needed or the link expired?)	ເຊີບເວີສົ່ງໜ້າເວັບແທນໄຟລ໌ (ຕ້ອງເຂົ້າສູ່ລະບົບ ຫຼື ລິ້ງໝົດອາຍຸແລ້ວ?)
-#. text in errors.rs
-#, machine
 	the server sent an unexpected part of the file ({detail})	ເຊີບເວີສົ່ງພາກສ່ວນຂອງໄຟລ໌ທີ່ບໍ່ຄາດຄິດ ({detail})
+#. text in errors.rs
+#. why a download failed (#701): a file host answered with its own web page (a countdown before the link, a captcha, a sign-in) where the file was expected. The browser gets past it; MDM's browser extension then hands the real file back to MDM
+#, machine
+	the site sent a web page instead of the file (a waiting page, a captcha or a sign-in): open the link in your browser, finish there, and the download comes back to MDM	ເວັບໄຊທ໌ໄດ້ສົ່ງໜ້າເວັບແທນໄຟລ໌ (ໜ້າລໍຖ້າ, captcha ຫຼື ການເຂົ້າສູ່ລະບົບ): ເປີດລິ້ງໃນບຣາວເຊີຂອງທ່ານ, ສໍາເລັດຢູ່ທີ່ນັ້ນ, ແລະການດາວໂຫຼດຈະກັບຄືນມາທີ່ MDM
 #. text in the Download video window
 #. the Download video window: the site asked for a sign-in although the browser's extension passed the page's cookies
 #, machine
@@ -4497,6 +4727,18 @@
 #. the Download video window: the site asked for a sign-in although yt-dlp had the cookies of the browser chosen in Options; {browser} = its name
 #, machine
 	The site wants you signed in, even with {browser}'s cookies. Sign in to it in {browser}, then look the page up again.	ເວັບໄຊຕ້ອງການໃຫ້ທ່ານເຂົ້າສູ່ລະບົບ, ເຖິງແມ່ນວ່າມີຄຸກກີ້ຂອງ {browser}. ເຂົ້າສູ່ລະບົບໃນ {browser}, ແລ້ວຊອກຫາໜ້ານັ້ນອີກຄັ້ງ.
+#. text in the Download video window
+#. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away though the browser's extension passed the page's cookies
+#, machine
+	The site's bot check (Cloudflare) refused yt-dlp, even with your browser's cookies for this page. Try again later, or from another browser.	ການກວດສອບບັອດຂອງເວັບໄຊ (Cloudflare) ໄດ້ປະຕິເສດ yt-dlp, ເຖິງແມ່ນວ່າມີຄຸກກີ້ຂອງບຣາວເຊີຂອງທ່ານສຳລັບໜ້ານີ້. ລອງໃໝ່ອີກຄັ້ງພາຍຫຼັງ, ຫຼືຈາກບຣາວເຊີອື່ນ.
+#. text in the Download video window
+#. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away though it had the cookies of the browser chosen in Options; {browser} = its name
+#, machine
+	The site's bot check (Cloudflare) refused yt-dlp, even with {browser}'s cookies. Use the Download video button over the video in {browser}, or try the page again later.	ການກວດສອບບັອດຂອງເວັບໄຊ (Cloudflare) ໄດ້ປະຕິເສດ yt-dlp, ເຖິງແມ່ນວ່າມີຄຸກກີ້ຂອງ {browser}. ໃຊ້ປຸ່ມດາວໂຫຼດວິດີໂອຢູ່ເທິງວິດີໂອໃນ {browser}, ຫຼືລອງໜ້ານີ້ໃໝ່ອີກຄັ້ງພາຍຫຼັງ.
+#. text in the Download video window
+#. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
+#, machine
+	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	ການກວດສອບບັອດຂອງເວັບໄຊ (Cloudflare) ໄດ້ປະຕິເສດ yt-dlp. ຖ້າໜ້ານີ້ເປີດໃນບຣາວເຊີຂອງທ່ານ, ໃຫ້ເລືອກບຣາວເຊີນັ້ນໃນຕົວເລືອກ → ການເຂົ້າສູ່ລະບົບເວັບໄຊ → ຄຸກກີ້ສຳລັບເວັບໄຊວິດີໂອ ແລະຊອກຫາໜ້ານີ້ໃໝ່ອີກຄັ້ງ, ຫຼືໃຊ້ປຸ່ມດາວໂຫຼດວິດີໂອຢູ່ເທິງວິດີໂອ.
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -4653,6 +4895,7 @@
 #, machine
 	This name is reserved by Windows	ຊື່ນີ້ຖືກສະຫງວນໄວ້ໂດຍ Windows
 #. tooltip (why a control is greyed) in the Download video window
+#. why "Embed chapters" is greyed: ffmpeg (a helper program) is not installed
 #. why "Put them into the video" is greyed: ffmpeg (a helper program) is not installed
 #, machine
 	This needs ffmpeg	ອັນນີ້ຕ້ອງການ ffmpeg
@@ -4694,6 +4937,11 @@
 #. the Download video window: the video needs the user to be signed in
 #, machine
 	This video needs you to be signed in. Use the Download video button over it in your browser, which passes your sign-in on, or choose your browser in Options → Sites Logins → Cookies for video sites.	ວິດີໂອນີ້ຕ້ອງການໃຫ້ທ່ານເຂົ້າສູ່ລະບົບ. ໃຊ້ປຸ່ມດາວໂຫຼດວິດີໂອຢູ່ເທິງມັນໃນບຣາວເຊີຂອງທ່ານ, ເຊິ່ງຈະສົ່ງການເຂົ້າສູ່ລະບົບຂອງທ່ານໄປ, ຫຼືເລືອກບຣາວເຊີຂອງທ່ານໃນຕົວເລືອກ → ການເຂົ້າສູ່ລະບົບເວັບໄຊ → ຄຸກກີ້ສຳລັບເວັບໄຊວິດີໂອ.
+#. text in errors.rs
+#. a download's error: the address is a site's web page that needs a browser, not the file; {site} = the site's name (gofile)
+#. {site} = a web site's name such as "example.com" (keep the braces as they are)
+#, machine
+	this {site} link is a web page, not the file: open it in your browser and download from there	ລິ້ງ {site} ນີ້ແມ່ນໜ້າເວັບ, ບໍ່ແມ່ນໄຟລ໌: ເປີດມັນໃນບຣາວເຊີຂອງທ່ານ ແລະດາວໂຫຼດຈາກບ່ອນນັ້ນ
 #. text in whereis.rs
 #. where a download's server is, when a proxy carries it (the proxy's place not known)
 #, machine
@@ -4802,6 +5050,15 @@
 #. button in helpers.rs
 #, machine
 	Try again	ລອງໃໝ່
+#. text in errors.rs
+#. what to do when a helper couldn't be downloaded because its server limits requests; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Try again in an hour, or download {name} yourself and choose it in {helpers} → {other}.	ລອງໃໝ່ອີກຄັ້ງໃນໜຶ່ງຊົ່ວໂມງ, ຫຼື ດາວໂຫຼດ {name} ດ້ວຍຕົນເອງ ແລະ ເລືອກມັນໃນ {helpers} → {other}.
+#. text in errors.rs
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Try again later, or download {name} yourself and choose it in {helpers} → {other}.	ລອງໃໝ່ອີກຄັ້ງພາຍຫຼັງ, ຫຼື ດາວໂຫຼດ {name} ດ້ວຍຕົນເອງ ແລະ ເລືອກມັນໃນ {helpers} → {other}.
 #. text in the Scheduler window
 #. Tuesday, as short as a calendar's column head (two letters in English)
 #, machine
@@ -4948,6 +5205,7 @@
 #, machine
 	United States Minor Outlying Islands	ໝູ່ເກາະນ້ອຍຮອບນອກຂອງສະຫະລັດ
 #. text in a download's Properties window
+#. the web page is not known
 #, machine
 	Unknown	ບໍ່ຮູ້ຈັກ
 #. text in a dialog box; text in a download's progress window; text in whereis.rs
@@ -4956,6 +5214,10 @@
 #. where a download's server is: an address the location table doesn't place
 #, machine
 	unknown	ບໍ່ຮູ້ຈັກ
+#. text in finish.rs
+#. Snooze menu of the Download complete window: show no Download complete window until MDM is started again
+#, machine
+	Until MDM restarts	ຈົນກວ່າ MDM ຈະເລີ່ມໃໝ່
 #. button in the Options window
 #. button (short): move the account up the list (accounts are asked in the list's order)
 #, machine
@@ -4982,7 +5244,7 @@
 #. text in the Options window
 #, machine
 	Use advanced browser integration	ໃຊ້ການເຊື່ອມໂຍງບຣາວເຊີຂັ້ນສູງ
-#. button in helpers.rs
+#. text in errors.rs; button in helpers.rs
 #. Video helpers: button: pick a program (yt-dlp or ffmpeg) already on the computer
 #. the trailing ... means it opens a window: keep it
 #, machine
@@ -5082,9 +5344,14 @@
 #, machine
 	Verify checksum	ຢືນຢັນ checksum
 #. text in the download list (sizes, speeds, status)
+#. a download's status while the finished file is checked against its checksum
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Verifying...	ກຳລັງຢືນຢັນ...
+#. text in the download list (sizes, speeds, status)
+#. a download's status while the finished file is checked against its checksum; {percent} how much is checked, e.g. "45%"
+#, machine
+	Verifying... ({percent})	ກຳລັງກວດສອບ... ({percent})
 #. text in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #. {version} = a version number (keep the braces as they are)
 #, machine
@@ -5192,6 +5459,10 @@
 #. the Scheduler, under "Wake the computer to run this queue" (Windows): "Allow wake timers" is on when plugged in, off on battery
 #, machine
 	Windows allows wake timers only while plugged in	Windows ອະນຸຍາດໃຫ້ໃຊ້ໂມງປຸກໄດ້ສະເພາະເວລາສຽບສາຍໄຟເທົ່ານັ້ນ
+#. text in the Options window
+#. tooltip of "Mark downloaded files as coming from the internet" on Windows
+#, machine
+	Windows checks the files marked this way: SmartScreen before a program first runs, Office's Protected View before a document opens. Unticked, or under Windows' policy "Do not preserve zone information in file attachments", no download is marked.	Windows ກວດສອບໄຟລ໌ທີ່ໝາຍໄວ້ແບບນີ້: SmartScreen ກ່ອນໂປຣແກຣມຈະເລີ່ມເຮັດວຽກຄັ້ງທຳອິດ, Protected View ຂອງ Office ກ່ອນເອກະສານຈະເປີດ. ຖ້າບໍ່ໄດ້ໝາຍ, ຫຼື ພາຍໃຕ້ນະໂຍບາຍຂອງ Windows “ຫ້າມເກັບຮັກສາຂໍ້ມູນເຂດໃນໄຟລ໌ແນບ”, ຈະບໍ່ມີການດາວໂຫຼດໃດໆຖືກໝາຍ.
 #. text in the Options window
 #. Options → Accounts: Windows Credential Manager didn't answer, so the sign-ins stay in MDM's settings, encrypted so that only this Windows account can read them
 #, machine
@@ -5303,6 +5574,10 @@
 #, machine
 	Your system's: {path}	ຂອງລະບົບ: {path}
 #. text in the Download video window
+#. in Download video and the browser's video menu: yt-dlp had no JavaScript runtime, so YouTube listed only some qualities (often only the sound); Node.js and Deno are program names
+#, machine
+	YouTube needs a JavaScript runtime to list its video qualities: install Node.js or Deno, then look it up again	YouTube ຕ້ອງການ JavaScript runtime ເພື່ອສະແດງລາຍການຄຸນນະພາບວິດີໂອ: ຕິດຕັ້ງ Node.js ຫຼື Deno, ແລ້ວຄົ້ນຫາອີກຄັ້ງ
+#. text in the Download video window
 #. the Download video window: yt-dlp couldn't read the cookies of the browser chosen in Options (Chrome, Edge...), which holds them while it runs; {browser} = its name
 #, machine
 	yt-dlp can't read {browser}'s cookies while {browser} is open. Close {browser} and look the page up again, or choose Firefox in Options → Sites Logins.	yt-dlp ບໍ່ສາມາດອ່ານຄຸກກີ້ຂອງ {browser} ໃນຂະນະທີ່ {browser} ເປີດຢູ່. ປິດ {browser} ແລະຊອກຫາໜ້ານັ້ນອີກຄັ້ງ, ຫຼືເລືອກ Firefox ໃນຕົວເລືອກ → ການເຂົ້າສູ່ລະບົບເວັບໄຊ.
@@ -5315,6 +5590,26 @@
 #. {error} = an error message (keep the braces as they are)
 #, machine
 	yt-dlp couldn't read {browser}'s cookies: {error}	yt-dlp ບໍ່ສາມາດອ່ານຄຸກກີ້ຂອງ {browser} ໄດ້: {error}
+#. text in a download's progress window
+#. progress window, a video's line: the helper program yt-dlp gave no address MDM's own downloader could use
+#, machine
+	yt-dlp downloads it itself	yt-dlp ດາວໂຫຼດມັນເອງ
+#. text in a download's progress window
+#. progress window, a video's line: MDM's own downloader can't take a live broadcast, so the helper program yt-dlp records it
+#, machine
+	yt-dlp downloads it itself: a live stream	yt-dlp ດາວໂຫຼດມັນເອງ: ການຖ່າຍທອດສົດ
+#. text in a download's progress window
+#. progress window, a video's line: a stream sent in many small pieces of a rare kind (Adobe HDS, Smooth Streaming), which the helper program yt-dlp downloads itself
+#, machine
+	yt-dlp downloads it itself: a stream in pieces	yt-dlp ດາວໂຫຼດມັນເອງ: ການຖ່າຍທອດເປັນສ່ວນໆ
+#. text in a download's progress window
+#. progress window, a video's line: the stream is copy-protected (DRM), left to the helper program yt-dlp, which refuses it
+#, machine
+	yt-dlp downloads it itself: protected (DRM)	yt-dlp ດາວໂຫຼດມັນເອງ: ຖືກປ້ອງກັນ (DRM)
+#. text in a download's progress window
+#. progress window, a video's line: {protocol} = a streaming protocol's short name (rtmp, rtsp, mms); MDM's own downloader doesn't speak it, so the helper program yt-dlp downloads it
+#, machine
+	yt-dlp downloads it itself: {protocol}	yt-dlp ດາວໂຫຼດມັນເອງ: {protocol}
 #. text in the Download video window
 #. the Download video window: the browser chosen in Options has no cookies on this computer (not installed, or another profile); {browser} = its name
 #, machine
@@ -5416,6 +5711,14 @@
 #. text in a dialog box
 #, machine
 	{file} is no longer where it was saved (moved or deleted). Redownload, in its right-click menu, gets it again.	{file} ບໍ່ຢູ່ໃນບ່ອນທີ່ບັນທຶກໄວ້ອີກຕໍ່ໄປ (ຖືກຍ້າຍ ຫຼື ລຶບ). ເລືອກ ດາວໂຫຼດຄືນໃໝ່ ໃນເມນູຄລິກຂວາເພື່ອດາວໂຫຼດມັນອີກຄັ້ງ.
+#. message or event log entry in the main window
+#. Import refused a file; {size} = its size and {limit} = the largest Import reads, like "4.50 GB" and "64.00 MB"
+#. {size} = a file size such as "4.2 MB" (keep the braces as they are)
+#, machine
+	{file} is too large to be a list of addresses ({size}). Import reads text files, web pages and .ef2 exports of up to {limit}.	{file} ມີຂະໜາດໃຫຍ່ເກີນໄປທີ່ຈະເປັນລາຍການ URL ({size}). ການນຳເຂົ້າອ່ານໄຟລ໌ຂໍ້ຄວາມ, ໜ້າເວັບ ແລະ ໄຟລ໌ສົ່ງອອກ .ef2 ທີ່ມີຂະໜາດສູງສຸດ {limit}.
+#. text in a dialog box
+#, machine
+	{file} was moved elsewhere by dragging it out of Download complete, and MDM couldn't learn where. Look for it where you dropped it.	{file} ຖືກຍ້າຍໄປບ່ອນອື່ນໂດຍການລາກອອກຈາກ “ດາວໂຫຼດສຳເລັດ” ແລະ MDM ບໍ່ສາມາດລະບຸບ່ອນທີ່ມັນຢູ່ໄດ້. ຊອກຫາມັນຢູ່ບ່ອນທີ່ວາງລົງ.
 #. text in the Checksum window
 #. {algorithm} = a checksum algorithm such as "SHA-256" (keep the braces as they are)
 #, machine
@@ -5434,6 +5737,35 @@
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
 	{have} of {total} pieces ({size} each)	{have} ຈາກ {total} ສ່ວນ ({size} ຕໍ່ອັນ)
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: its server ({host}) answered with an HTTP error ({status}, such as "404 Not Found")
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	{host} answered {status}	{host} ຕອບກັບ {status}
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: its server's name ({host}, such as api.github.com) wasn't found
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	{host} could not be found: no connection, or a network that blocks it	ບໍ່ພົບ {host}: ບໍ່ມີການເຊື່ອມຕໍ່, ຫຼື ເຄືອຂ່າຍທີ່ບລັອກມັນ
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: there is no way to its server ({host}); the network may be down
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	{host} could not be reached: check the connection	ບໍ່ສາມາດເຂົ້າເຖິງ {host} ໄດ້: ກວດສອບການເຊື່ອມຕໍ່
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: its server ({host}) didn't answer in time
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	{host} did not answer in time	{host} ບໍ່ຕອບກັບຕາມເວລາ
+#. text in errors.rs
+#. a helper (yt-dlp, ffmpeg) couldn't be downloaded: its server ({host}) or something on the way refused the connection
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	{host} refused the connection: a firewall, or a network that blocks it	{host} ປະຕິເສດການເຊື່ອມຕໍ່: ໄຟວໍ, ຫຼື ເຄືອຂ່າຍທີ່ບລັອກມັນ
+#. text in errors.rs
+#. {host} = a server name such as "example.com" (keep the braces as they are)
+#, machine
+	{host} refused the request ({status}): too many requests from your network for now	{host} ປະຕິເສດຄຳຮ້ອງຂໍ ({status}): ມີຄຳຮ້ອງຂໍຫຼາຍເກີນໄປຈາກເຄືອຂ່າຍຂອງທ່ານໃນຕອນນີ້
 #. text in the download list (sizes, speeds, status)
 #. {h} = hours; {m} = minutes (keep the braces as they are)
 #, machine
@@ -5488,6 +5820,11 @@
 #. {name} = a file name; {version} = a version number (keep the braces as they are)
 #, machine
 	{name} {version} is too old: MDM needs {oldest} or newer	{name} {version} ເກົ່າເກີນໄປ: MDM ຕ້ອງການ {oldest} ຫຼືໃໝ່ກວ່າ
+#. text in a dialog box
+#. one failed download in the summary of a group of downloads: {name} its file name, {error} why it failed
+#. {name} = a file name; {error} = an error message (keep the braces as they are)
+#, machine
+	{name}: {error}	{name}: {error}
 #. text in the Options window
 #. a number of connections the app learned by itself for a server
 #. {n} = a number (keep the braces as they are)
@@ -5509,6 +5846,10 @@
 #. text in errors.rs
 #, machine
 	{problem} ({cause})	{problem} ({cause})
+#. text in errors.rs
+#. why a helper couldn't be downloaded ({problem}), then what to do about it ({advice}, whole sentences)
+#, machine
+	{problem}. {advice}	{problem}. {advice}
 #. text in errors.rs
 #. a debrid service's error: too many requests; MDM waits and retries
 #, machine
@@ -5575,6 +5916,11 @@
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
 	{size} free	{size} ວ່າງ
+#. text in a dialog box
+#. under "12 downloads finished": {size} the finished files' size together, like "1.25 GB"
+#. {size} = a file size such as "4.2 MB" (keep the braces as they are)
+#, machine
+	{size} in all	ທັງໝົດ {size}
 #. text in errors.rs
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
@@ -5662,6 +6008,23 @@ column	Transfer rate	ອັດຕາການໂອນ
 #, machine
 column	Upload speed	ຄວາມໄວອັບໂຫຼດ
 #. text in the browser extension
+#. in the menu under the download button over a video: the page is a list of videos (a playlist), whose videos are chosen in the app's window; keep the name Mister Download Manager as it is
+#, machine
+extension	A list of videos: choose them in Mister Download Manager	ລາຍການວິດີໂອ: ເລືອກພວກມັນໃນ Mister Download Manager
+#. text in the browser extension
+#. on the download button (green) over a video after the app added and started the download; a quality may follow ('· 1080p') and a 'Show' button; MDM is the app's short name, keep it; short
+#, machine
+extension	Added to MDM	ເພີ່ມເຂົ້າ MDM ແລ້ວ
+#. text in the browser extension
+#. shown briefly on the download button over a video after a quality was picked: the download was added to the app's download queue, to start later
+#, machine
+extension	Added to the queue	ເພີ່ມເຂົ້າໃນຄິວແລ້ວ
+#. text in the browser extension
+#. command in the menu of the download button over a video: opens the app's Download video window, with every quality and the subtitles
+#. the trailing ... means it is still going on: keep it
+#, machine
+extension	All qualities and subtitles...	ຄຸນນະພາບທັງໝົດ ແລະ ຄຳບັນຍາຍ...
+#. text in the browser extension
 #. choice under Send downloads to: an MDM running on another computer of the network, such as a home server; keep the name Mister Download Manager as it is
 #, machine
 extension	Another Mister Download Manager (a server)	Mister Download Manager ອື່ນ (ເຊີບເວີ)
@@ -5669,6 +6032,10 @@ extension	Another Mister Download Manager (a server)	Mister Download Manager ອ
 #. tab above the list of qualities in the menu under the download button over a video: the choices that are sound only (MP3, Opus and the like); short, one word
 #, machine
 extension	Audio	ສຽງ
+#. text in the browser extension
+#. after the best quality in the menu of the download button over a video, after a star (★ best); lower case; one word
+#, machine
+extension	best	ດີທີ່ສຸດ
 #. text in the browser extension
 #. the name this browser gets in the other MDM's list of paired devices
 #, machine
@@ -5678,6 +6045,10 @@ extension	Browser extension	ສ່ວນຂະຫຍາຍຂອງບຣາວ�
 #. the trailing ... means it is still going on: keep it
 #, machine
 extension	Button settings...	ການຕັ້ງຄ່າປຸ່ມ...
+#. text in the browser extension
+#. on the download button over a copy-protected video, after 'Protected video ·': it can't be downloaded; short, lower case
+#, machine
+extension	can't be saved	ບໍ່ສາມາດບັນທຶກໄດ້
 #. text in the browser extension
 #. shown briefly on the download button when nothing on the page says which video the player is playing, so nothing was sent
 #, machine
@@ -5692,6 +6063,10 @@ extension	Connected to Mister Download Manager	ເຊື່ອມຕໍ່ກັ
 #, machine
 extension	Connected to Mister Download Manager {version}	ເຊື່ອມຕໍ່ກັບ Mister Download Manager {version} ແລ້ວ
 #. text in the browser extension
+#. in the menu under the download button over a video: finding the video's qualities failed; the app's own explanation follows on the next line
+#, machine
+extension	Could not look it up	ບໍ່ສາມາດຊອກຫາໄດ້
+#. text in the browser extension
 #. button beside a video, sound or stream in the toolbar button's popup: download it with the app; verb; short
 #, machine
 extension	Download	ດາວໂຫຼດ
@@ -5700,9 +6075,17 @@ extension	Download	ດາວໂຫຼດ
 #, machine
 extension	Download all links with Mister Download Manager	ດາວໂຫຼດທຸກລິ້ງດ້ວຍ Mister Download Manager
 #. text in the browser extension
+#. first line of the list under the download button over a video: downloads the best quality at once; the quality, its file type and size follow on the same line; short
+#, machine
+extension	Download best	ດາວໂຫຼດຄຸນນະພາບດີທີ່ສຸດ
+#. text in the browser extension
 #. command in the browser's right-click menu on selected text: download the links in the selection; keep the name Mister Download Manager as it is
 #, machine
 extension	Download selected links with Mister Download Manager	ດາວໂຫຼດລິ້ງທີ່ເລືອກດ້ວຍ Mister Download Manager
+#. text in the browser extension
+#. first line of the tooltip of the download button over a video while the app is still finding its qualities
+#, machine
+extension	Download the best quality	ດາວໂຫຼດຄຸນນະພາບດີທີ່ສຸດ
 #. text in the browser extension
 #. the button over a video on a web page that downloads it; verb; short (it sits on the video)
 #, machine
@@ -5711,6 +6094,10 @@ extension	Download video	ດາວໂຫຼດວິດີໂອ
 #. command in the browser's right-click menu on a link, picture, video or sound; keep the name Mister Download Manager as it is
 #, machine
 extension	Download with Mister Download Manager	ດາວໂຫຼດດ້ວຍ Mister Download Manager
+#. text in the browser extension
+#. first line of the tooltip of the download button over a video: what one click downloads; $what$ is a quality, a file type and a size, e.g. '1080p MP4 · 412 MB'
+#, machine
+extension	Download {what}	ດາວໂຫຼດ {what}
 #. text in the browser extension
 #. shown in the toolbar button's popup after the site was excluded
 #. {site} = a web site's name such as "example.com" (keep the braces as they are)
@@ -5721,13 +6108,17 @@ extension	Downloads from {site} stay with the browser	ການດາວໂຫ�
 #, machine
 extension	Downloads go to {address}	ກຳລັງດາວໂຫຼດໄປທີ່ {address}
 #. text in the browser extension
-#. tooltip of the download button over a video: it can be dragged to another place on the video's edge
+#. second line of the tooltip of the download button over a video: dragging its dotted grip moves it along the video's edge
 #, machine
-extension	Drag to move it along the video's edge	ລາກເພື່ອຍ້າຍມັນໄປຕາມຂອບຂອງວິດີໂອ
+extension	Drag the dots to move it along the edge	ລາກຈຸດເພື່ອຍ້າຍມັນຕາມຂອບ
 #. text in the browser extension
 #. the address typed isn't an https:// address
 #, machine
 extension	Enter its https:// address.	ປ້ອນທີ່ຢູ່ https:// ຂອງມັນ.
+#. text in the browser extension
+#. button on the download button over a video when the app didn't answer: opens the app's download page; MDM is the app's short name, keep it; very short
+#, machine
+extension	Get MDM	ເອົາ MDM
 #. text in the browser extension
 #. the extension's description in the browser's list of extensions; keep the name Mister Download Manager as it is
 #, machine
@@ -5782,6 +6173,14 @@ extension	Left to the browser: {name}	ເຫຼືອໃຫ້ກັບບຣາ
 #, machine
 extension	Live	ສົດ
 #. text in the browser extension
+#. in the menu under the download button over a video: the app took more than a minute to find the video's qualities, so the menu stopped waiting
+#, machine
+extension	Looking up took too long	ການຊອກຫາໃຊ້ເວລາດົນເກີນໄປ
+#. text in the browser extension
+#. on the download button (red) over a video when the app isn't installed or didn't start; 'Get MDM' and 'Retry' buttons follow; MDM is the app's short name, keep it; short
+#, machine
+extension	MDM didn't answer	MDM ບໍ່ຕອບ
+#. text in the browser extension
 #. heading in the toolbar button's popup over the list of the videos, sounds and streams the current web page has loaded
 #, machine
 extension	Media on this page	ສື່ໃນໜ້ານີ້
@@ -5798,6 +6197,10 @@ extension	Mister Download Manager didn't start in time	Mister Download Manager �
 #, machine
 extension	Mister Download Manager doesn't accept this copy of the extension	Mister Download Manager ບໍ່ຍອມຮັບສຳເນົາສ່ວນຂະຫຍາຍນີ້
 #. text in the browser extension
+#. in the menu under the download button over a video: the app is already looking up other videos and can't look this one up now; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager is busy with other videos	Mister Download Manager ກຳລັງຫຍຸ້ງກັບວິດີໂອອື່ນ
+#. text in the browser extension
 #. shown briefly on the download button when the app could not be reached; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed or didn't start	Mister Download Manager ບໍ່ໄດ້ຕິດຕັ້ງ ຫຼື ບໍ່ໄດ້ເລີ່ມຕົ້ນ
@@ -5805,6 +6208,10 @@ extension	Mister Download Manager isn't installed or didn't start	Mister Downloa
 #. status when the browser can't find the app's connection; keep the name Mister Download Manager as it is
 #, machine
 extension	Mister Download Manager isn't installed, or its browser integration isn't set up	Mister Download Manager ບໍ່ໄດ້ຕິດຕັ້ງ, ຫຼື ການເຊື່ອມໂຍງບຣາວເຊີຂອງມັນບໍ່ໄດ້ຖືກຕັ້ງຄ່າ
+#. text in the browser extension
+#. in the menu under the download button over a video: the app needs the yt-dlp tool (a program's name, keep it as it is) to find this video's qualities, and it isn't installed; keep the name Mister Download Manager as it is
+#, machine
+extension	Mister Download Manager needs yt-dlp for this video	Mister Download Manager ຕ້ອງການ yt-dlp ສຳລັບວິດີໂອນີ້
 #. text in the browser extension
 #. tooltip of the switch Send downloads through this browser's proxy or VPN extension; keep the name Mister Download Manager as it is
 #, machine
@@ -5832,9 +6239,17 @@ extension	Never take downloads from {site}	ຢ່າດາວໂຫຼດຈາ�
 #, machine
 extension	No video or sound found on this page yet. Play it, then open this again.	ຍັງບໍ່ພົບວິດີໂອ ຫຼື ສຽງໃນໜ້ານີ້ເທື່ອ. ຫຼິ້ນມັນ, ແລ້ວເປີດອັນນີ້ອີກຄັ້ງ.
 #. text in the browser extension
+#. in the menu under the download button over a video: the app found no quality of the video it could download
+#, machine
+extension	No video to download here	ບໍ່ມີວິດີໂອໃຫ້ດາວໂຫຼດຢູ່ທີ່ນີ້
+#. text in the browser extension
 #. pairing failed: the other MDM didn't answer
 #, machine
 extension	Not reached. Open its address once in this browser and accept its certificate, then try again.	ບໍ່ສາມາດເຂົ້າເຖິງໄດ້. ເປີດທີ່ຢູ່ຂອງມັນເທື່ອໜຶ່ງໃນບຣາວເຊີນີ້ ແລະ ຍອມຮັບໃບຢັ້ງຢືນຂອງມັນ, ຈາກນັ້ນລອງໃໝ່ອີກຄັ້ງ.
+#. text in the browser extension
+#. on the download button over a video (grey) when the button is turned off on this web site; a 'Turn on' button follows it; short
+#, machine
+extension	Off on this site	ປິດຢູ່ເວັບໄຊທ໌ນີ້
 #. text in the browser extension
 #. button: open the other MDM's address in a tab (to accept its certificate once)
 #, machine
@@ -5847,14 +6262,23 @@ extension	Open its address once and accept its certificate, then enter a code fr
 #. button in the toolbar button's popup; keep the name Mister Download Manager as it is
 #, machine
 extension	Open Mister Download Manager	ເປີດ Mister Download Manager
-#. shown briefly on the download button over a video in a feed (a social site's home page, a timeline) when nothing in the feed gives that video's own address, so nothing was sent: the user should open the post the video belongs to and click the button on that page; short
+#. text in the browser extension
+#. button on the download button over a video in a feed: opens the post the video belongs to in a new tab; verb; very short
 #, machine
-extension	Open the post, then use the button there	ເປີດໂພສ, ແລ້ວໃຊ້ປຸ່ມຢູ່ບ່ອນນັ້ນ
+extension	Open post	ເປີດໂພສ
+#. text in the browser extension
+#. on the download button (amber) over a video in a feed (a social site's home page, a timeline) that can't be downloaded from there: the user should open the post the video belongs to; short
+#, machine
+extension	Open the post to download it	ເປີດໂພສເພື່ອດາວໂຫຼດ
 #. text in the browser extension
 #. button in the toolbar button's popup: open the app's Options
 #. the trailing ... means it is still going on: keep it
 #, machine
 extension	Options...	ຕົວເລືອກ...
+#. text in the browser extension
+#. in the list under the download button over a video, after a sound-only line's bitrate: the sound as the site sends it, not converted (e.g. '128 kbps · original'); lower case; one word
+#, machine
+extension	original	ຕົ້ນສະບັບ
 #. text in the browser extension
 #. button: pair this browser with the other MDM using the code
 #, machine
@@ -5876,9 +6300,13 @@ extension	Prefix media file names with the page title	ໃສ່ຊື່ໄຟ�
 #, machine
 extension	Protected	ຖືກປ້ອງກັນ
 #. text in the browser extension
-#. shown briefly on the download button when the video is copy-protected (DRM) and no tool can download it
+#. on the download button over a copy-protected (DRM) video, which no tool can download; 'can't be saved' follows it after a dot; short
 #, machine
-extension	Protected video: it can't be saved	ວິດີໂອທີ່ຖືກປົກປ້ອງ: ບໍ່ສາມາດບັນທຶກໄດ້
+extension	Protected video	ວິດີໂອປ້ອງກັນ
+#. text in the browser extension
+#. button on the download button over a video when the app didn't answer: try again; verb; very short
+#, machine
+extension	Retry	ລອງໃໝ່
 #. text in the browser extension
 #. switch in the toolbar button's popup: on, the app downloads through the same proxy the browser uses (one a VPN or proxy extension sets); the browser then asks once to allow reading it
 #, machine
@@ -5888,9 +6316,18 @@ extension	Send downloads through this browser's proxy or VPN extension	ສົ່
 #, machine
 extension	Send downloads to	ສົ່ງການດາວໂຫຼດໄປທີ່
 #. text in the browser extension
+#. on the download button over a video right after it was clicked, while the download goes to the app; MDM is Mister Download Manager's short name, keep it as it is; short
+#. the trailing ... means it is still going on: keep it
+#, machine
+extension	Sending to MDM...	ກຳລັງສົ່ງໄປ MDM...
+#. text in the browser extension
 #. shown briefly on the download button after it was clicked; keep the name Mister Download Manager as it is
 #, machine
 extension	Sent to Mister Download Manager	ສົ່ງໄປທີ່ Mister Download Manager
+#. text in the browser extension
+#. button on the download button over a video after a download was added: shows that download in the app's window; verb; very short
+#, machine
+extension	Show	ສະແດງ
 #. text in the browser extension
 #. link at the foot of the toolbar button's popup to the creator's GitHub Sponsors page (MDM is free; this is an optional donation)
 #, machine
@@ -5907,10 +6344,6 @@ extension	The Chrome Web Store's rules keep this copy of the add-on away from th
 #. status when the connection to the app broke off (often security software blocking it); keep the name Mister Download Manager as it is
 #, machine
 extension	The connection to Mister Download Manager failed	ການເຊື່ອມຕໍ່ກັບ Mister Download Manager ລົ້ມເຫຼວ
-#. text in the browser extension
-#. shown briefly on the download button over a video when the app's settings keep the button off on this web site
-#, machine
-extension	The download button is off on this site	ປຸ່ມດາວໂຫຼດຖືກປິດຢູ່ໃນເວັບໄຊນີ້
 #. text in the browser extension
 #. why a download stayed with the browser: the user limited the extension's access to web sites in the browser, so it can't pass the sign-in on
 #, machine
@@ -5935,6 +6368,10 @@ extension	This download's details were too large to hand over	ລາຍລະອ
 #. in the toolbar button's popup, when the page's player plays from a stream built in the page (a blob:): the list of the page's media has nothing to show; Download video is the name of the button over videos
 #, machine
 extension	This page's player streams its video in pieces, so there's no file to list. Point at the video and use its Download video button.	ຕົວຫຼິ້ນຂອງໜ້ານີ້ສະຕຣີມວິດີໂອເປັນຕອນໆ ຈຶ່ງບໍ່ມີໄຟລ໌ໃຫ້ສະແດງລາຍການ. ຊີ້ໄປທີ່ວິດີໂອແລ້ວໃຊ້ປຸ່ມດາວໂຫຼດວິດີໂອ.
+#. text in the browser extension
+#. button on the download button over a video when it is off on this web site: turns it on again here; verb; very short
+#, machine
+extension	Turn on	ເປີດ
 #. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
@@ -5971,6 +6408,10 @@ key	Ctrl+0	Ctrl+0
 #. translate key names as the keyboard shows them (e.g. Strg for Ctrl)
 #, machine
 key	Ctrl+A	Ctrl+A
+#. key name or combination in the Help menu's windows (About, updates, shortcuts, Tell a friend)
+#. translate key names as the keyboard shows them (e.g. Strg for Ctrl)
+#, machine
+key	Ctrl+B	Ctrl+B
 #. key name or combination in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #. translate key names as the keyboard shows them (e.g. Strg for Ctrl)
 #, machine
@@ -6067,7 +6508,12 @@ menu	&Add new download	ເພີ່ມການດາວໂຫຼດໃ&ໝ່
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #. the trailing ... means it opens a window: keep it
 #, machine
-menu	&Add new download...	ເພີ່ມການດາວໂຫຼດໃ&ໝ່...
+menu	Add &new download...	ເພີ່ມການດາວໂຫຼດໃ&ໝ່...
+#. menu command in the main window
+#. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Classic	&ຄລາສສິກ
 #. menu command in standard windows
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
@@ -6155,6 +6601,11 @@ menu	&Scheduler and queues	&ຕົວຈັດການຕາຕະລາງ ແ
 #, machine
 menu	&Show hidden tabs	ສະແດງແຖບທີ່ເຊື່ອງໄວ້(&S)
 #. menu command in the main window
+#. View → Text: letters drawn smooth, as Windows' modern apps draw them, anti-aliased at any size
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Smooth	&ລຽບ
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Stop All	ຢຸດທັງ&ໝົດ
@@ -6162,6 +6613,11 @@ menu	&Stop All	ຢຸດທັງ&ໝົດ
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Stop Download	ຢຸດການດາວໂຫຼ&ດ
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&ຂໍ້ຄວາມ
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
@@ -6272,7 +6728,7 @@ menu	By Save &Path	ຕາມ &Save Path
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
-menu	By St&atus	ຕາມສະ&ຖານະ
+menu	By Stat&us	ຕາມສະ&ຖານະ
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
@@ -6321,9 +6777,17 @@ menu	Delete from queue	ລຶບອອກຈາກຄິວ
 #, machine
 menu	Direct3D	Direct3D
 #. menu command in the main window
+#. View → Draw with: a greyed note; what draws the windows and why: Direct3D 12 through Windows' own software renderer (WARP, keep the name), because this computer's graphics card has no Direct3D 12 driver
+#, machine
+menu	Direct3D 12 (WARP): this graphics card has no Direct3D 12 driver	Direct3D 12 (WARP): ກາດຈໍນີ້ບໍ່ມີໄດເວີ Direct3D 12
+#. menu command in the main window
 #. View → Draw with: a greyed note; Direct3D failed on this computer, so OpenGL draws the windows
 #, machine
 menu	Direct3D didn't start here: OpenGL draws	Direct3D ບໍ່ໄດ້ເລີ່ມຕົ້ນຢູ່ທີ່ນີ້: OpenGL ແຕ້ມ
+#. menu command in the main window
+#. View → Draw with: a greyed note; Direct3D draws the windows through Windows' own software renderer (WARP) instead of a graphics card
+#, machine
+menu	Direct3D draws with Windows' software renderer (WARP)	Direct3D ແຕ້ມດ້ວຍຕົວສະແດງຊອບແວຂອງ Windows (WARP)
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #. the trailing ... means it opens a window: keep it
@@ -6414,6 +6878,10 @@ menu	Metal	Metal
 #, machine
 menu	Metal didn't start here: OpenGL draws	Metal ບໍ່ໄດ້ເລີ່ມຕົ້ນຢູ່ທີ່ນີ້: OpenGL ແຕ້ມ
 #. menu command in the main window
+#. View → Draw with: a greyed note; Metal draws the windows through a software renderer instead of a graphics card
+#, machine
+menu	Metal draws with a software renderer	Metal ແຕ້ມດ້ວຍຕົວສະແດງຊອບແວ
+#. menu command in the main window
 #. View → Theme: a style theme's name (Windows 8's flat look); keep "Metro" unless your language writes it otherwise
 #, machine
 menu	Metro	ເມໂຕຣ
@@ -6460,6 +6928,26 @@ menu	Open with...	ເປີດດ້ວຍ...
 #. View → Draw with: a graphics system's name, usually kept as is
 #, machine
 menu	OpenGL	OpenGL
+#. menu command in the main window
+#. View → Draw with: a greyed note; why MDM no longer draws with OpenGL: it couldn't start on this computer
+#, machine
+menu	OpenGL didn't start here	OpenGL ບໍ່ໄດ້ເລີ່ມຕົ້ນຢູ່ທີ່ນີ້
+#. menu command in the main window
+#. View → Draw with: a greyed note; why MDM no longer draws with OpenGL: its window froze inside the graphics card's driver while OpenGL drew
+#, machine
+menu	OpenGL froze inside the graphics driver here	OpenGL ຄ້າງຢູ່ໃນໄດເວີກຣາຟິກຢູ່ທີ່ນີ້
+#. menu command in the main window
+#. View → Draw with: a greyed note; this computer's OpenGL (its graphics driver) is too old, so MDM doesn't draw with it
+#, machine
+menu	OpenGL here is too old to draw MDM	OpenGL ເກົ່າເກີນໄປທີ່ຈະແຕ້ມ MDM
+#. menu command in the main window
+#. View → Draw with: a greyed note; why MDM no longer draws with OpenGL: its window stayed empty for 10 seconds, so MDM started again another way
+#, machine
+menu	OpenGL's first frame didn't show within 10 seconds	ເຟຣມທຳອິດຂອງ OpenGL ບໍ່ສະແດງພາຍໃນ 10 ວິນາທີ
+#. menu command in the main window
+#. View → Draw with: a greyed note; why MDM no longer draws with OpenGL: MDM crashed or was closed while starting with it
+#, machine
+menu	OpenGL's last start ended before its first frame	ການເລີ່ມຕົ້ນຄັ້ງສຸດທ້າຍຂອງ OpenGL ສິ້ນສຸດລົງກ່ອນເຟຣມທຳອິດ
 #. menu command in the main window
 #. what double-clicking a download does — noun: show its properties
 #. noun: opens the download's Properties window
@@ -6611,6 +7099,10 @@ menu	Vulkan	Vulkan
 #. View → Draw with: a greyed note; Vulkan failed on this computer, so OpenGL draws the windows
 #, machine
 menu	Vulkan didn't start here: OpenGL draws	Vulkan ບໍ່ໄດ້ເລີ່ມຕົ້ນຢູ່ທີ່ນີ້: OpenGL ແຕ້ມ
+#. menu command in the main window
+#. View → Draw with: a greyed note; Vulkan draws the windows through a software renderer instead of a graphics card
+#, machine
+menu	Vulkan draws with a software renderer	Vulkan ແຕ້ມດ້ວຍຕົວສະແດງຊອບແວ
 #. menu bar title in the main window (menus, toolbar, Categories pane)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
