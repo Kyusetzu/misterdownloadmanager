@@ -156,11 +156,13 @@ impl Link {
     }
 
     /// A web page given on its own (pasted, copied, typed, in a list), not found on a page: one
-    /// to read for its links (#705). A page's own links aren't read in turn.
+    /// to read for its links (#705). A page's own links aren't read in turn, and a link a web
+    /// page sent (Click'n'Load) never is: reading it is a request the user didn't ask for.
     fn to_read(&self) -> bool {
         self.page
             && self.state == LinkState::Online
             && self.found.referer.is_none()
+            && !self.found.from_page
             && self.read.is_none()
             && !self.known
     }
@@ -1387,6 +1389,35 @@ mod tests {
             None,
         );
         assert!(a.same(&c));
+    }
+
+    #[test]
+    fn a_link_a_page_sent_is_never_read_for_its_links() {
+        // A web page's address sent through Click'n'Load: not looked up, and not read either,
+        // even if it ever came to be known as a web page (here: answered as one by hand).
+        let mut g = grabber();
+        g.add(
+            vec![Imported {
+                url: "https://example.com/water/epanet".into(),
+                from_page: true,
+                ..Default::default()
+            }],
+            "Click'n'Load".into(),
+            |_| false,
+        );
+        assert!(g.to_check().is_empty());
+        let slot: Check = Default::default();
+        *slot.lock().unwrap() = Some(Ok(mdm_engine::ProbeInfo {
+            final_url: g.links[0].url.clone(),
+            size: None,
+            file_name: "epanet.html".into(),
+            server: None,
+            web_page: true,
+        }));
+        g.checking(0, slot);
+        g.take_answers();
+        assert_eq!(g.links[0].state, LinkState::Online);
+        assert!(g.to_read().is_empty());
     }
 
     #[test]
