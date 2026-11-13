@@ -519,6 +519,7 @@ impl Session {
                     file_name: u.filename.filter(|n| !n.trim().is_empty()),
                     size: (u.filesize > 0).then_some(u.filesize as u64),
                     max_connections: None,
+                    headers: Default::default(),
                 }))
             }
             ServiceKind::Premiumize => {
@@ -539,6 +540,7 @@ impl Session {
                     file_name: Some(name).filter(|n| !n.trim().is_empty()),
                     size: (entry.size > 0).then_some(entry.size as u64),
                     max_connections: None,
+                    headers: Default::default(),
                 }))
             }
             ServiceKind::TorBox => {
@@ -597,6 +599,7 @@ impl Session {
                     file_name: Some(name).filter(|n| !n.trim().is_empty()),
                     size: (file.size > 0).then_some(file.size),
                     max_connections: None,
+                    headers: Default::default(),
                 }))
             }
             ServiceKind::MegaDebrid => {
@@ -615,6 +618,7 @@ impl Session {
                     file_name: None,
                     size: None,
                     max_connections: None,
+                    headers: Default::default(),
                 }))
             }
             ServiceKind::RealDebrid => {
@@ -639,6 +643,7 @@ impl Session {
                     file_name: u.filename.filter(|n| !n.trim().is_empty()),
                     size: (u.filesize > 0).then_some(u.filesize as u64),
                     max_connections: (u.chunks >= 1).then_some(u.chunks as u32),
+                    headers: Default::default(),
                 }))
             }
         }

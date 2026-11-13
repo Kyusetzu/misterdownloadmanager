@@ -97,7 +97,7 @@ When MDM takes a download, the browser's own copy is cancelled and removed from 
 
 Downloads from a private window use that window's cookies, never the normal ones, and aren't kept in MDM's list after it closes.
 
-Files MDM downloads from the browser are marked as coming from the internet, as the browser marks its own: Windows checks a program with SmartScreen before it runs and Office opens a document in Protected View.
+Files MDM downloads from the browser are marked as coming from the internet, as the browser marks its own: Windows checks a program with SmartScreen before it runs and Office opens a document in Protected View. Like the browser, MDM leaves the mark out when Windows' Group Policy **Do not preserve zone information in file attachments** is on; [Options → Save to](options.md#save-to) can turn it off for MDM alone.
 
 ## Files the browser would open
 
@@ -151,8 +151,12 @@ too. The toolbar button lists what the page has loaded, so you can still save it
   for a video, its picture size.
 
 Start the video first: the list fills as the page loads things, and it's emptied when the tab goes
-to another page. With **Prefix media file names with the page title** on, a file from the list is
-named after the page, then its own name (`The page - clip.mp4`). Click **Download** beside one: a stream opens MDM's **Download video from a page**
+to another page. Each file is listed under the name it will be saved with. A file the site sends
+through a program's address (`stream.php`, `remote_control.php`, `videoplayback`, a bare number)
+has no name of its own: it's named after the page (`The page.mp4`), or after the `file=` name in
+its address when there is one, with the type its server says it is (MP4, not PHP). With **Prefix
+media file names with the page title** on, a file with a name of its own is named after the page,
+then that name (`The page - clip.mp4`). Click **Download** beside one: a stream opens MDM's **Download video from a page**
 window, which reads its qualities (yt-dlp does the work); a file goes to MDM's list like any other
 download. Your cookies for its server, the page as the referrer and your browser's User-Agent go
 with it, as they do for a link you click.
@@ -167,7 +171,7 @@ browser closes.
 
 ## Right-click: Download with Mister Download Manager
 
-Right-click a link, a video, a sound or a picture and choose **Download with Mister Download Manager**. MDM downloads it whatever its type: you asked for it, so the file types list and the excluded sites don't apply here (they only decide which downloads MDM takes over by itself). A video that plays as a stream goes to the **Download video** window with the stream its player loaded (HLS or DASH), as the [button over videos](#the-download-button-over-videos) sends it, with your cookies for the stream's server and the page as the referrer.
+Right-click a link, a video, a sound or a picture and choose **Download with Mister Download Manager**. MDM downloads it whatever its type: you asked for it, so the file types list and the excluded sites don't apply here (they only decide which downloads MDM takes over by itself). A video that plays as a stream goes to the **Download video** window with the stream its player loaded (HLS or DASH), as the [button over videos](#the-download-button-over-videos) sends it, with your cookies for the stream's server and what the browser sent with the stream (its referrer and origin, else the page as the referrer).
 
 Select part of a page and right-click it for **Download selected links with Mister Download Manager**, or right-click the page for **Download all links with Mister Download Manager**: the links open in **[Link grabber](link-grabber.md)**, sorted into packages, where you tick the ones you want.
 
@@ -178,12 +182,22 @@ If MDM can't be reached when you choose one of these, the help page opens at the
 ![The Download video button over a YouTube video in Chrome](images/help/video-button.webp)
 *The button over a video. Drag it where you like; it stays there.*
 
-Point at a video on a web page and a small **Download video** button appears at its edge. Click it and a menu opens over the video: MDM looks up the qualities it can download and lists them with their sizes. Pick one and it downloads at once, with only its progress window; MDM's main window stays where it is (with **Do not start downloading, only add files to the queue** on in Options, it goes in the queue instead). **Open in Mister Download Manager...** at the bottom of the menu opens the **Download video from a page** window instead. MDM must be running for the menu: when it isn't, or for another MDM you send downloads to, a click opens that window directly. It takes the video you clicked: its own file when it plays one, or the stream the player loaded (HLS or DASH), else the page. When the button can't tell which one you mean, the toolbar button's [Media on this page](#media-on-this-page) lists them all. Embedded players work too, and your sign-in for the site, the page that embeds the player and your browser's User-Agent go with it, so videos for members, or that play only on the site that embeds them, can be downloaded. Sound players get the button too.
+Point at a video on a web page and a small tab appears at its top corner: MDM's logo and a green **Download video** part, an arrow for its list and **✕** to hide it on this video. It follows Windows' light or dark mode. As it appears, MDM looks the video up (when MDM is running), and the button then names the best quality it found (**1080p**, **4K**). Click it and that quality downloads at once, with only its progress window; MDM's main window stays where it is (with **Do not start downloading, only add files to the queue** on in Options, it goes in the queue instead). Clicking while MDM is still looking works too: it takes the best quality as soon as it is known. A video that plays a plain file (not a stream) needs no look-up: the button shows its picture size and downloads the file itself. When nothing could be looked up (MDM wasn't running, yt-dlp isn't installed, the page is a playlist, or you send downloads to another MDM), a click opens the **Download video from a page** window, which says why and offers what to do.
 
-It stays out of the way: it shows only while you point at a video (or the player has the keyboard's focus; **Tab** then moves to the button), fades when the pointer rests, and leaves out small videos and short muted loops (animated pictures, backgrounds). In fullscreen it follows the video when the player allows it. On a copy-protected video (DRM) it says that the video can't be saved.
+It takes the video you clicked: its own file when it plays one, or the stream the player loaded (HLS or DASH), else the page. When the button can't tell which one you mean, the toolbar button's [Media on this page](#media-on-this-page) lists them all. Embedded players work too, and your sign-in for the site, the page that embeds the player and your browser's User-Agent go with it, so videos for members, or that play only on the site that embeds them, can be downloaded. A stream goes with what the browser sent when the player asked for it, its referrer, its origin and its cookies (a player embedded from another site may have cookies the browser keeps for that page only), and MDM sends them again with each of its playlists and pieces: a site's video server that serves its own pages' players only lets MDM through as well. Sound players get the button too.
 
-- **Move it**: drag it anywhere along the video's edge; it snaps to the nearest edge and stays there on that site.
-- **Its menu** (the arrow next to it): **Hide on this video**, **Never on** the site (MDM remembers the site), and **Button settings...**, which opens MDM's Options.
+After a click it says what happened, in its own colour:
+
+- **Added to MDM** (green), with the quality: **Show** brings MDM's window up with that download selected.
+- **Open the post to download it** (amber): the video sits in a feed and can't be downloaded from there. **Open post** opens the post in a new tab, when the button knows it; use the button there.
+- **MDM didn't answer** (red): MDM isn't installed or didn't start. **Get MDM** opens its download page; **Retry** tries again.
+- **Off on this site** (grey): after **Never on** the site, or when Options keep it off there. **Turn on** shows it on the site again.
+- **Protected video · can't be saved** (grey, with a lock): a copy-protected video (DRM), which no tool may save.
+
+It stays out of the way: it shows only while you move the pointer over a video (or the player has the keyboard's focus; **Tab** then moves to the button), fades 1.5 seconds after the pointer stops and at once when it leaves the video, and leaves out small videos and short muted loops (animated pictures, backgrounds). Playing or pausing the video doesn't bring it back. On a video under 360 pixels wide, or where its words wouldn't fit, it is only its logo, its arrow and **✕**. In fullscreen it follows the video when the player allows it.
+
+- **Its menu** (the arrow next to it, or **↓** when the button has the keyboard's focus): the video's title, length and site; **Download best** first, then one numbered line per quality under **VIDEO** and **AUDIO**, with its file type, frame rate or bitrate and size, the best one marked; **All qualities and subtitles...**, which opens the **Download video from a page** window; then **Hide on this video** (**Esc**), **Never on** the site (MDM remembers the site), and **Button settings...**, which opens MDM's Options. The arrow keys move through it, **Enter** picks, **Esc** closes it.
+- **Move it**: drag it by its dots along the video's edge; while you drag, the edge and the spots it snaps to (the corners and the middle) show. It stays there on that site.
 - **Turn it off, or see the sites it stays off**: **Options → General → Customize MDM Download panels in browsers → Edit...**.
 
 ![The Download panels settings: the button on or off, and the sites it never shows on](images/help/download-panels.webp)

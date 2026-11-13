@@ -28,6 +28,11 @@ pub trait Unlocker: Send + Sync + std::fmt::Debug {
         note: &'a (dyn Fn(String, Option<f32>) + Send + Sync),
         cancel: &'a CancellationToken,
     ) -> BoxFuture<'a, Result<Option<Unlocked>, ServiceFault>>;
+
+    /// The event log's line for a link it gave (never the link itself).
+    fn noted(&self, u: &Unlocked) -> String {
+        note_unlocked(self.name(), u)
+    }
 }
 
 /// A service's direct link for a file.
@@ -41,6 +46,10 @@ pub struct Unlocked {
     pub size: Option<u64>,
     /// The most connections the service allows on it (Real-Debrid's `chunks`).
     pub max_connections: Option<u32>,
+    /// Headers the direct link wants on every request (a helper's: yt-dlp's `http_headers` and
+    /// cookies for a stream, #769). A service's links want none: the host's cookies and logins
+    /// never go to them.
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Why a service didn't give the file (`Refusal::Service`).

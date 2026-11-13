@@ -820,8 +820,12 @@ impl About {
 // Keyboard shortcuts
 
 /// Every shortcut the main window answers (keep in step with `app.rs` and `list.rs`).
-const SHORTCUTS: [(&str, &str); 25] = [
+const SHORTCUTS: [(&str, &str); 26] = [
     ("Ctrl+N", "Add a download (Add URL)"),
+    (
+        "Ctrl+B",
+        "Download the links in the clipboard (Add batch download from clipboard)",
+    ),
     ("Ctrl+F", "Find a download"),
     ("F3", "Find the next match"),
     ("Enter", "Open the selected download"),
