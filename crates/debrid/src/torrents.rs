@@ -575,6 +575,7 @@ impl RemoteTorrent {
             events,
             server,
             at_service,
+            finishing: None,
         }
     }
 }
