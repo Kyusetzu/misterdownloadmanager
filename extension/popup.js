@@ -111,16 +111,19 @@ const TYPES = {
   "audio/wav": "WAV",
 };
 
-// Its type as a short tag: HLS, DASH, else the file's extension or its type's.
+// Its type as a short tag: HLS, DASH, else its file's extension as it will be saved (a script's
+// answer: its type's, #800), else its type's.
 function tagOf(m) {
   if (m.kind === "hls") return "HLS";
   if (m.kind === "dash") return "DASH";
-  const ext = (/\.([a-z0-9]{2,4})$/i.exec(m.url.split(/[?#]/)[0]) || [])[1];
+  const ext = typeof m.name === "string" ? m.ext : (/\.([a-z0-9]{2,4})$/i.exec(m.url.split(/[?#]/)[0]) || [])[1];
   return (ext || TYPES[m.mime] || (m.kind === "audio" ? "AUDIO" : "VIDEO")).toUpperCase();
 }
 
-// The address's last part, readable.
-function nameOf(url) {
+// Its name: a file's as it will be saved (#800), else the address's last part, readable.
+function nameOf(m) {
+  if (typeof m.name === "string" && m.name) return m.name;
+  const url = m.url;
   const last = url.split(/[?#]/)[0].split("/").filter(Boolean).pop() || url;
   try {
     return decodeURIComponent(last);
@@ -187,7 +190,7 @@ async function showMedia(tab, connected) {
     what.className = "what";
     const name = document.createElement("span");
     name.className = "name";
-    name.textContent = nameOf(m.url);
+    name.textContent = nameOf(m);
     name.title = m.url;
     const meta = document.createElement("span");
     meta.className = "meta";
@@ -209,7 +212,7 @@ async function showMedia(tab, connected) {
       get.onclick = async () => {
         get.disabled = true;
         const reply = await ask({ type: "media-download", tab: tab.id, url: m.url });
-        said(reply.ok ? t("video_sent") : reply.why === "drm" ? t("video_drm") : t("video_failed"), !reply.ok);
+        said(reply.ok ? t("video_sent") : reply.why === "drm" ? `${t("video_drm")} · ${t("video_cant_save")}` : t("video_failed"), !reply.ok);
         get.disabled = false;
       };
       li.append(get);
@@ -223,8 +226,9 @@ const mediaTitleName = $("media-title-name");
 ext.storage.local.get({ mediaTitleName: false })
   .then((v) => (mediaTitleName.checked = Boolean(v.mediaTitleName)))
   .catch(() => {});
+// The list's names follow it at once.
 mediaTitleName.addEventListener("change", () =>
-  ext.storage.local.set({ mediaTitleName: mediaTitleName.checked }).catch(() => {}));
+  ext.storage.local.set({ mediaTitleName: mediaTitleName.checked }).then(show, () => {}));
 
 // #42: reading the browser's proxy (a VPN or proxy extension's) is an opt-in, this switch, off as
 // installed. Firefox: the optional "proxy" permission, asked for on it. Chromium can't make that

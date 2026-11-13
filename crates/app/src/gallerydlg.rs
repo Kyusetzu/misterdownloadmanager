@@ -35,7 +35,7 @@ pub struct GalleryDialog {
     checked: Option<(String, bool)>,
     error: Option<String>,
     start_now: Option<bool>,
-    asking: Option<(crate::dialogs::CreateFolder, ())>,
+    asking: crate::dialogs::FolderGate<()>,
     helpers: Option<crate::helpers::Programs>,
     /// The helper as found (read again after an install or Helpers, not every frame).
     tool: Option<Option<mdm_tools::Installed>>,
@@ -58,7 +58,7 @@ impl GalleryDialog {
             checked: None,
             error: None,
             start_now: None,
-            asking: None,
+            asking: Default::default(),
             helpers: None,
             tool: None,
         }
@@ -222,7 +222,9 @@ impl GalleryDialog {
                 let net = crate::settings::own_net();
                 rt.spawn(async move {
                     let res = mdm_tools::gallery::install_latest(&dir, &net, None).await;
-                    *out.lock().unwrap() = Some(res.map_err(|e| crate::errors::tools(&e)));
+                    // What failed and what to do (#816), whole on hover where it's cut.
+                    *out.lock().unwrap() =
+                        Some(res.map_err(|e| crate::errors::tools_and_advice(&e, "gallery-dl")));
                     ctx.request_repaint();
                 });
                 self.install = Some(slot);

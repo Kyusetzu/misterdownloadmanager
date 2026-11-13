@@ -109,37 +109,48 @@ pub fn select(id: &str, ctx: &egui::Context) -> Vec<String> {
     }
 }
 
-/// A theme file's theme, by its id or its path.
+/// A theme file's theme, by its id or its path; pywal's file followed from now on when the
+/// theme is made from it.
 fn load(id: &str) -> Result<crate::themefile::Loaded, String> {
-    let path = std::path::Path::new(id);
-    if path.is_file() {
-        crate::themefile::load_file(path)
-    } else {
-        crate::themefile::load(id)
+    let (loaded, followed) = crate::themefile::read(id);
+    if loaded.is_ok() {
+        crate::themefile::follow_pywal(followed);
     }
+    loaded
 }
 
 /// The id (or path) [`select`] was last given.
 static SELECTED: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
 
+/// The id (or path) of the theme chosen last.
+pub fn selected() -> String {
+    SELECTED.lock().unwrap_or_else(|e| e.into_inner()).clone()
+}
+
 /// While the theme is made from pywal's colours (#45): read again when `wal` wrote them anew,
-/// as it does for each new wallpaper. A file that doesn't read (half written as it was read)
-/// keeps the theme as it is, and is read again when it is next written. True when the theme
-/// changed (the caller applies it: `apply_theme`, `apply_mode`).
-pub fn follow_pywal() -> bool {
-    if !crate::themefile::pywal_changed() {
+/// as it does for each new wallpaper; `lookwatch`'s thread reads it (#719), this takes what it
+/// read while the theme and the file it follows are still those it was read for. A file that
+/// doesn't read (half written as it was read) keeps the theme as it is, and is read again when
+/// it is next written. True when the theme changed (the caller applies it: `apply_theme`,
+/// `apply_mode`).
+pub fn follow_pywal(files: Option<&crate::lookwatch::ThemeFiles>) -> bool {
+    let Some(r) = files.and_then(|f| f.pywal.as_ref()) else {
+        return false;
+    };
+    if selected() != r.id || crate::themefile::following_pywal().as_ref() != Some(&r.followed) {
         return false;
     }
-    let id = SELECTED.lock().unwrap_or_else(|e| e.into_inner()).clone();
-    match load(&id) {
-        Ok(loaded) => {
+    let id = &r.id;
+    match &r.read {
+        Ok((theme, _)) => {
             tracing::info!("theme {id}: pywal's colours changed, read again");
-            set(loaded.theme);
+            set(theme.clone());
+            crate::themefile::follow_pywal(r.follow.clone());
             true
         }
         Err(e) => {
             tracing::warn!("theme {id}: {e}; the theme kept until pywal's file is written again");
-            crate::themefile::pywal_seen();
+            crate::themefile::pywal_seen_as(r.written);
             false
         }
     }
@@ -213,12 +224,10 @@ pub fn system_theme(dark: bool) -> egui::SystemTheme {
 /// appearance the window system reports (light when nothing says). True if it changed.
 /// `always_dark` (View → Always dark, #60): dark whatever the system says, for desktops that
 /// report no preference.
+/// On Windows the registry is read by `lookwatch`'s thread, never this one (#719).
 pub fn update(dark_mode_support: bool, always_dark: bool, ctx: &egui::Context) -> bool {
     #[cfg(windows)]
-    let system_dark = {
-        let _ = ctx;
-        crate::win32::apps_use_dark()
-    };
+    let system_dark = crate::lookwatch::system(ctx).dark;
     #[cfg(target_os = "linux")]
     let system_dark = crate::unix::desktop_dark(ctx)
         .unwrap_or_else(|| ctx.system_theme() == Some(egui::Theme::Dark));
@@ -228,19 +237,22 @@ pub fn update(dark_mode_support: bool, always_dark: bool, ctx: &egui::Context) -
     DARK.swap(want, Ordering::Relaxed) != want
 }
 
-/// Did the desktop say its look changed since the last call? On Linux, the portal's and the theme
-/// settings' watchers count each change (`unix::desktop_generation`), and the app's theme check,
-/// otherwise every 2 s, then runs in the frame the change woke (#156). Elsewhere false: the check's
-/// 2 s are its only clock there.
+/// Did the desktop say its look changed since the last call, or the theme files? The watchers
+/// count each change: on Linux the portal's and the theme settings' (`unix::desktop_generation`),
+/// everywhere `lookwatch`'s (Windows' registry, the themes folder, pywal's file). The app's theme
+/// check, otherwise every 2 s, then runs in the frame the change woke (#156, #719).
 pub fn system_changed() -> bool {
+    static WATCHED: AtomicU64 = AtomicU64::new(0);
+    let now = crate::lookwatch::generation();
+    let watched = WATCHED.swap(now, Ordering::Relaxed) != now;
     #[cfg(target_os = "linux")]
     {
         static SEEN: AtomicU64 = AtomicU64::new(0);
         let now = crate::unix::desktop_generation();
-        SEEN.swap(now, Ordering::Relaxed) != now
+        (SEEN.swap(now, Ordering::Relaxed) != now) | watched
     }
     #[cfg(not(target_os = "linux"))]
-    false
+    watched
 }
 
 /// Dark or not: View → Always dark, else the system's mode while Dark Mode support is on.
@@ -584,6 +596,88 @@ fn fallback_entry(fonts: &'static [FallbackFont], c: char) -> Option<&'static Fa
         .find(|f| f.ranges.iter().any(|&(a, b)| (a..=b).contains(&cp)))
 }
 
+/// The CJK script `c` belongs to, or `None`: Chinese and Japanese characters (`"han"`), kana
+/// (`"japanese"`) and Hangul (`"hangul"`). The combining tone marks Japanese and Chinese put on
+/// kana and letters (U+302A–302F, U+3099–309A) are `None`: a shaper must place them with their
+/// base, so egui keeps them (as it keeps every multi-codepoint cluster).
+#[cfg(windows)]
+pub(crate) fn cjk_script(c: char) -> Option<&'static str> {
+    let cp = c as u32;
+    if matches!(cp, 0x302A..=0x302F | 0x3099..=0x309A) {
+        return None;
+    }
+    if matches!(
+        cp,
+        0x3040..=0x30FF // hiragana, katakana
+        | 0x31F0..=0x31FF // katakana phonetic extensions
+        | 0xFF66..=0xFF9D // halfwidth katakana
+    ) {
+        return Some("japanese");
+    }
+    if matches!(cp, 0x3130..=0x318F | 0xAC00..=0xD7A3) {
+        return Some("hangul");
+    }
+    if matches!(
+        cp,
+        0x2E80..=0x2FFF // radicals
+        | 0x3000..=0x303F // CJK punctuation
+        | 0x3100..=0x312F // bopomofo
+        | 0x31A0..=0x31BF // bopomofo extended
+        | 0x3200..=0x33FF // enclosed and compatibility characters
+        | 0x3400..=0x4DBF // Han extension A
+        | 0x4E00..=0x9FFF // Han
+        | 0xF900..=0xFAFF // compatibility ideographs
+        | 0xFE30..=0xFE4F // compatibility forms
+        | 0xFF00..=0xFF65 // fullwidth forms and punctuation
+        | 0xFFE0..=0xFFE6 // fullwidth signs
+        | 0x20000..=0x3FFFF // Han extensions B and later, and the compatibility supplement
+    ) {
+        return Some("han");
+    }
+    None
+}
+
+/// The system font files to try for a CJK character, in order (Windows): the interface language's
+/// own face first, then the fallback table's. It is the same one source the loaded script fonts
+/// use ([`SCRIPT_FONTS`]), so a Chinese, Japanese or Korean interface keeps its language's glyph
+/// variants. Empty for a character [`cjk_script`] leaves to egui.
+#[cfg(windows)]
+pub(crate) fn cjk_font_files(c: char) -> Vec<&'static str> {
+    cjk_font_files_for(c, crate::i18n::code())
+}
+
+/// [`cjk_font_files`] for an interface language `code` (the production path and its tests).
+#[cfg(windows)]
+pub(crate) fn cjk_font_files_for(c: char, code: &str) -> Vec<&'static str> {
+    let Some(script) = cjk_script(c) else {
+        return Vec::new();
+    };
+    let own = match script {
+        "han" => match code {
+            "zh-hant" => "han-tc",
+            "ja" => "japanese",
+            "ko" => "hangul",
+            _ => "han-sc",
+        },
+        other => other,
+    };
+    let mut files = Vec::new();
+    let mut add = |list: &'static [&'static str]| {
+        for file in list {
+            if !files.contains(file) {
+                files.push(*file);
+            }
+        }
+    };
+    if let Some((_, own_files, _)) = SCRIPT_FONTS.iter().find(|(key, ..)| *key == own) {
+        add(own_files);
+    }
+    if let Some(entry) = fallback_entry(FALLBACK_FONTS, c) {
+        add(entry.files);
+    }
+    files
+}
+
 /// The bytes of the font for `c`, loaded once per font, shared by every family that asks.
 fn fallback_font(c: char) -> Option<(String, egui::FontData)> {
     use std::collections::HashMap;
@@ -884,11 +978,20 @@ fn fonts(ctx: &egui::Context, code: &str, all: bool) {
 /// interface's direction changes: a right-to-left line needs its brackets mirrored by the shaper.
 #[cfg(windows)]
 fn classic_text(ctx: &egui::Context) {
-    use std::sync::atomic::{AtomicI8, Ordering};
-    static DRAWN: AtomicI8 = AtomicI8::new(-1);
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static DRAWN: AtomicU64 = AtomicU64::new(u64::MAX);
     let rtl = crate::i18n::rtl();
     let smooth = SMOOTH_TEXT.load(Ordering::Relaxed);
-    let now = i8::from(rtl) | (i8::from(smooth) << 1);
+    // A CJK face depends on the interface language (its glyph variants), and the glyph atlas
+    // keeps what was rasterized: a change of CJK language installs the rasterizer again.
+    let lang = match crate::i18n::code() {
+        "zh-hans" => 1,
+        "zh-hant" => 2,
+        "ja" => 3,
+        "ko" => 4,
+        _ => 0,
+    };
+    let now = u64::from(rtl) | (u64::from(smooth) << 1) | (lang << 2);
     if DRAWN.swap(now, Ordering::Relaxed) != now {
         ctx.set_glyph_rasterizers(
             crate::win32::text_rasterizer(font_dir(), rtl, smooth)
@@ -942,14 +1045,46 @@ fn text_styles(ctx: &egui::Context) {
     ctx.all_styles_mut(|s| {
         use egui::{FontId, TextStyle};
         s.text_styles = [
-            (TextStyle::Small, FontId::proportional(m.font_small)),
-            (TextStyle::Body, FontId::proportional(m.font_body)),
-            (TextStyle::Button, FontId::proportional(m.font_body)),
-            (TextStyle::Monospace, FontId::monospace(m.font_body)),
-            (TextStyle::Heading, FontId::proportional(m.font_heading)),
+            (
+                TextStyle::Small,
+                FontId::proportional(font_size(m.font_small)),
+            ),
+            (
+                TextStyle::Body,
+                FontId::proportional(font_size(m.font_body)),
+            ),
+            (
+                TextStyle::Button,
+                FontId::proportional(font_size(m.font_body)),
+            ),
+            (
+                TextStyle::Monospace,
+                FontId::monospace(font_size(m.font_body)),
+            ),
+            (
+                TextStyle::Heading,
+                FontId::proportional(font_size(m.font_heading)),
+            ),
         ]
         .into();
     });
+}
+
+/// The size a role is drawn at: in a Chinese, Japanese or Korean interface, no smaller than the
+/// theme's `font.cjk` (their glyphs are denser than Latin's at the same size, #837). Other
+/// languages keep the role's size exactly.
+pub fn font_size(size: f32) -> f32 {
+    font_size_for(crate::i18n::code(), size, metrics().font_cjk)
+}
+
+/// [`font_size`] for an interface language `code` and a theme's CJK floor (also the production
+/// path, so the test covers what the UI calls).
+fn font_size_for(code: &str, size: f32, cjk: f32) -> f32 {
+    if crate::i18n::cjk_code(code) {
+        size.max(cjk)
+    } else {
+        size
+    }
 }
 
 pub fn apply(ctx: &egui::Context) {
@@ -1026,7 +1161,7 @@ pub fn apply_theme(ctx: &egui::Context) {
 
 #[cfg(test)]
 mod mode_tests {
-    use super::wanted;
+    use super::{font_size_for, wanted};
 
     /// #60: Always dark wins whatever the system says; otherwise Dark Mode support follows it.
     #[test]
@@ -1038,6 +1173,24 @@ mod mode_tests {
             assert_eq!(wanted(true, false, system), system, "following the system");
             assert!(!wanted(false, false, system), "support off: light");
         }
+    }
+
+    /// #837: Chinese, Japanese and Korean text keeps the theme's floor; English and the other
+    /// languages keep their measured size. A role already larger keeps it.
+    #[test]
+    fn cjk_text_keeps_the_themes_floor() {
+        assert_eq!(crate::palette::Metrics::CLASSIC.font_cjk, 12.0);
+        for code in ["zh-hans", "zh-hant", "ja", "ko"] {
+            assert_eq!(font_size_for(code, 11.0, 12.0), 12.0, "{code}");
+            assert_eq!(font_size_for(code, 13.0, 12.0), 13.0, "{code}");
+        }
+        for code in ["en", "de", "ar", "ru", "th"] {
+            assert_eq!(font_size_for(code, 11.0, 12.0), 11.0, "{code}");
+        }
+        // A theme that asks for a larger floor gets it; one that asks for less than the role
+        // doesn't shrink the role.
+        assert_eq!(font_size_for("zh-hans", 11.0, 14.0), 14.0);
+        assert_eq!(font_size_for("zh-hans", 16.0, 14.0), 16.0);
     }
 }
 
@@ -1272,5 +1425,69 @@ mod glyph_tests {
             "marks without a glyph:\n{}",
             report.join("\n")
         );
+    }
+}
+
+#[cfg(test)]
+mod status_width_tests {
+    /// #736: the list's Status cell while a torrent's files or a finished file are checked or a
+    /// video joined, a short word and how far ("Checking 45%", "Merging 63%"), fits its column
+    /// at the default width in English, German, French, Russian and Arabic, at 100 % and at
+    /// 150 % (View → Interface size), the widest percentage ("100 %") and "..." before it is
+    /// known included. "63% merged" was cut to "63% me..." at 65 px, and a torrent's "Wird
+    /// überprüft 45 %" in German.
+    ///
+    /// In the list's font as this system draws it: Segoe UI on Windows, the system font on
+    /// macOS, fontconfig's interface font on Linux (DejaVu Sans on a bare Ubuntu, where German
+    /// needs 147 px). The default grows with the font there ([`crate::list::status_width`]); on
+    /// Windows it stays 132 px, so the list's other columns keep their room.
+    #[test]
+    fn finishing_fits_the_status_column() {
+        let i18n = crate::i18n::i18n();
+        #[cfg(not(any(windows, target_os = "macos")))]
+        println!("interface font: {:?}", super::fc_match("sans-serif"));
+        let mut widest = (0.0f32, String::new());
+        for code in ["en", "de", "fr", "ru", "ar"] {
+            let lang = i18n.from_code(code).expect("a catalog");
+            let full = craft_i18n::Format::from_tag(code).percent(1.0, 0);
+            for zoom in [1.0, 1.5] {
+                let ctx = egui::Context::default();
+                ctx.set_pixels_per_point(zoom);
+                super::fonts(&ctx, code, false);
+                let mut out = ctx.run_ui(Default::default(), |_| {});
+                out.textures_delta.clear();
+                let font = crate::winui::tahoma();
+                let measure = |text: &str| {
+                    ctx.fonts_mut(|f| {
+                        f.layout_no_wrap(text.to_owned(), font.clone(), egui::Color32::WHITE)
+                            .size()
+                            .x
+                    })
+                };
+                let column = crate::list::status_width(code, &full, measure);
+                let room = column - crate::list::CELL_PAD;
+                println!("{code} at {zoom}: Status {column} px");
+                #[cfg(windows)]
+                assert_eq!(
+                    column,
+                    crate::list::DEFAULT_WIDTHS[crate::list::STATUS],
+                    "{code} at {zoom}: Segoe UI fits in the default"
+                );
+                for source in ["Checking {percent}", "Merging {percent}"] {
+                    for percent in [full.as_str(), "100%", "..."] {
+                        let text = i18n.t(lang, source).replace("{percent}", percent);
+                        let width = measure(&text);
+                        if width > widest.0 {
+                            widest = (width, format!("{code} at {zoom}: {text}"));
+                        }
+                        assert!(
+                            width <= room,
+                            "{code} at {zoom}: {text}: {width} px, {room} px of room"
+                        );
+                    }
+                }
+            }
+        }
+        println!("widest: {} px, {}", widest.0, widest.1);
     }
 }

@@ -75,6 +75,7 @@ impl Unlocker for Fake {
                         file_name: Some("from-the-service.bin".into()),
                         size: None,
                         max_connections: chunks,
+                        headers: Default::default(),
                     }))
                 }
             }
