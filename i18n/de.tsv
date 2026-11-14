@@ -449,6 +449,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Afghanistan	Afghanistan
+#. text in the Options window
+#. Options → Add an account: a note under the user name and password fields (Mega-Debrid bans the address for some minutes after a few wrong passwords)
+#, machine
+	After a few wrong passwords the service blocks this connection for some minutes.	Nach einigen falschen Passwörtern sperrt der Dienst diese Verbindung für einige Minuten.
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -3389,6 +3393,10 @@
 #, machine
 	Options on completion	Optionen nach Abschluss
 #. text in the Options window
+#. Options → Add an account: label before the field for an API key the user made at the service (Mega-Debrid: My Account → API Key; the other way to sign in)
+#, machine
+	Or paste an application's API key:	Oder den API-Schlüssel einer Anwendung einfügen:
+#. text in the Options window
 #. Options → Add an account: label before the field for the service's API token (the other way to sign in)
 #, machine
 	Or paste your API token:	Oder fügen Sie Ihr API-Token ein:
@@ -4097,6 +4105,10 @@
 #, machine
 	Sierra Leone	Sierra Leone
 #. button in the Options window
+#. button: sign in to the debrid service with the user name and password typed in
+#, machine
+	Sign in	Anmelden
+#. button in the Options window
 #. button: sign in to the debrid service in the browser, by typing a code there
 #, machine
 	Sign in in the browser	Im Browser anmelden
@@ -4112,6 +4124,10 @@
 #. Options → Accounts: where the debrid accounts' sign-ins and the other passwords are kept (Windows' own Credential Manager, in Control Panel)
 #, machine
 	Sign-ins and passwords are kept in Windows Credential Manager.	Anmeldeinformationen und Passwörter werden im Windows-Anmeldeinformations-Manager gespeichert.
+#. text in the Options window
+#. Options → Add an account: signed in, the service gives no account name; {state} premium or not
+#, machine
+	Signed in ({state})	Angemeldet ({state})
 #. text in the Options window
 #. Options → Add an account: signed in; {user} the account's name, {state} premium or not
 #, machine
@@ -4759,6 +4775,10 @@
 #. text in errors.rs
 #, machine
 	the server sent an unexpected part of the file ({detail})	Der Server hat einen unerwarteten Teil der Datei gesendet ({detail}).
+#. text in debrid.rs
+#. Options → Accounts: the service doesn't say whether the account is premium (Mega-Debrid, signed in with an API key); a free account's links are refused when downloading
+#, machine
+	the service doesn't say whether it is premium	der Dienst sagt nicht, ob es Premium ist
 #. text in errors.rs
 #. why a download failed (#701): a file host answered with its own web page (a countdown before the link, a captcha, a sign-in) where the file was expected. The browser gets past it; MDM's browser extension then hands the real file back to MDM
 #, machine
@@ -5345,6 +5365,10 @@
 #. column title: the user name
 #, machine
 	User	Benutzer
+#. text in the Options window
+#. Options → Add an account: label before the field for the user name at the debrid service
+#, machine
+	User name:	Benutzername:
 #. page title in the Options window
 #, machine
 	User names and passwords for servers/sites	Benutzernamen und Passwörter für Server/Websites
