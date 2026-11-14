@@ -12,6 +12,7 @@ publish = false
 
 [workspace.dependencies]
 mdm-cli = { path = "crates/cli" }
+mdm-cnl = { path = "crates/cnl" }
 mdm-crash = { path = "crates/crash", default-features = false }
 mdm-debrid = { path = "crates/debrid" }
 # Without its browser-like connection unless asked (the app asks: its `browser-connection`).

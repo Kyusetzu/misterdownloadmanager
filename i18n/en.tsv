@@ -6,6 +6,10 @@
 #. never shown for a single file
 #. {n} = a number (keep the braces as they are)
 @plural	Also delete the {n} file from disk|Also delete the {n} files from disk	Also delete the {n} file from disk|Also delete the {n} files from disk
+#. count in cnl.rs
+#. Click'n'Load window: a page whose web site the browser doesn't name, so MDM can't tell which site it is
+#. {n} = a number (keep the braces as they are)
+@plural	An unknown site wants to send {n} link to Link grabber.|An unknown site wants to send {n} links to Link grabber.	An unknown site wants to send {n} link to Link grabber.|An unknown site wants to send {n} links to Link grabber.
 #. count in a dialog box
 #. never shown for a single download
 #. {n} = a number (keep the braces as they are)
@@ -106,6 +110,10 @@
 #. where a magnet's peers came from: {n} = trackers asked; {peers} = "3 peers"
 #. {n} = a number (keep the braces as they are)
 @plural	{n} tracker: {peers}|{n} trackers: {peers}	{n} tracker: {peers}|{n} trackers: {peers}
+#. count in cnl.rs
+#. Click'n'Load window: {site} is a web site's name such as "example.com"
+#. {site} = a web site's name such as "example.com"; {n} = a number (keep the braces as they are)
+@plural	{site} wants to send {n} link to Link grabber.|{site} wants to send {n} links to Link grabber.	{site} wants to send {n} link to Link grabber.|{site} wants to send {n} links to Link grabber.
 #. count in playlistdlg.rs
 #. in Download video: a playlist title then how many videos it has ({count})
 #. {count} = a number (keep the braces as they are)
@@ -220,6 +228,9 @@
 #. a file size that is only an estimate, as a screen reader says it in the Download video window's list of qualities; {size} is "532 MB"
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 	about {size}	about {size}
+#. text in the Options window
+#. Options → Archives → Link grabber check box: Click'n'Load, a link site's button that sends its links to a program on this computer (port 9666, as JDownloader)
+	Accept Click'n'Load from web pages (port 9666)	Accept Click'n'Load from web pages (port 9666)
 #. checkbox in the Add torrent window
 #. Torrent settings: other peers may connect to this computer
 	Accept incoming connections	Accept incoming connections
@@ -359,10 +370,16 @@
 #. text in the Download video window
 #. in the Subtitles list of Download video: every language the video's uploader gave
 	All the uploader's	All the uploader's
+#. text in cnl.rs
+#. button in the Click'n'Load window: let this site send links (remembered)
+	Allow	Allow
 #. text in the Options window
 #. checkbox under the number of connections per download; {n} is 32
 #. {n} = a number (keep the braces as they are)
 	Allow more than {n} connections	Allow more than {n} connections
+#. text in cnl.rs
+#. Click'n'Load window, under the question: nothing happens to the links before the user adds them in Link grabber
+	Allow only sites you use. Nothing is looked up or downloaded before you add it in Link grabber.	Allow only sites you use. Nothing is looked up or downloaded before you add it in Link grabber.
 #. text in errors.rs
 	already being downloaded: {path}	already being downloaded: {path}
 #. text in the Link grabber window
@@ -528,6 +545,9 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Bhutan	Bhutan
+#. text in cnl.rs
+#. button in the Click'n'Load window: refuse this site's links (remembered)
+	Block	Block
 #. text in the Add torrent window
 #. Torrent settings: the address of an IP blocklist (empty: none)
 	Block the addresses in this list (P2P or eMule format):	Block the addresses in this list (P2P or eMule format):
@@ -728,6 +748,17 @@
 #. button in the download list
 #. verb: clears this filter
 	Clear	Clear
+#. message or event log entry in the main window; window title in cnl.rs
+#. title of the notice when Click'n'Load couldn't start
+#. window title: a web page used Click'n'Load (a link site's button that sends its links to this program)
+	Click'n'Load	Click'n'Load
+#. text in cnl.rs
+#. notice: Click'n'Load couldn't start; {port} is 9666; JDownloader is another download manager that uses the same port
+	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.	Click'n'Load can't start: another program (JDownloader?) is using port {port}. Close it, then turn Click'n'Load off and on again in Options.
+#. text in cnl.rs
+#. notice: Click'n'Load couldn't start; {error} the system's reason
+#. {error} = an error message (keep the braces as they are)
+	Click'n'Load can't start: {error}	Click'n'Load can't start: {error}
 #. text in a download's progress window
 #. column title: the peer's torrent program
 	Client	Client
@@ -2352,7 +2383,11 @@
 #. text in helpers.rs
 #. Video helpers: no copy of this helper yet
 	Not installed yet	Not installed yet
-#. button in helpers.rs
+#. text in the Link grabber window
+#. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up (name, size, online) before it is added
+	Not looked up	Not looked up
+#. text in cnl.rs; button in helpers.rs
+#. button in the Click'n'Load window: refuse these links, ask again next time
 	Not now	Not now
 #. text in helpers.rs
 	Not now? Get them later from Tasks → Download video from a page.	Not now? Get them later from Tasks → Download video from a page.

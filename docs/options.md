@@ -155,6 +155,7 @@ Archives (zip, 7z, rar, tar, gz, xz), and [Link grabber](link-grabber.md).
 - **Extract in place with HatchZip** (off by default; greyed out when HatchZip isn't installed) — the archive is removed while its files come out, so only they need room. See [Extracting archives](link-grabber.md#in-place-with-hatchzip).
 - **Look links up when they arrive (name, size, online)** — Link grabber asks each server about its file (on by default).
 - **Hide web pages** — Link grabber's default for the same box (on).
+- **Accept Click'n'Load from web pages (port 9666)** (off by default) — a link site's Click'n'Load button sends its links to MDM's Link grabber. See [Click'n'Load](link-grabber.md#clickn-load).
 
 ## Remote
 

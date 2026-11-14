@@ -2314,10 +2314,10 @@ impl OptionsDialog {
             has_hatchzip,
         );
         // i18n: Options → Archives: group box title
-        group(ui, o, 16.0, 332.0, 392.0, 100.0, "Link grabber");
+        group(ui, o, 16.0, 320.0, 392.0, 132.0, "Link grabber");
         winui::checkbox_light(
             ui,
-            o + vec2(30.0, 350.0),
+            o + vec2(30.0, 338.0),
             &mut s.grabber_check,
             // i18n: Options → Archives → Link grabber check box (IDM's Download all links looks every link up)
             "Look links up when they arrive (name, size, online)",
@@ -2325,15 +2325,23 @@ impl OptionsDialog {
         );
         winui::checkbox_light(
             ui,
-            o + vec2(30.0, 374.0),
+            o + vec2(30.0, 362.0),
             &mut s.grabber_hide_pages,
             "Hide web pages",
+            true,
+        );
+        winui::checkbox_light(
+            ui,
+            o + vec2(30.0, 386.0),
+            &mut s.cnl_on,
+            // i18n: Options → Archives → Link grabber check box: Click'n'Load, a link site's button that sends its links to a program on this computer (port 9666, as JDownloader)
+            "Accept Click'n'Load from web pages (port 9666)",
             true,
         );
         winui::paragraph(
             &p,
             o.x + 30.0,
-            o.y + 412.0,
+            o.y + 418.0,
             crate::i18n::t(
                 "Tasks → Link grabber, or the browser's \"Download all links\": a split\narchive's volumes are one package, the other links of a page another.",
             ),
