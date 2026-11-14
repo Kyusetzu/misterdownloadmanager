@@ -39,7 +39,7 @@ Your download list, settings, logins you save in **Sites Logins**, the history o
 From version 0.5.0, only if you choose them:
 
 - **The DNS you choose.** With a DNS other than the system's in **Options → Connection → DNS** (Cloudflare, Google, Quad9, AdGuard, NextDNS or your own), MDM asks it, over HTTPS, TLS or TCP, for the addresses of the servers it downloads from. That service sees those names and your IP address, under its own privacy terms.
-- **Your debrid accounts.** A link or torrent you send through a Real-Debrid, AllDebrid or Premiumize account in **Options → Accounts** goes to that service, which then serves the file. Its sign-in stays on your computer, with the passwords above.
+- **Your debrid accounts.** A link or torrent you send through a Real-Debrid, AllDebrid, Premiumize or Mega-Debrid account in **Options → Accounts** goes to that service, which then serves the file. Its sign-in stays on your computer, with the passwords above.
 - **Codeberg, for gallery-dl.** If you download an image gallery, MDM installs gallery-dl from its official releases on Codeberg and checks its author's signature; gallery-dl then talks to the site you asked for.
 - **A torrent IP blocklist**, if you give one: MDM fetches it from the address you entered, again every 7 days.
 - **Your own devices, for the remote control.** Off until you turn it on in **Options → Remote**: then MDM answers, over HTTPS on your local network, only the phones and computers you paired with its code.
