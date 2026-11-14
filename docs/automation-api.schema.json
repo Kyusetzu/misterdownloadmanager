@@ -211,6 +211,31 @@
       ],
       "type": "object"
     },
+    "LinksPart": {
+      "description": "One part of a page's links ([`Command::links_part`]): the browser's extension sends a list\nlonger than the native host takes at once ([`MAX_MESSAGE`]) in parts, each with the page's\nreferrer and cookies, and the app puts them back together into one list.",
+      "properties": {
+        "batch": {
+          "default": "",
+          "description": "The same in every part of one list, and in no other list's (random, made by the\nextension): letters, digits and `-`, at most 64.",
+          "type": "string"
+        },
+        "count": {
+          "default": 0,
+          "description": "How many parts the list came in (at most [`MAX_LINK_PARTS`]).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "index": {
+          "default": 0,
+          "description": "This part's place in the list, from 0.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "ListAnswer": {
       "description": "`{\"query\": \"list\"}`: every download, and the total speed.",
       "properties": {
@@ -417,6 +442,17 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "links_part": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LinksPart"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "With `links`: which part of a page's list they are, when the list was too long for one\nmessage from the browser ([`MAX_MESSAGE`]); the app adds the list once all its parts are\nin. None: the whole list (an older extension's, or a short one)."
         },
         "mime": {
           "default": null,

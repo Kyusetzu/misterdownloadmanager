@@ -21,7 +21,9 @@
 // (Content-Disposition), torrents (a tracker's .torrent stays with the browser
 // while Torrent settings leave torrents alone, #1058), redirect, leadon (a page going to the file by script, #374), form (POST, 303), alt (Alt+click leaves it
 // to the browser: a link, a redirect, a page's script; Firefox's own default too, #332), sites (a listed
-// site's page linking to a file on another host leaves it to the browser, #1049), opened (a PDF or MP3 the browser would show or play), openedNames
+// site's page linking to a file on another host leaves it to the browser, #1049), manylinks
+// (Download all links on a page of 20,000 long links, in parts, to one Link grabber list), opened
+// (a PDF or MP3 the browser would show or play), openedNames
 // (such a video under its server's name, inline or an attachment, #948), spot (the video button
 // clear of the page's controls, #421), feeds (a video in a feed sends its post, its own file, or
 // nothing and says so, never the feed: sample pages served at LinkedIn's, Facebook's, X's,
@@ -2318,6 +2320,83 @@ const CASES = {
       await panelSettings({ excluded_sites: was });
     }
     return "a file on 127.0.0.1 linked from a listed site's page (localhost): the browser's, MDM untouched";
+  },
+
+  // Download all links on a page of 20,000 links with long paths (E2E_MANY_LINKS: another
+  // number), about 5 MB of them, past the 1 MB a message to the host may be: sent in parts, they
+  // open in Link grabber as one list, every link once, and nothing opens the help page. Firefox's
+  // right-click menu is opened and its item chosen; Chromium's can't be opened headless, so its
+  // handler is called as the menu calls it.
+  async manylinks(t) {
+    const n = Number(process.env.E2E_MANY_LINKS || 20000);
+    const page = `${LAB}/page?files=${n}&pathlen=200&title=many`;
+    await t.session.navigate(page);
+    const log = path.join(data, "logs", "mdm.log");
+    const from = fs.existsSync(log) ? fs.statSync(log).size : 0;
+    const label = "Download all links with Mister Download Manager";
+    const help = "https://misterdownloadmanager.com/help/browser-help.html";
+    // The tabs open now (the help page's, when the extension explains a failure).
+    const tabs = () =>
+      t.kind === "chromium"
+        ? t.session.inExtension(`chrome.tabs.query({}).then((ts) => ts.map((x) => x.pendingUrl || x.url || ""))`)
+        : t.session.inBrowser(`[...gBrowser.tabs].map((x) => x.linkedBrowser.currentURI.spec || "")`);
+    const started = Date.now();
+    let clicked;
+    if (t.kind === "chromium") {
+      clicked = await t.session.inExtension(`(async () => {
+        const tab = (await chrome.tabs.query({})).find((x) => x.url === ${JSON.stringify(page)});
+        if (!tab) return "no tab";
+        await menuClicked({ menuItemId: "mdm-all", pageUrl: tab.url, frameId: 0 }, tab);
+        const { status } = await chrome.storage.local.get("status");
+        return "called; status " + JSON.stringify(status && status.why) + ", badge " + JSON.stringify(await chrome.action.getBadgeText({}));
+      })()`);
+    } else {
+      const at = await t.session.evaluate(`(() => { const b = document.getElementById("blank").getBoundingClientRect(); return [b.left + 4, b.top + b.height / 2]; })()`);
+      clicked = await t.session.menu(at[0], at[1], label);
+      if (!String(clicked).startsWith("chosen")) throw new Error(`the menu: ${clicked}`);
+    }
+    // E2E_OLD_APP (a released app and its host, which know no parts): each part reaches Link
+    // grabber as a list of its own, and nothing says why (no line in its log): it opens, and no
+    // help page does.
+    if (process.env.E2E_OLD_APP) {
+      if (!WIN) throw new Skip(NO_UIA);
+      const pid = ourApps()[0];
+      const shown = await until("Link grabber", 120000, async () => (await tabs()).some((u) => u.startsWith(help)) ? ["help"] : appWindows(pid).includes("Link grabber") && appWindows(pid));
+      if (shown[0] === "help") throw new Error(`the help page opened: ${(await tabs()).join(", ")} (${clicked})`);
+      await sleep(3000);
+      if ((await tabs()).some((u) => u.startsWith(help))) throw new Error(`the help page opened: ${(await tabs()).join(", ")}`);
+      await stopApp();
+      return `an older app: Link grabber opened (${shown.join(", ")}), no help page in ${((Date.now() - started) / 1000).toFixed(1)} s (${clicked})`;
+    }
+    // The app's line once the list is whole (crates/app/src/linkparts.rs), or the help page.
+    const said = () => (fs.existsSync(log) ? fs.readFileSync(log, "utf8").slice(from) : "");
+    const whole = new RegExp(`a page's (\\d+) links came in (\\d+) parts`);
+    let got = null;
+    try {
+      got = await until("the page's links in MDM", 90000, async () => whole.exec(said()) || ((await tabs()).some((u) => u.startsWith(help)) && "help"));
+    } catch (e) {
+      e.message += ` (${clicked}; tabs: ${(await tabs()).join(", ")})`;
+      throw e;
+    }
+    const open = await tabs();
+    if (got === "help") throw new Error(`the help page opened instead: ${open.filter((u) => u.startsWith(help)).join(", ")} (${clicked})`);
+    const [, links, parts] = got.map(Number);
+    if (links !== n) throw new Error(`${links} links reached MDM, not ${n} (${parts} parts)`);
+    if (parts < 2) throw new Error(`in ${parts} part: the test's list should need more`);
+    const ms = Date.now() - started;
+    let windows = "";
+    if (WIN) {
+      const pid = ourApps()[0];
+      const shown = await until("Link grabber", 20000, () => appWindows(pid).includes("Link grabber") && appWindows(pid));
+      windows = `, windows: ${shown.join(", ")}`;
+      appWindows(pid, "Link grabber");
+    }
+    await sleep(1000);
+    const after = await tabs();
+    if (after.some((u) => u.startsWith(help))) throw new Error(`the help page opened too: ${after.join(", ")}`);
+    // Link grabber looks its links up: stopped with the app (the next case starts another).
+    await stopApp();
+    return `${links} links in ${parts} parts to Link grabber in ${(ms / 1000).toFixed(1)} s${windows}; no help page (${clicked})`;
   },
 
   // Files the browser would show or play, made downloads, MDM's (Chromium 128+, Firefox): typed

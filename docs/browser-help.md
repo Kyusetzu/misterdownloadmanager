@@ -61,6 +61,8 @@ If MDM says it's up to date, there's nothing for you to do. The extension update
 
 A download carries its site's cookies (and a form's data) to MDM. A few sites set so many that together they exceed what MDM accepts from the browser (1 MB). The browser kept this one. Signing out and back in to the site usually trims them.
 
+**Download all links** and **Download selected links** send a long list of links in parts of up to 1 MB, so a page with tens of thousands of links reaches Link grabber whole. A single link longer than that, which no server takes, can't be sent: it is left out, the others still reach Link grabber, and this page opens to say so. When a site's cookies alone fill the 1 MB, no link can go with them: sign out and back in to the site, as above.
+
 ## Downloads stay with the browser although MDM is connected {#options}
 
 The extension is connected, but MDM's own settings leave this download to the browser. Check, in MDM:

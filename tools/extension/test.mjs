@@ -45,6 +45,8 @@ function fakeApi({
   // The host's answer to the video button's lookups (`videoLookup`, `videoPoll`, `videoPick`): a
   // function of the message; none: `reply`.
   lookup,
+  // The page's links, as the right-click menu's script collects them (pageLinks).
+  pageLinks = ["https://x/1.zip", "https://x/2.zip"],
   // tabs.query's answer for the active tab of the window last used (#607).
   activeTab,
 }) {
@@ -147,7 +149,8 @@ function fakeApi({
         // for an address it can't download (`noticeReply`).
         if (m.declined) return noticeReply || { ok: true };
         if (lookup && (m.videoLookup || m.videoPoll || m.videoPick)) return lookup(m);
-        // A function: the app's answer to this message (it may change its rules, as the app would).
+        // A function: the app's answer to each message (a page's links' parts, one by one; it may
+        // change its rules, as the app would).
         return typeof reply === "function" ? reply(m) : reply;
       },
       getManifest: () => ({
@@ -192,7 +195,7 @@ function fakeApi({
           if (!frames) throw new Error("Cannot access contents of the page");
           return Object.entries(frames).map(([frameId, result]) => ({ frameId: Number(frameId), result }));
         }
-        return func ? [{ result: ["https://x/1.zip", "https://x/2.zip"] }] : [];
+        return func ? [{ result: pageLinks }] : [];
       },
     },
     action: {
@@ -255,11 +258,14 @@ function load(api, firefox, extra = {}) {
     setTimeout,
     clearTimeout,
     Promise,
+    crypto: globalThis.crypto,
   };
   if (firefox) ctx.browser = api;
   else ctx.chrome = api;
   Object.assign(ctx, extra);
   vm.runInNewContext(code, ctx);
+  // Its globals (the functions it declares), for the tests of its parts.
+  return ctx;
 }
 
 const settle = () => new Promise((r) => setTimeout(r, 30));
@@ -744,6 +750,117 @@ const ok = (what) => {
   await settle();
   assert.ok(failing.calls.some((c) => c[0] === "openTab" && c[1].endsWith("#not-running")));
   ok("context menus: explicit links, a page's links, failures explained");
+}
+
+// A page's links past what the host takes in one message (1 MB, crates/ipc MAX_MESSAGE): sent in
+// parts, each under it as every browser writes it, in order, each with the page's referrer and
+// cookies and its place in the list; a list exactly at the limit still goes whole, without
+// parts, as before.
+{
+  const MAX = 1 << 20;
+  // As the host counts: the bytes of the message's JSON in UTF-8.
+  const bytes = (m) => Buffer.byteLength(JSON.stringify(m), "utf8");
+  const { api } = fakeApi({ firefox: false });
+  const g = load(api, false);
+  assert.equal(vm.runInContext("MESSAGE_MAX", g), MAX, "the host's limit (crates/ipc MAX_MESSAGE)");
+  // wireSize: JSON.stringify's UTF-8, plus what Chromium (< DEL U+2028 U+2029) and Safari's
+  // helper (/) escape: never less than any of them writes.
+  assert.equal(g.wireSize({ a: "plain text, é, ✓, 😀" }), bytes({ a: "plain text, é, ✓, 😀" }));
+  assert.equal(g.wireSize("a/b"), bytes("a/b") + 1);
+  assert.equal(g.wireSize("<\u007f\u2028\u2029"), 2 + 4 * 6);
+  assert.equal(g.wireSize("\ud800"), bytes("\ud800"), "a lone surrogate, escaped by JSON.stringify");
+  // Cut in order, every part's message within the limit, nothing lost or doubled.
+  const base = { referrer: "https://x.test/files/", cookies: "sid=1", private: false, userAgent: "UA", brands: [], v: "1", linksPart: { batch: "b", index: 256, count: 256 } };
+  const many = Array.from({ length: 5000 }, (_, k) => `https://x.test/files/${"d".repeat(k % 300)}/file${k}.zip`);
+  // The script's arrays are of its own realm: compared as plain copies.
+  const cutAt = (...a) => JSON.parse(JSON.stringify(g.linkParts(...a)));
+  const { parts, left } = cutAt(base, many, 100000);
+  assert.ok(parts.length > 5);
+  assert.deepEqual(parts.flat(), many);
+  assert.equal(left.length, 0);
+  for (const links of parts) assert.ok(g.wireSize({ ...base, links }) <= 100000);
+  // Each part as full as the next link allows.
+  for (let k = 0; k + 1 < parts.length; k++) assert.ok(g.wireSize({ ...base, links: [...parts[k], parts[k + 1][0]] }) > 100000);
+  // A link too long to go even alone is left out, the others go.
+  const huge = `https://x.test/${"x".repeat(100000)}`;
+  const cut = cutAt(base, ["https://x.test/a.zip", huge, "https://x.test/b.zip"], 100000);
+  assert.deepEqual([cut.parts, cut.left], [[["https://x.test/a.zip", "https://x.test/b.zip"]], [huge]]);
+  // Exactly at the limit: one part; a byte more: two.
+  const exact = cutAt(base, ["https://x.test/a"], g.wireSize({ ...base, links: ["https://x.test/a"] }));
+  assert.equal(exact.parts.length, 1);
+  const over = cutAt(base, ["https://x.test/a", "https://x.test/b"], g.wireSize({ ...base, links: ["https://x.test/a", "https://x.test/b"] }) - 1);
+  assert.deepEqual(over.parts, [["https://x.test/a"], ["https://x.test/b"]]);
+  ok("a page's links: measured as browsers write them, cut in order within the limit");
+}
+
+// Through the right-click menu: a page whose links' message would be exactly 1 MB goes as one
+// message, as before (an older app knows nothing else); one byte more, in two parts; 30,000 long
+// links (7 MB) in parts the host takes, as one list.
+{
+  const MAX = 1 << 20;
+  const bytes = (m) => Buffer.byteLength(JSON.stringify(m), "utf8");
+  // The message the menu sends for `links`, as background.js stamps it (fakeApi's browser).
+  const message = (links) => ({ links, referrer: "https://x.test/files/", cookies: "sid=1", private: false, userAgent: "UA", brands: ["Chromium", "Brave"], v: "0.2.5" });
+  const probe = load(fakeApi({ firefox: false }).api, false);
+  const filler = (n) => `https://x.test/${"f".repeat(n)}`;
+  const fixed = Array.from({ length: 2000 }, (_, k) => `https://x.test/files/file${k}.zip`);
+  const room = MAX - probe.wireSize(message([...fixed, filler(0)]));
+  const atLimit = [...fixed, filler(room)];
+  assert.equal(probe.wireSize(message(atLimit)), MAX);
+  const run = async (links, reply) => {
+    const f = fakeApi({ firefox: false, pageLinks: links, ...(reply ? { reply } : {}) });
+    load(f.api, false);
+    // Its start's own asking for the rules done first.
+    await settle();
+    await f.listeners.menu({ menuItemId: "mdm-all", pageUrl: "https://x.test/files/", frameId: 0 }, { id: 1, incognito: false });
+    await settle();
+    return { sent: natives(f.calls), tabs: f.calls.filter((c) => c[0] === "openTab").map((c) => c[1]), store: f.store };
+  };
+  let { sent, tabs } = await run(atLimit);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].linksPart, undefined, "whole, as before");
+  assert.equal(probe.wireSize(sent[0]), MAX, "at the limit as the widest browser writes it");
+  assert.ok(bytes(sent[0]) <= MAX);
+  assert.deepEqual(tabs, []);
+  ({ sent, tabs } = await run([...fixed, filler(room + 1)]));
+  assert.equal(sent.length, 2);
+  assert.deepEqual(sent.map((m) => [m.linksPart.index, m.linksPart.count]), [[0, 2], [1, 2]]);
+  assert.equal(sent[0].linksPart.batch, sent[1].linksPart.batch);
+  assert.deepEqual(sent.flatMap((m) => m.links), [...fixed, filler(room + 1)]);
+  // 30,000 links of about 240 characters: parts within the limit, in order, one batch, each
+  // with the page's context; nothing to explain.
+  const long = Array.from({ length: 30000 }, (_, k) => `https://x.test/files/${"d".repeat(200)}/file${k}.zip?seed=${k}`);
+  ({ sent, tabs } = await run(long));
+  assert.ok(sent.length >= 7, `${sent.length} parts`);
+  assert.deepEqual(sent.flatMap((m) => m.links), long);
+  assert.deepEqual(sent.map((m) => m.linksPart.index), [...sent.keys()]);
+  assert.ok(sent.every((m) => m.linksPart.count === sent.length && m.linksPart.batch === sent[0].linksPart.batch));
+  assert.match(sent[0].linksPart.batch, /^[A-Za-z0-9-]{1,64}$/);
+  for (const m of sent) {
+    assert.ok(bytes(m) <= MAX, `${bytes(m)} bytes`);
+    assert.deepEqual([m.referrer, m.cookies, m.private, m.v], ["https://x.test/files/", "sid=1", false, "0.2.5"]);
+  }
+  assert.deepEqual(tabs, []);
+  // Another click: another batch.
+  const again = await run(long);
+  assert.notEqual(again.sent[0].linksPart.batch, sent[0].linksPart.batch);
+  // A part refused (MDM quit meanwhile): no more parts, and the help page says why.
+  let answered = 0;
+  ({ sent, tabs } = await run(long, () => (++answered === 3 ? { ok: false, why: "not-running" } : { ok: true })));
+  assert.equal(sent.length, 3);
+  assert.deepEqual(tabs, ["https://misterdownloadmanager.com/help/browser-help.html#not-running"]);
+  // A link longer than a whole message: the others go, and the help page says one was left out.
+  const huge = `https://x.test/${"x".repeat(MAX)}`;
+  ({ sent, tabs } = await run([...long, huge]));
+  assert.deepEqual(sent.flatMap((m) => m.links), long);
+  assert.deepEqual(tabs, ["https://misterdownloadmanager.com/help/browser-help.html#too-large"]);
+  // Only such links: nothing goes, too large.
+  let store;
+  ({ sent, tabs, store } = await run([huge]));
+  assert.deepEqual(sent, []);
+  assert.deepEqual(tabs, ["https://misterdownloadmanager.com/help/browser-help.html#too-large"]);
+  assert.equal(store.status.why, "too-large");
+  ok("Download all links: a list at the limit whole, past it in parts the host takes, failures explained");
 }
 
 // The download button over videos: the page asks once a minute per site, a click opens the

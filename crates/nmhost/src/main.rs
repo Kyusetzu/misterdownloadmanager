@@ -19,6 +19,10 @@
 //!   (`mdm_ipc::api::VideoLookupAnswer`), never with a `why`; none of them starts the app
 //!   (`use-window`: the button's click then opens the Download video window as before). A
 //!   question waits here while the look-up runs, up to 1.5 s ([`POLL_WAIT`]).
+//! - The right-click menu's links (a page's, a selection's): `{"links": [...], referrer, cookies}`,
+//!   handed over as one list. A list longer than a message may be (`mdm_ipc::MAX_MESSAGE`, 1 MB)
+//!   comes in parts, each with `"linksPart": {batch, index, count}` and the page's context, each
+//!   handed over as it comes; the app puts them back together (crates/app/src/linkparts.rs).
 //! - `misterdownloadmanager-nmhost --register` / `--unregister`: writes / removes the host
 //!   manifests (Chromium's names the extension's origin, Firefox's its add-on ID). Windows: beside
 //!   this exe, with the per-user (HKCU) registry entries the browsers look up; with `--all-users`
@@ -134,6 +138,10 @@ struct Message {
     page: Option<String>,
     /// The right-click menu: these links of a page or its selection.
     links: Vec<String>,
+    /// With `links`: their part of a list too long for one message (`MAX_MESSAGE`), which the
+    /// app puts back together. An older host ignores it and hands each part over as a list of
+    /// its own, which Link grabber adds to the one it shows.
+    links_part: Option<mdm_ipc::LinksPart>,
     /// The toolbar button: leave this site (a host name) to the browser.
     exclude_site: Option<String>,
     /// The popup's Undo (#404): take this host name off the excluded sites again.
@@ -312,6 +320,34 @@ impl Reply {
     }
 }
 
+/// The right-click menu's links (a page's, a selection's) as the app's command: those MDM
+/// downloads, with the page's referrer and cookies; or why not (the reply's `why` and `error`).
+fn links_command(m: &Message) -> Result<mdm_ipc::Command, (&'static str, &'static str)> {
+    let links: Vec<String> = m
+        .links
+        .iter()
+        .filter(|l| downloadable(l))
+        .cloned()
+        .collect();
+    if m.links_part.as_ref().is_some_and(|p| !p.valid()) {
+        return Err(("refused", "a part of a page's links that doesn't fit"));
+    }
+    // A part goes to the app even with nothing in it MDM downloads: the list is complete only
+    // with all its parts.
+    if links.is_empty() && m.links_part.is_none() {
+        return Err(("refused", "no link MDM downloads"));
+    }
+    Ok(mdm_ipc::Command {
+        links,
+        links_part: m.links_part.clone(),
+        referer: m.referrer.clone().filter(|r| !r.is_empty()),
+        cookies: m.cookies.clone().filter(|c| !c.is_empty()),
+        user_agent: m.user_agent.clone(),
+        private: m.private,
+        ..Default::default()
+    })
+}
+
 /// The name a download will have: the browser's, else the address's last part.
 fn file_name_of(m: &Message) -> String {
     let from_browser = m
@@ -435,24 +471,11 @@ fn answer(m: Message, rules: &mdm_ipc::capture::CaptureRules) -> Reply {
             include_site: Some(host.to_owned()),
             ..Default::default()
         })
-    } else if !m.links.is_empty() {
-        let links: Vec<String> = m
-            .links
-            .iter()
-            .filter(|l| downloadable(l))
-            .cloned()
-            .collect();
-        if links.is_empty() {
-            return Reply::failed("refused", "no link MDM downloads");
+    } else if !m.links.is_empty() || m.links_part.is_some() {
+        match links_command(&m) {
+            Ok(cmd) => Some(cmd),
+            Err((why, error)) => return Reply::failed(why, error),
         }
-        Some(mdm_ipc::Command {
-            links,
-            referer: m.referrer.clone().filter(|r| !r.is_empty()),
-            cookies: m.cookies.clone().filter(|c| !c.is_empty()),
-            user_agent: m.user_agent.clone(),
-            private: m.private,
-            ..Default::default()
-        })
     } else if m.video {
         match video_command(&m, rules, browser) {
             Ok(cmd) => Some(cmd),
@@ -2602,6 +2625,90 @@ mod tests {
             matches!(read_message(&mut r).unwrap(), Some(Ok(_))),
             "the next one reads"
         );
+    }
+
+    /// A message exactly as large as the host takes is read; one byte more is refused (the
+    /// extension's parts of a page's links are cut to fit this, background.js `MESSAGE_MAX`).
+    #[test]
+    fn a_message_at_the_limit_is_read() {
+        for (len, taken) in [
+            (mdm_ipc::MAX_MESSAGE, true),
+            (mdm_ipc::MAX_MESSAGE + 1, false),
+        ] {
+            let mut input = (len as u32).to_le_bytes().to_vec();
+            input.extend(vec![b' '; len]);
+            let mut r = &input[..];
+            let got = read_message(&mut r).unwrap().unwrap();
+            assert_eq!(got.is_ok(), taken, "{len} bytes");
+        }
+    }
+
+    /// A page's links: a whole list as before (an older extension's, or a short one), and a
+    /// long one's parts, each handed over with its place and the page's referrer and cookies,
+    /// even a part with nothing MDM downloads (the app waits for every part). A part that
+    /// doesn't add up is refused.
+    #[test]
+    fn a_pages_links_in_parts_reach_the_app_as_parts() {
+        let whole: Message = serde_json::from_str(
+            r#"{"links":["https://x.test/a.zip","mailto:a@b","ftp://x.test/b.iso"],"referrer":"https://x.test/files/","cookies":"sid=1","private":false,"userAgent":"UA","v":"0.5.2"}"#,
+        )
+        .unwrap();
+        let cmd = links_command(&whole).ok().unwrap();
+        assert_eq!(cmd.links, ["https://x.test/a.zip", "ftp://x.test/b.iso"]);
+        assert_eq!(cmd.links_part, None);
+        assert_eq!(
+            (cmd.referer.as_deref(), cmd.cookies.as_deref()),
+            (Some("https://x.test/files/"), Some("sid=1"))
+        );
+        let part: Message = serde_json::from_str(
+            r#"{"links":["https://x.test/c.zip"],"linksPart":{"batch":"6f1c2a9e-5b7d","index":1,"count":3},"referrer":"https://x.test/files/","cookies":"sid=1","private":true}"#,
+        )
+        .unwrap();
+        let cmd = links_command(&part).ok().unwrap();
+        assert_eq!(cmd.links, ["https://x.test/c.zip"]);
+        assert_eq!(
+            cmd.links_part,
+            Some(mdm_ipc::LinksPart {
+                batch: "6f1c2a9e-5b7d".into(),
+                index: 1,
+                count: 3
+            })
+        );
+        assert!(cmd.private && cmd.referer.is_some() && cmd.cookies.is_some());
+        // Nothing MDM downloads in it: still handed over, to complete the list.
+        let none = Message {
+            links: vec!["mailto:a@b".into()],
+            links_part: Some(mdm_ipc::LinksPart {
+                batch: "b".into(),
+                index: 2,
+                count: 3,
+            }),
+            ..Default::default()
+        };
+        let cmd = links_command(&none).ok().unwrap();
+        assert!(cmd.links.is_empty() && cmd.links_part.is_some());
+        // A whole list with nothing MDM downloads is refused, as before.
+        let r = links_command(&Message {
+            links: vec!["mailto:a@b".into()],
+            ..Default::default()
+        })
+        .err()
+        .unwrap();
+        assert_eq!(r.0, "refused");
+        // A part out of its list, or of too many.
+        for (index, count) in [(3, 3), (0, 0), (0, mdm_ipc::MAX_LINK_PARTS + 1)] {
+            let bad = Message {
+                links: vec!["https://x.test/a.zip".into()],
+                links_part: Some(mdm_ipc::LinksPart {
+                    batch: "b".into(),
+                    index,
+                    count,
+                }),
+                ..Default::default()
+            };
+            let r = links_command(&bad).err().unwrap();
+            assert_eq!(r.0, "refused", "{index} of {count}");
+        }
     }
 
     /// The extension's cookies with their domains, as `cookies.getAll` names them (its other

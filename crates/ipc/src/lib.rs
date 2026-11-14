@@ -143,6 +143,11 @@ pub struct Command {
     /// From the browser's right-click menu: the links of a page or a selection, offered in the
     /// list window to pick from (the browser's `referer` and `cookies` go with them).
     pub links: Vec<String>,
+    /// With `links`: which part of a page's list they are, when the list was too long for one
+    /// message from the browser ([`MAX_MESSAGE`]); the app adds the list once all its parts are
+    /// in. None: the whole list (an older extension's, or a short one).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links_part: Option<LinksPart>,
     /// From the browser's toolbar button: leave this site's downloads (a host name) to the
     /// browser from now on (Options → File types → excluded sites).
     pub exclude_site: Option<String>,
@@ -150,6 +155,38 @@ pub struct Command {
     /// sites again (a pattern of the user's own that covers it stays).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_site: Option<String>,
+}
+
+/// The most parts a page's links come in ([`LinksPart`]): 256 messages of up to 1 MB each.
+pub const MAX_LINK_PARTS: u32 = 256;
+
+/// One part of a page's links ([`Command::links_part`]): the browser's extension sends a list
+/// longer than the native host takes at once ([`MAX_MESSAGE`]) in parts, each with the page's
+/// referrer and cookies, and the app puts them back together into one list.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(default)]
+pub struct LinksPart {
+    /// The same in every part of one list, and in no other list's (random, made by the
+    /// extension): letters, digits and `-`, at most 64.
+    pub batch: String,
+    /// This part's place in the list, from 0.
+    pub index: u32,
+    /// How many parts the list came in (at most [`MAX_LINK_PARTS`]).
+    pub count: u32,
+}
+
+impl LinksPart {
+    /// A part the app can place: a batch name it takes, and a place among at most
+    /// [`MAX_LINK_PARTS`] parts.
+    pub fn valid(&self) -> bool {
+        (1..=64).contains(&self.batch.len())
+            && self
+                .batch
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+            && (1..=MAX_LINK_PARTS).contains(&self.count)
+            && self.index < self.count
+    }
 }
 
 /// One cookie as the browser keeps it (`cookies.getAll`'s fields, under the extension's names
@@ -636,7 +673,9 @@ fn same_secret(a: &str, b: &str) -> bool {
 }
 
 /// The largest message the browser's native host takes from the extension (a download with
-/// its cookies and a form's body); a request line carrying one, escaped, fits `MAX_REQUEST`.
+/// its cookies and a form's body; a page's links longer than this come in parts under it,
+/// [`LinksPart`], as `MESSAGE_MAX` in extension/background.js); a request line carrying one,
+/// escaped, fits `MAX_REQUEST`.
 pub const MAX_MESSAGE: usize = 1 << 20;
 /// Largest request line accepted, and the time a client gets to send it.
 const MAX_REQUEST: usize = 2 * MAX_MESSAGE + 4096;
@@ -988,6 +1027,48 @@ mod tests {
         drop(rx);
         let pick = b"{\"token\":\"secret\",\"video_pick\":{\"token\":\"abc\",\"choice\":0}}\n";
         assert_eq!(exchange(port, pick), "gone\n");
+    }
+
+    /// A page's links in parts: what a part may say, and that it travels the channel whole.
+    #[test]
+    fn link_parts_are_checked() {
+        let part = |batch: &str, index, count| LinksPart {
+            batch: batch.into(),
+            index,
+            count,
+        };
+        assert!(part("6f1c2a9e-5b7d-4c3e-8a1f-0d2b4e6c8a9b", 0, 1).valid());
+        assert!(part("b", MAX_LINK_PARTS - 1, MAX_LINK_PARTS).valid());
+        for bad in [
+            part("", 0, 1),
+            part(&"x".repeat(65), 0, 1),
+            part("a b", 0, 1),
+            part("a/b", 0, 1),
+            part("b", 0, 0),
+            part("b", 2, 2),
+            part("b", 0, MAX_LINK_PARTS + 1),
+        ] {
+            assert!(!bad.valid(), "{bad:?}");
+        }
+        let cmd = Command {
+            links: vec!["https://x.test/a.zip".into()],
+            links_part: Some(part("b", 1, 3)),
+            ..Default::default()
+        };
+        let line = serde_json::to_string(&Envelope {
+            token: "t".into(),
+            cmd,
+        })
+        .unwrap();
+        let back = serde_json::from_str::<Envelope>(&line).unwrap().cmd;
+        assert_eq!(back.links_part, Some(part("b", 1, 3)));
+        // A whole list (an older host's) says nothing of parts.
+        let whole = serde_json::to_string(&Command {
+            links: vec!["https://x.test/a.zip".into()],
+            ..Default::default()
+        })
+        .unwrap();
+        assert!(!whole.contains("links_part"), "{whole}");
     }
 
     #[test]

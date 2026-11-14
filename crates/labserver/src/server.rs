@@ -758,6 +758,12 @@ GET /rss/dir.xml   the .torrent files in --rss-dir, newest first, linked to /rss
 PAGES  for the browser extension's tests (tools/extension/e2e.mjs); styles and scripts are files
 GET /page?<any of>
     link=PATH      <a id=link href=PATH>download</a>; again for more (#link2, #link3...)
+    files=N        N more links (up to 200000) in <ul id=files>, after <p id=blank>, a line without
+                   a link: to /gen/1K files, as a big page gives Link grabber: two in five a split
+                   archive's volumes (setK.part1.rar, setK.part2.rar), the others fileK.zip,
+                   clipK.mp4, docK.pdf
+    pathlen=L      with files: /gen/1K/<folder>/fileK.zip?seed=K instead, each path L characters
+                   long, its folder's name made that long
     video=PATH|1   <video id=video controls> 640x360 (1: /gen/1M/clip.mp4?inline=1, also shown
                    when nothing else is asked for, or with muted_loop, iframe or shadow)
     w=PX h=PX      the videos' size
@@ -767,9 +773,6 @@ GET /page?<any of>
     iframe=1       the video inside <iframe id=frame> (a /page of its own)
     shadow=1       the video inside the open shadow root of <div id=host> (declarative)
     several=N      N more videos #video1..N, each with its own <source> /gen/1M/clipK.mp4?seed=K
-    files=N        N links (at most 50000) to /gen/1K files, as a big page gives Link grabber:
-                   two in five a split archive's volumes (setK.part1.rar, setK.part2.rar), the
-                   others fileK.zip, clipK.mp4, docK.pdf
     audio=PATH|1   <audio id=audio controls> (1: /gen/512K/sound.mp3?inline=1)
     hls=1, dash=1, drm=1   a <video> and /assets/stream.js for each (#player, then #player2,
                    #player3), which fetches /hls/master.m3u8, /dash/manifest.mpd or

@@ -55,6 +55,13 @@ function hostProblem(error) {
   return "host-failed";
 }
 
+// `message` as it goes to the host: with the browser and the extension's version.
+async function stamped(message) {
+  const app = await APP_NAME;
+  const brands = app ? [...BRANDS, app] : BRANDS;
+  return { ...message, userAgent: navigator.userAgent, brands, v: VERSION };
+}
+
 // Every message says which browser and extension version it comes from (the app keeps each
 // browser's status, and the rules depend on the browser). Never throws: failures come back as
 // `{ok: false, why}`.
@@ -64,9 +71,7 @@ async function native(message, ms = HOST_WAIT) {
     const target = await remoteTarget();
     if (target) return remoteSend(target, message);
   }
-  const app = await APP_NAME;
-  const brands = app ? [...BRANDS, app] : BRANDS;
-  const sent = { ...message, userAgent: navigator.userAgent, brands, v: VERSION };
+  const sent = await stamped(message);
   try {
     const reply = (await withTimeout(ext.runtime.sendNativeMessage(HOST, sent), ms)) || {};
     if (reply.version) {
@@ -2153,6 +2158,86 @@ function pageLinks(selectedOnly) {
   return links;
 }
 
+// ---- a page's links, in parts ------------------------------------------------------------
+
+// The most the host takes in one message, as the browser writes it (crates/ipc MAX_MESSAGE). A
+// page's links past it (a folder's listing of 20,000 files) go in parts under it, each with the
+// page's referrer and cookies, and MDM puts them back together into one list for Link grabber.
+const MESSAGE_MAX = 1 << 20;
+// The most parts one list goes in (crates/ipc MAX_LINK_PARTS).
+const PARTS_MAX = 256;
+
+// The most bytes `value` takes as JSON in the message the browser writes to the host: Firefox
+// writes JSON.stringify's text in UTF-8; Chromium also writes < as \u003C, and DEL and the line
+// and paragraph separators (U+2028, U+2029) escaped; Safari's helper (tools/safari) writes / as
+// \/. Counted at the most any of them writes, so a part measured within MESSAGE_MAX is within it
+// in every browser.
+function wireSize(value) {
+  const json = JSON.stringify(value);
+  let n = 0;
+  for (let i = 0; i < json.length; i++) {
+    const c = json.charCodeAt(i);
+    if (c === 0x3c || c === 0x7f) n += 6;
+    else if (c === 0x2f) n += 2;
+    else if (c < 0x80) n += 1;
+    else if (c < 0x800) n += 2;
+    // Each half of a surrogate pair: 4 bytes the pair (JSON.stringify escapes a lone one).
+    else if (c >= 0xd800 && c <= 0xdfff) n += 2;
+    else if (c === 0x2028 || c === 0x2029) n += 6;
+    else n += 3;
+  }
+  return n;
+}
+
+// `links` cut into parts, in order, each of whose messages (`base` with its links) is at most
+// `limit` bytes (wireSize). `left`: the links too long to go even alone, left out.
+function linkParts(base, links, limit = MESSAGE_MAX) {
+  const empty = wireSize({ ...base, links: [] });
+  const parts = [];
+  const left = [];
+  let part = [];
+  let size = empty;
+  for (const link of links) {
+    const own = wireSize(link);
+    if (empty + own > limit) {
+      left.push(link);
+      continue;
+    }
+    // With the comma before it, after the part's first link.
+    if (part.length && size + 1 + own > limit) {
+      parts.push(part);
+      part = [];
+      size = empty;
+    }
+    size += own + (part.length ? 1 : 0);
+    part.push(link);
+  }
+  if (part.length) parts.push(part);
+  return { parts, left };
+}
+
+// A page's links (`message.links`, with its referrer, cookies and window) to the app: in one
+// message when they fit, as before; else in parts, one after the other, each answered before the
+// next goes. An answer that isn't ok stops it (the app drops a list it didn't get whole) and is
+// the answer. `left`: how many links were too long to send at all (#too-large says so).
+async function sendLinks(message) {
+  const sent = await stamped(message);
+  if (wireSize(sent) <= MESSAGE_MAX) return native(message);
+  const batch = globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  // Measured with the widest place a part can have.
+  const { parts, left } = linkParts({ ...sent, linksPart: { batch, index: PARTS_MAX, count: PARTS_MAX } }, message.links);
+  if (!parts.length || parts.length > PARTS_MAX) {
+    // The page's cookies alone fill a message, or the list is beyond any page's.
+    await noteStatus("too-large");
+    return { ok: false, why: "too-large", error: `${message.links.length} links in ${parts.length} parts` };
+  }
+  for (const [index, links] of parts.entries()) {
+    const reply = await native({ ...message, links, linksPart: { batch, index, count: parts.length } });
+    if (!reply.ok) return reply;
+  }
+  return { ok: true, parts: parts.length, left: left.length };
+}
+
 // When the user asked and it couldn't be done: the help page's section opens beside (a link
 // MDM refused has none of its own: the connection's).
 const SECTIONS = ["not-installed", "forbidden", "not-running", "host-failed", "too-large", "update-app", "options"];
@@ -2161,7 +2246,9 @@ function explain(why) {
   ext.tabs.create({ url: `${HELP}#${at}` }).catch(() => {});
 }
 
-ext.contextMenus.onClicked.addListener(async (info, tab) => {
+// The right-click menu's items, clicked (named: tools/extension/e2e.mjs calls it in Chromium,
+// whose menus a headless browser can't open).
+async function menuClicked(info, tab) {
   const incognito = Boolean(tab && tab.incognito);
   const storeId = tab && tab.cookieStoreId;
   if (info.menuItemId === "mdm-link") {
@@ -2219,10 +2306,12 @@ ext.contextMenus.onClicked.addListener(async (info, tab) => {
       // A page extensions may not read (the browser's own, a store).
     }
     if (!links.length) return;
-    const reply = await native({ links, referrer: info.pageUrl, cookies: await cookieHeader(info.pageUrl, { incognito, storeId }), private: incognito });
-    if (!reply.ok) explain(reply.why);
+    const reply = await sendLinks({ links, referrer: info.pageUrl, cookies: await cookieHeader(info.pageUrl, { incognito, storeId }), private: incognito });
+    // Sent, but a link longer than a whole message was left out: the help page says so.
+    if (!reply.ok || reply.left) explain(reply.ok ? "too-large" : reply.why);
   }
-});
+}
+ext.contextMenus.onClicked.addListener(menuClicked);
 
 // ---- install, start, the toolbar popup ------------------------------------------------------
 

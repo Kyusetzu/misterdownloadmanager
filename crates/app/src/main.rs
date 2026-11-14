@@ -34,6 +34,7 @@ mod i18n;
 mod icons;
 mod langpick;
 mod launch;
+mod linkparts;
 mod list;
 mod lookwatch;
 mod model;

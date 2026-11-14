@@ -919,6 +919,8 @@ pub struct App {
     /// Link grabber (#37): links from the browser, Tasks → Import, drops and pastes, in
     /// packages to tick before adding.
     grabber: Option<crate::grabber::Grabber>,
+    /// A page's links from the browser that came in parts, until the last one is in.
+    link_parts: crate::linkparts::LinkParts,
     /// When `follow_assistive_technology` last asked (#131).
     assistive_checked: Option<Instant>,
     /// Archives extracted when their download completes (#37).
@@ -1635,6 +1637,7 @@ impl App {
             category_dlg: None,
             category_for_file_info: false,
             grabber: None,
+            link_parts: Default::default(),
             assistive_checked: None,
             extracts: Default::default(),
             queue_pick: None,
@@ -2947,6 +2950,22 @@ impl App {
             self.select_download_of(address);
             return;
         }
+        // The browser's right-click menu's links: a long list comes in parts (the browser hands
+        // over 1 MB a message), kept until the last is in, then shown as one list.
+        let cmd = if cmd.links_part.is_some() {
+            match self.link_parts.add(cmd, Instant::now()) {
+                crate::linkparts::Placed::Whole(whole) if !whole.links.is_empty() => *whole,
+                crate::linkparts::Placed::Waiting { got, count } => {
+                    tracing::debug!(
+                        "browser integration: {got} of {count} parts of a page's links"
+                    );
+                    return;
+                }
+                _ => return,
+            }
+        } else {
+            cmd
+        };
         // The browser's right-click menu: a page's (or a selection's) links, to tick in Import.
         if !cmd.links.is_empty() {
             self.show_for_dialog(ctx);

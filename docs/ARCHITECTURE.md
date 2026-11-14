@@ -155,6 +155,13 @@ The extension asks the host which file types to take, checks each download again
 cancels the browser's download only after the app has accepted it; otherwise the browser keeps
 it, and the extension says why.
 
+A message to the host is at most 1 MB (`mdm_ipc::MAX_MESSAGE`; the host refuses more, and the
+browser lets a host answer no more than that either). A page's links past it go in parts, each
+measured as the widest browser writes it (`wireSize` in `background.js`) and carrying the page's
+referrer and cookies and its place (`mdm_ipc::LinksPart`); the host hands each over as it comes,
+and the app keeps them (`linkparts.rs`) until the last is in, then opens Link grabber with the
+whole list.
+
 The host serves only MDM's own extension. Its IDs are in one place, `mdm_ipc::extension`
 (`crates/ipc/src/extension.rs`): the unpacked copy's (`UNPACKED_ID`, from the manifest's public
 key), the Chrome Web Store's (`STORE_ID`, signed with the store's own key: `pack.ps1` leaves the
