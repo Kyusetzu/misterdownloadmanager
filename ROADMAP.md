@@ -560,6 +560,9 @@ Bug fixes from the first days of 0.5.0, a Safari extension, and more file types.
 
 These ship in the next version.
 
+- ✅ Linux: no crash when fontconfig offers a font MDM can't draw with (an old bitmap font for
+  Japanese): the best font that scales and MDM can read is used instead
+  ([#931](https://github.com/anefzaoui/misterdownloadmanager/issues/931))
 - ✅ Bangla reviewed by a native speaker: the main window, the list, the progress window, the
   dialogs and the tray, with the menus' letters on English letters
   ([#927](https://github.com/anefzaoui/misterdownloadmanager/pull/927))
@@ -630,6 +633,9 @@ These ship in the next version.
 - ✅ A video of unknown size no longer reads 99.9 % from its first second while yt-dlp downloads it,
   and a video named after a page titled with its file's name gets its extension once (Dropbox's
   `Episode 31.mp4.mp4`) ([#622](https://github.com/anefzaoui/misterdownloadmanager/issues/622))
+- ✅ Tests: the crash reports' end-to-end tests find their crashing example where Rust 1.100's
+  Cargo builds the tests (in its build folder, no longer in deps/), as well as where earlier ones
+  did ([#934](https://github.com/anefzaoui/misterdownloadmanager/issues/934))
 - ✅ Where a download's server is: shown once the server answered, its address and round trip
   together, not a round trip alone (twice too long over https) while a slow server answers; it
   also made a test fail now and then on Linux

@@ -34,6 +34,7 @@ eframe.workspace = true
 egui.workspace = true
 egui-winit.workspace = true
 egui_extras.workspace = true
+skrifa.workspace = true
 image.workspace = true
 craft-i18n.workspace = true
 # misterdownloadmanager-cli's commands: its launcher runs this program for them (main.rs).
