@@ -4739,6 +4739,10 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	የጣቢያው የቦት ፍተሻ (Cloudflare) yt-dlpን አልተቀበለም። ገጹ በአሳሽዎ ውስጥ ከተከፈተ፣ ያንን አሳሽ በቅንብሮች → የጣቢያ መግቢያዎች → ኩኪዎች ለቪዲዮ ጣቢያዎች ይምረጡ እና ገጹን እንደገና ይፈልጉ፣ ወይም በቪዲዮው ላይ ያለውን የቪዲዮ አውርድ አዝራር ይጠቀሙ።
+#. text in the Download video window
+#. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+#, machine
+	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	የጣቢያው ሰርተፍኬት በyt-dlpም ሆነ በዚህ ኮምፒውተር አይታመንም፦ የጸረ-ቫይረስ ድር ማጣሪያ ወይም HTTPS የሚያነብ ፕሮክሲ እንቅፋት ሊሆን ይችላል። የHTTPS ቅኝቱን ያጥፉት፣ ወይም ሰርተፍኬቱን ወደ ኮምፒውተሩ ያክሉ፣ ከዚያ ገጹን እንደገና ይፈልጉ።
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine

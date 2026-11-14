@@ -4739,6 +4739,10 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	साइटच्या बॉट तपासणीने (Cloudflare) yt-dlp ला प्रवेश नाकारला. पृष्ठ तुमच्या ब्राउझरमध्ये उघडत असल्यास, पर्याय → साइट लॉगिन → व्हिडिओ साइट्ससाठी कुकीजमध्ये तो ब्राउझर निवडा आणि पृष्ठ पुन्हा शोधा किंवा व्हिडिओवरील डाउनलोड व्हिडिओ बटण वापरा.
+#. text in the Download video window
+#. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+#, machine
+	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	साइटचे प्रमाणपत्र yt-dlp किंवा या संगणकाद्वारे विश्वसनीय नाही: अँटीव्हायरसचा वेब फिल्टर किंवा HTTPS वाचणारा प्रॉक्सी अडथळा आणत असेल. त्याचे HTTPS स्कॅनिंग बंद करा, किंवा त्याचे प्रमाणपत्र संगणकात जोडा, नंतर पृष्ठ पुन्हा शोधा.
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine

@@ -212,6 +212,41 @@ fn limits_stop_a_bomb() {
     no_staging(&dest);
 }
 
+/// An entry whose name isn't safe is left out but still decompressed, so it counts against the
+/// same limit: naming a bomb `../b1` doesn't make it free.
+#[test]
+fn limits_stop_a_bomb_behind_an_unsafe_name() {
+    let t = tempfile::tempdir().unwrap();
+    let a = t.path().join("evil-big.zip");
+    let zeros = vec![0u8; 3 << 20];
+    zip_of(&a, &[("../b1", &zeros), ("../b2", &zeros)], None);
+    let dest = t.path().join("out");
+    let mut on_file = |_: &Path| {};
+    let mut policy = Policy {
+        dest: dest.clone(),
+        subfolder: Subfolder::Never,
+        password: None,
+        limits: Limits {
+            total: 4 << 20,
+            entries: 100,
+            depth: 8,
+        },
+        tool: None,
+        hatchzip: None,
+        in_place: false,
+        runs: None,
+        on_file: &mut on_file,
+        cancel: None,
+    };
+    // Six megabytes read, four allowed: stopped mid-entry.
+    assert!(matches!(
+        extract(&a, &mut policy),
+        Err(Error::TooBig { .. })
+    ));
+    assert!(!t.path().join("b1").exists() && !t.path().join("b2").exists());
+    no_staging(&dest);
+}
+
 /// 7-Zip's own archives (`7z a`): plain, encrypted, or split in 100 KB volumes.
 fn seven_of(tool: &Path, src: &Path, archive: &Path, extra: &[&str]) {
     let ok = std::process::Command::new(tool)

@@ -1503,6 +1503,9 @@ pub(crate) fn lookup_error(
             // i18n: the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
             "The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video."
         }
+    } else if mdm_tools::proc::untrusted_certificate(e) {
+        // i18n: the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+        "The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again."
     } else if lower.contains("drm") {
         // i18n: the Download video window: the page's video is copy-protected
         "This video is protected (DRM): no tool can save it."
@@ -1618,6 +1621,17 @@ mod tests {
             lookup_error("yt-dlp failed: Video unavailable", false, None),
             "yt-dlp failed: Video unavailable"
         );
+    }
+
+    /// #955: a certificate trusted neither by yt-dlp nor by the computer (asked again with its
+    /// certificates) says what reads HTTPS on the way; an expired one stays yt-dlp's own words.
+    #[test]
+    fn an_untrusted_certificate_says_what_may_be_in_the_way() {
+        let untrusted = "yt-dlp failed: [youtube] X6ek6j1gTQA: Unable to download API page: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1085) (caused by CertificateVerifyError('[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1085)'))";
+        let said = lookup_error(untrusted, false, None);
+        assert!(said.contains("antivirus's web filter"), "{said}");
+        let expired = "yt-dlp failed: [generic] Unable to download webpage: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1006)";
+        assert_eq!(lookup_error(expired, false, None), expired);
     }
 
     /// #229: yt-dlp's refusals and its trouble with a browser's cookies, in MDM's words, saying

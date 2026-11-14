@@ -4734,6 +4734,10 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Kiểm tra bot của trang web (Cloudflare) đã từ chối yt-dlp. Nếu trang mở trong trình duyệt của bạn, hãy chọn trình duyệt đó trong Tùy chọn → Đăng nhập trang web → Cookie cho các trang video và tìm lại trang, hoặc sử dụng nút Tải xuống video trên video.
+#. text in the Download video window
+#. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+#, machine
+	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Chứng chỉ của trang web không được tin cậy, cả bởi yt-dlp lẫn máy tính này: bộ lọc web của phần mềm diệt vi-rút hoặc proxy đọc HTTPS có thể đang chặn. Hãy tắt tính năng quét HTTPS của nó, hoặc thêm chứng chỉ của nó vào máy tính, sau đó tra cứu lại trang.
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine

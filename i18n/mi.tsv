@@ -4739,6 +4739,10 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	I whakahē te tirotiro karetao a te pae (Cloudflare) i a yt-dlp. Mēnā ka tuwhera te whārangi i tō pūtirotiro, kōwhiria taua pūtirotiro i Ngā Kōwhiringa → Ngā Takiuru Pae → Ngā Pihikete mō ngā pae ataata ka rapu anō i te whārangi, whakamahia rānei te pātene Tikiake ataata i runga i te ataata.
+#. text in the Download video window
+#. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+#, machine
+	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Kāore i whakawhirinakihia te tiwhikete o te pae, e yt-dlp, e tēnei rorohiko rānei: tērā pea kei te ara te tātari tukutuku o tētahi pūmanawa wheori, tētahi takawaenga rānei e pānui ana i ngā hononga haumaru (HTTPS). Whakawetohia tana matawai HTTPS, tāpirihia rānei tana tiwhikete ki tō te rorohiko, kātahi ka rapu anō i te whārangi.
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine

@@ -8,6 +8,7 @@ use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -186,6 +187,8 @@ pub struct LookedUp {
 /// (it looks for Deno alone) every video is dropped: "Requested format is not available". The
 /// same page without the cookies lists its qualities, so a look-up that fails this way and had
 /// cookies is made once more without them; if that fails too, the first error is the one told.
+/// A look-up whose secure connection failed for a certificate yt-dlp doesn't trust is made once
+/// more with the system's certificates ([`with_system_certs`], #955).
 pub fn look_up(
     exe: &Path,
     ours: &[String],
@@ -197,7 +200,7 @@ pub fn look_up(
         output_warned(ytdlp(exe, &[], args, url)?, "yt-dlp", timeout)
             .map(|(json, warnings)| (crate::resolve::typed_scripts(json), warnings))
     };
-    match run(ours) {
+    match with_system_certs(&SYSTEM_CERTS, || run(ours)) {
         Ok((json, warnings)) => Ok(LookedUp {
             json,
             without_cookies: false,
@@ -217,6 +220,60 @@ pub fn look_up(
             }
         }
         Err(e) => Err(e),
+    }
+}
+
+/// yt-dlp checks the sites' certificates with the system's (`--compat-options no-certifi`)
+/// rather than its own list, Mozilla's (#955). Set once a look-up needed it: every later run of
+/// yt-dlp (the download, a fresh address, a playlist) needs it too.
+static SYSTEM_CERTS: AtomicBool = AtomicBool::new(false);
+
+/// yt-dlp's arguments for the certificates it checks sites with: its own list (Mozilla's, from
+/// Python's `certifi`), or the system's (`system`). The system's is what MDM's own connections
+/// and the browsers trust (rustls-platform-verifier, #668): there an antivirus's web filter or a
+/// proxy that reads HTTPS adds the certificate it signs sites with, and yt-dlp's own list,
+/// without it, said `CERTIFICATE_VERIFY_FAILED` for every page the browser opened (#955). Not
+/// the default: Windows fetches a root certificate the first time a connection needs it, so its
+/// store can lack one Mozilla's list has.
+fn cert_args(system: bool) -> &'static [&'static str] {
+    if system {
+        &["--compat-options", "no-certifi"]
+    } else {
+        &[]
+    }
+}
+
+/// Did yt-dlp fail for a certificate it doesn't trust (Python's `ssl` words, in yt-dlp's
+/// message)? An expired or another site's certificate says so in other words.
+pub fn untrusted_certificate(message: &str) -> bool {
+    message.contains("CERTIFICATE_VERIFY_FAILED")
+        && (message.contains("unable to get local issuer certificate")
+            || message.contains("self-signed certificate in certificate chain")
+            || message.contains("self signed certificate in certificate chain"))
+}
+
+/// `run` a yt-dlp run; when it failed for a certificate its own list doesn't trust, once more
+/// with the system's (`system`, [`cert_args`]), kept for the runs after when that worked. A
+/// second refusal of the certificate goes back to yt-dlp's own list and tells the first error;
+/// another failure is the new run's (the certificate was fine).
+fn with_system_certs<T>(
+    system: &AtomicBool,
+    mut run: impl FnMut() -> Result<T, ProcError>,
+) -> Result<T, ProcError> {
+    let first = match run() {
+        Err(e) if !system.load(Ordering::Relaxed) && untrusted_certificate(&e.to_string()) => e,
+        done => return done,
+    };
+    tracing::info!(
+        "yt-dlp didn't trust the site's certificate: asking with the system's ({first})"
+    );
+    system.store(true, Ordering::Relaxed);
+    match run() {
+        Err(e) if untrusted_certificate(&e.to_string()) => {
+            system.store(false, Ordering::Relaxed);
+            Err(first)
+        }
+        done => done,
     }
 }
 
@@ -927,6 +984,7 @@ pub fn ytdlp(
     layers(&mut cmd, user, ours)?;
     cmd.args(["--ignore-config", "--no-exec", "--no-update"]);
     cmd.args(js_runtime_args());
+    cmd.args(cert_args(SYSTEM_CERTS.load(Ordering::Relaxed)));
     cmd.args(UTF8);
     cmd.args(route);
     cmd.arg("--");
@@ -947,6 +1005,7 @@ pub fn ytdlp_info(
     layers(&mut cmd, user, ours)?;
     cmd.args(["--ignore-config", "--no-exec", "--no-update"]);
     cmd.args(js_runtime_args());
+    cmd.args(cert_args(SYSTEM_CERTS.load(Ordering::Relaxed)));
     cmd.args(UTF8);
     cmd.args(route);
     cmd.arg("--load-info-json");
@@ -1833,6 +1892,91 @@ foreach ($d in $env:PATH.Split(';')) {
             ),
             "Video unavailable"
         );
+    }
+
+    /// #955: yt-dlp's words for a certificate its own list doesn't trust (an antivirus or a
+    /// proxy that reads HTTPS), as the reporter's yt-dlp 2026.10.26 said them on Windows.
+    const UNTRUSTED: &str = "[youtube] X6ek6j1gTQA: Unable to download API page: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1085) (caused by CertificateVerifyError('[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1085)')); please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U";
+
+    fn failed(message: &str) -> ProcError {
+        ProcError::Failed {
+            tool: "yt-dlp".into(),
+            message: message.into(),
+        }
+    }
+
+    #[test]
+    fn an_untrusted_certificate_is_told_apart() {
+        assert!(untrusted_certificate(UNTRUSTED));
+        assert!(untrusted_certificate(
+            "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1006)"
+        ));
+        // The system's certificates wouldn't help: an expired one, another site's.
+        assert!(!untrusted_certificate(
+            "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1006)"
+        ));
+        assert!(!untrusted_certificate(
+            "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'x'. (_ssl.c:1006)"
+        ));
+        assert!(!untrusted_certificate(
+            "Sign in to confirm you're not a bot."
+        ));
+        assert_eq!(cert_args(false), &[] as &[&str]);
+        assert_eq!(cert_args(true), ["--compat-options", "no-certifi"]);
+    }
+
+    /// The reporter's computer: an antivirus or a proxy signs the sites, and only the system has
+    /// its certificate. yt-dlp's own list refuses; once more with the system's works, and the
+    /// runs after (the download, a fresh address) keep it.
+    #[test]
+    fn a_certificate_yt_dlp_refuses_is_asked_with_the_systems() {
+        let system = AtomicBool::new(false);
+        let mut runs = Vec::new();
+        let mut run = || {
+            let with_system = system.load(Ordering::Relaxed);
+            runs.push(with_system);
+            if with_system {
+                Ok("json")
+            } else {
+                Err(failed(UNTRUSTED))
+            }
+        };
+        assert_eq!(with_system_certs(&system, &mut run).unwrap(), "json");
+        assert_eq!(with_system_certs(&system, &mut run).unwrap(), "json");
+        assert_eq!(runs, [false, true, true]);
+        assert!(system.load(Ordering::Relaxed));
+    }
+
+    /// The system doesn't trust it either: back to yt-dlp's own list, and the first error is
+    /// told. Another failure isn't a certificate's: no second run.
+    #[test]
+    fn a_certificate_nobody_trusts_goes_back_to_yt_dlps_list() {
+        let system = AtomicBool::new(false);
+        let mut runs = 0;
+        let e = with_system_certs(&system, || -> Result<(), _> {
+            runs += 1;
+            Err(failed(&format!("{UNTRUSTED} ({runs})")))
+        })
+        .unwrap_err();
+        assert_eq!(runs, 2);
+        assert!(e.to_string().ends_with("(1)"), "{e}");
+        assert!(!system.load(Ordering::Relaxed));
+        let mut runs = 0;
+        let e = with_system_certs(&system, || -> Result<(), _> {
+            runs += 1;
+            Err(failed("Video unavailable"))
+        })
+        .unwrap_err();
+        assert_eq!(runs, 1);
+        assert!(e.to_string().contains("Video unavailable"), "{e}");
+        // With the system's already: a refusal isn't asked again.
+        system.store(true, Ordering::Relaxed);
+        let mut runs = 0;
+        let _ = with_system_certs(&system, || -> Result<(), _> {
+            runs += 1;
+            Err(failed(UNTRUSTED))
+        });
+        assert_eq!(runs, 1);
     }
 
     #[test]

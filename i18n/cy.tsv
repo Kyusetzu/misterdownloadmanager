@@ -4739,6 +4739,10 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Gwrthododd gwiriad bot y safle (Cloudflare) yt-dlp. Os yw'r dudalen yn agor yn eich porwr, dewiswch y porwr hwnnw yn Opsiynau → Mewngofnodi Safleoedd → Cwcis ar gyfer safleoedd fideo ac edrychwch ar y dudalen eto, neu defnyddiwch y botwm Lawrlwytho fideo dros y fideo.
+#. text in the Download video window
+#. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+#, machine
+	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Nid yw yt-dlp na'r cyfrifiadur hwn yn ymddiried yn nhystysgrif y safle: gall hidlydd gwe gwrthfeirws neu ddirprwy sy'n darllen cysylltiadau HTTPS fod yn y ffordd. Diffoddwch sganio HTTPS, neu ychwanegwch ei dystysgrif at storfa dystysgrifau'r cyfrifiadur, yna edrychwch ar y dudalen eto.
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine

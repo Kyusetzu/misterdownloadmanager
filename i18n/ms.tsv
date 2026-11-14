@@ -4739,6 +4739,10 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Semakan bot tapak (Cloudflare) menolak yt-dlp. Jika halaman dibuka dalam pelayar anda, pilih pelayar itu dalam Pilihan → Log Masuk Tapak → Kuki untuk tapak video dan cari halaman itu lagi, atau gunakan butang Muat turun video di atas video.
+#. text in the Download video window
+#. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+#, machine
+	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Sijil laman tidak dipercayai, oleh yt-dlp mahupun oleh komputer ini: penapis web antivirus atau proksi yang membaca HTTPS mungkin menghalang. Matikan pengimbasan HTTPSnya, atau tambah sijilnya pada komputer, kemudian cari halaman itu semula.
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine

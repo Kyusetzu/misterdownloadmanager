@@ -4739,6 +4739,10 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	தளத்தின் போட் சரிபார்ப்பு (Cloudflare) yt-dlp ஐ மறுத்துவிட்டது. பக்கம் உங்கள் உலாவியில் திறந்தால், விருப்பத்தேர்வுகள் → தள உள்நுழைவுகள் → வீடியோ தளங்களுக்கான குக்கீகள் என்பதில் அந்த உலாவியைத் தேர்ந்தெடுத்து, பக்கத்தை மீண்டும் பார்க்கவும் அல்லது வீடியோவின் மேல் பதிவிறக்க வீடியோ பொத்தானைப் பயன்படுத்தவும்.
+#. text in the Download video window
+#. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
+#, machine
+	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	தளத்தின் சான்றிதழை yt-dlp-உம் இந்தக் கணினியும் நம்பவில்லை: வைரஸ் தடுப்பு நிரலின் வலை வடிகட்டி அல்லது HTTPS இணைப்புகளைப் படிக்கும் ப்ராக்ஸி குறுக்கிடக்கூடும். அதன் HTTPS ஸ்கேனிங்கை அணைக்கவும் அல்லது அதன் சான்றிதழைக் கணினியில் சேர்க்கவும், பின்னர் பக்கத்தை மீண்டும் சரிபார்க்கவும்.
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
