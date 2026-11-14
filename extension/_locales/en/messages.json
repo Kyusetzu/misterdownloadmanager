@@ -189,6 +189,10 @@
     "message": "Use advanced browser integration is off in Options → General.",
     "description": "why a download stayed with the browser: the app's setting 'Use advanced browser integration' is off; keep the setting's name as the app shows it"
   },
+  "declined_torrents": {
+    "message": "It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.",
+    "description": "why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it"
+  },
   "declined_site_access": {
     "message": "The extension isn't allowed to read this site (the browser's site access).",
     "description": "why a download stayed with the browser: the user limited the extension's access to web sites in the browser, so it can't pass the sign-in on"
@@ -424,5 +428,13 @@
   "video_original": {
     "message": "original",
     "description": "in the list under the download button over a video, after a sound-only line's bitrate: the sound as the site sends it, not converted (e.g. '128 kbps · original'); lower case; one word"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Hide the download button in full screen",
+    "description": "Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "While the page is in full screen, its videos show no Download video button",
+    "description": "Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos"
   }
 }

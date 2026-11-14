@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "L'opció «Utilitza la integració avançada del navegador» està desactivada a Opcions → General."
   },
+  "declined_torrents": {
+    "message": "És un torrent, i l’opció «Obre enllaços magnet i fitxers .torrent amb Mister Download Manager» està desactivada a la configuració de torrents."
+  },
   "declined_site_access": {
     "message": "L'extensió no té permís per llegir aquest lloc (accés al lloc del navegador)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "original"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Amaga el botó de baixada en pantalla completa"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Mentre la pàgina estigui en pantalla completa, els seus vídeos no mostraran el botó Baixa el vídeo"
   }
 }

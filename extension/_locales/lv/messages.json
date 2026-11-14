@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Opcijās → Vispārīgi ir izslēgta opcija Izmantot uzlabotu pārlūkprogrammas integrāciju."
   },
+  "declined_torrents": {
+    "message": "Tas ir torrents, un opcija „Atvērt magnētsaites un .torrent failus ar Mister Download Manager“ ir izslēgta torrentu iestatījumos."
+  },
   "declined_site_access": {
     "message": "Paplašinājumam nav atļauts lasīt šo vietni (pārlūkprogrammas vietnes piekļuve)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "oriģināls"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Paslēpt lejupielādes pogu pilnekrāna režīmā"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Kamēr lapa ir pilnekrāna režīmā, tās videoklipiem netiek rādīta lejupielādes poga"
   }
 }

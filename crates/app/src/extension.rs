@@ -518,7 +518,11 @@ pub enum Registration {
     #[cfg_attr(windows, allow(dead_code))]
     NoBrowser,
     /// A manifest names a helper program that isn't there or can't be run (#253).
-    HelperMissing(std::path::PathBuf),
+    HelperMissing(PathBuf),
+    /// The browsers are pointed at a manifest that is gone (Windows' registry), with the copy
+    /// that wrote it: one run from inside a zip, whose temporary folder was deleted (#818).
+    #[cfg_attr(unix, allow(dead_code))]
+    Gone(PathBuf),
 }
 
 /// Where browser integration's registration stands: the native host's manifests where the
@@ -535,13 +539,100 @@ pub fn registered() -> bool {
     registration() == Registration::Ready
 }
 
-/// Why the last registration failed, in the system's words (Linux and macOS, where MDM
-/// registers itself at each start).
+/// Why the last registration failed (at a start, or Set it up's), in the native host's words;
+/// None once one succeeded.
+static REGISTER_ERROR: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Why the last registration failed, if it did (Test browser integration says it).
 fn register_error() -> Option<String> {
+    REGISTER_ERROR.lock().ok().and_then(|e| e.clone())
+}
+
+/// Note how a registration went: logged, and its failure kept for Test browser integration.
+pub(crate) fn registered_as(result: &Result<String, String>) {
+    match result {
+        Ok(said) => tracing::info!("browser integration set up: {said}"),
+        Err(e) => tracing::warn!("browser integration not set up: {e}"),
+    }
+    if let Ok(mut last) = REGISTER_ERROR.lock() {
+        *last = result.as_ref().err().cloned();
+    }
+}
+
+/// The native host `host` run with `arg` (`--register`, `--repair`), waiting up to `limit`:
+/// what it says it did, or why it failed.
+pub(crate) fn run_host(
+    host: &std::path::Path,
+    arg: &str,
+    limit: Duration,
+) -> Result<String, String> {
+    use std::io::Read;
+    use std::process::{Command, Stdio};
+    let mut cmd = Command::new(host);
+    cmd.arg(arg)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     #[cfg(windows)]
-    return None;
+    crate::win32::no_console(&mut cmd);
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("{}: {e}", host.display()))?;
+    let status = crate::launch::wait_within(&mut child, limit);
+    // A few lines at most: they fit the pipes, so the helper never waits on them.
+    let mut said = String::new();
+    if let Some(mut out) = child.stdout.take() {
+        let _ = out.read_to_string(&mut said);
+    }
+    if let Some(mut err) = child.stderr.take() {
+        said.push('\n');
+        let _ = err.read_to_string(&mut said);
+    }
+    let said = said.split_whitespace().collect::<Vec<_>>().join(" ");
+    match status {
+        Some(s) if s.success() => Ok(said),
+        Some(s) => Err(format!("{} {arg}: {s}: {said}", host.display())),
+        None => Err(format!("{} {arg}: no answer in {limit:?}", host.display())),
+    }
+}
+
+/// This copy runs from a folder that is deleted later (#818): an archive run without extracting
+/// it first (WinRAR, 7-Zip and Windows Explorer extract it to a temporary folder, deleted once it
+/// quits), or anything under the temporary folder. It registers nothing with the browsers, which
+/// would be left with a helper that is gone. Linux's AppImage counts by where the AppImage is:
+/// its mount is always under /tmp, and its helper is registered from a copy outside it.
+pub fn temporary_copy() -> bool {
+    static TEMPORARY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *TEMPORARY.get_or_init(|| {
+        let image = std::env::var_os("APPIMAGE").filter(|i| cfg!(unix) && !i.is_empty());
+        let program = image
+            .map(PathBuf::from)
+            .or_else(|| std::env::current_exe().ok());
+        program.is_some_and(|p| mdm_ipc::browsers::in_temporary_folder(&p))
+    })
+}
+
+/// At each start, on a thread of its own (not in a portable copy, which registers nothing, nor an
+/// off-screen test run, whose browsers are the person's): a browser's registration that leads
+/// nowhere is repaired for this copy, one that works is left alone, whichever copy it names
+/// (#818). Linux and macOS, which have no installer step, also register with a browser that has
+/// none yet.
+pub fn repair_at_start() {
+    if mdm_ipc::portable_dir().is_some() || crate::offscreen() {
+        return;
+    }
+    if temporary_copy() {
+        tracing::warn!(
+            "browser integration: not set up, this copy runs from a temporary folder ({}), \
+             deleted once it quits: extract it to a folder of its own",
+            std::env::current_exe().unwrap_or_default().display()
+        );
+        return;
+    }
+    #[cfg(windows)]
+    crate::win32::repair_browsers();
     #[cfg(unix)]
-    return crate::unix::register_error();
+    crate::unix::register_browsers();
 }
 
 /// Set it up's runs finished so far: a window that shows the checks reads them again when this
@@ -550,12 +641,13 @@ static SET_UP_DONE: AtomicU64 = AtomicU64::new(0);
 /// A Set it up is running (a second press waits for it).
 static SETTING_UP: AtomicBool = AtomicBool::new(false);
 /// How long the native host's `--register` has (it writes a few files, or registry keys).
-const SET_UP_LIMIT: Duration = Duration::from_secs(20);
+pub(crate) const SET_UP_LIMIT: Duration = Duration::from_secs(20);
 
-/// Register it now, for a copy installed without it (the setup's box unticked): the native
-/// host's own `--register`, for this user, on a thread of its own (a program waited for on the
-/// window's thread freezes it for as long as the program takes, #222). The window repaints when
-/// it's done, and [`set_up_finished`] tells the checks to read the result.
+/// Register it now, for a copy installed without it (the setup's box unticked), or to take the
+/// browsers back from another copy: the native host's own `--register`, for this user, on a
+/// thread of its own (a program waited for on the window's thread freezes it for as long as the
+/// program takes, #222). The window repaints when it's done, and [`set_up_finished`] tells the
+/// checks to read the result, and why it failed if it did.
 pub fn set_up(ctx: &egui::Context) {
     if SETTING_UP.swap(true, Ordering::AcqRel) {
         return;
@@ -565,17 +657,19 @@ pub fn set_up(ctx: &egui::Context) {
         .name("set-up".into())
         .spawn(move || {
             #[cfg(unix)]
-            crate::unix::register_browsers_now(SET_UP_LIMIT);
+            crate::unix::register_browsers_now(SET_UP_LIMIT, "--register");
             #[cfg(windows)]
-            if let Ok(exe) = std::env::current_exe() {
-                crate::launch::run_within(
-                    std::process::Command::new(
-                        exe.with_file_name("misterdownloadmanager-nmhost.exe"),
-                    )
-                    .arg("--register"),
-                    SET_UP_LIMIT,
-                );
-            }
+            registered_as(
+                &std::env::current_exe()
+                    .map_err(|e| e.to_string())
+                    .and_then(|exe| {
+                        run_host(
+                            &exe.with_file_name("misterdownloadmanager-nmhost.exe"),
+                            "--register",
+                            SET_UP_LIMIT,
+                        )
+                    }),
+            );
             SETTING_UP.store(false, Ordering::Release);
             SET_UP_DONE.fetch_add(1, Ordering::AcqRel);
             ctx.request_repaint();
@@ -598,6 +692,9 @@ pub struct Check {
     pub ok: bool,
     pub text: String,
     pub why: Option<&'static str>,
+    /// A path the check names, on a line of its own under it: shortened in the middle when it
+    /// doesn't fit, whole on hover.
+    pub detail: Option<String>,
 }
 
 /// The checks in the order a connection needs them; the first failing one is what to fix.
@@ -606,6 +703,7 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
         ok,
         text: crate::i18n::t(text).to_owned(),
         why: (!ok).then_some(why).flatten(),
+        detail: None,
     };
     let mut out = vec![
         check(
@@ -621,6 +719,14 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
             Some("not-installed"),
         ),
     ];
+    if temporary_copy() {
+        out.push(check(
+            false,
+            // i18n: a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+            "This copy runs from a temporary folder that will be deleted",
+            Some("not-installed"),
+        ));
+    }
     let registration = registration();
     out.push(match &registration {
         Registration::Ready | Registration::Missing => check(
@@ -644,6 +750,17 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
                 Some("not-installed"),
             )
         }
+        Registration::Gone(manifest) => {
+            tracing::warn!("browser integration: {} is gone", manifest.display());
+            let folder = manifest.parent().unwrap_or(manifest);
+            Check {
+                ok: false,
+                // i18n: a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+                text: crate::i18n::t("The browsers are set up for a copy that is gone:").to_owned(),
+                why: Some("not-installed"),
+                detail: Some(folder.display().to_string()),
+            }
+        }
     });
     if registration != Registration::Ready
         && let Some(error) = register_error()
@@ -656,6 +773,7 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
                 &[("error", &error)],
             ),
             why: Some("not-installed"),
+            detail: None,
         });
     }
     let seen = mdm_ipc::extension::seen_browsers();
@@ -690,6 +808,7 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
             ok: true,
             text,
             why: None,
+            detail: None,
         });
     }
     out

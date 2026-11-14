@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Gelişmiş tarayıcı entegrasyonunu kullan seçeneği, Seçenekler → Genel bölümünde kapalı."
   },
+  "declined_torrents": {
+    "message": "Bu bir torrent ve Torrent ayarlarında Mister Download Manager ile mıknatıs bağlantılarını ve .torrent dosyalarını aç seçeneği kapalı."
+  },
   "declined_site_access": {
     "message": "Uzantının bu siteyi okumasına izin verilmiyor (tarayıcının site erişimi)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "orijinal"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Tam ekrandayken indirme düğmesini gizle"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Sayfa tam ekrandayken videolarda “Video indir” düğmesi görünmez"
   }
 }

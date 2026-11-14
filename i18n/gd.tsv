@@ -4488,6 +4488,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	tha progsaidh a’ bhrabhsair (leudachan VPN no progsaidh) ag iarraidh logadh a-steach nach eil ach aig an leudachan sin: cleachd aplacaid an VPN fhèin, no tagh an t-adapter lìonraidh aige ann an Roghainnean → Progsaidh / Socks
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	Tha na brobhsairean air an suidheachadh airson leth-bhreac a tha air falbh:
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	’S urrainn dha na brabhsairean Mister Download Manager a lorg
@@ -4878,6 +4882,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	An coimpiutair seo a-mhàin (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	Tha an leth-bhreac seo a’ ruith bho phasgan sealach a thèid a sguabadh às
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -6178,6 +6186,10 @@ extension	Help	Cobhair
 #, machine
 extension	Hide on this video	Falaich air a’ bhidio seo
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	Falaich am putan luchdaich a-nuas ann am modh làn-sgrìn
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	Cùm Alt sìos fhad ’s a bhriogas tu air ceangal gus am faigh am brabhsair a luchdadh a-nuas.
@@ -6193,6 +6205,10 @@ extension	It didn't work. Try again.	Cha do dh’obraich e. Feuch ris a-rithist.
 #. pairing failed: the other MDM shows no pairing code; Pair a device is its button
 #, machine
 extension	It shows no code now: click Pair a device there first.	Chan eil còd aige an-dràsta: cliog air Pair a device an sin an toiseach.
+#. text in the browser extension
+#. why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it
+#, machine
+extension	It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.	’S e torrent a th’ ann, agus tha “Fosgail ceanglaichean magnet is faidhlichean .torrent le Mister Download Manager” dheth ann an roghainnean torrent.
 #. text in the browser extension
 #. why a download stayed with the browser: the file is smaller than the app's minimum size setting
 #, machine
@@ -6442,6 +6458,10 @@ extension	Video	Video
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	Fuirich mionaid, an uair sin feuch ris a-rithist.
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	Fhad ‘s a tha an duilleag ann am modh làn-sgrìn, cha seall na bhideothan aice putan Luchdaich a-nuas bhidio
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

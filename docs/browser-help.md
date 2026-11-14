@@ -13,11 +13,12 @@ The browser can't find the small helper program it talks to. It is registered wh
 1. Install MDM with the setup from [the download page](https://misterdownloadmanager.com/download.html), and keep **Set up browser integration** ticked.
 2. Already installed? Open MDM, then **Options → General → Test browser integration**, and click **Set it up** if it offers to.
 3. The portable copy can't be connected: it writes nothing outside its own folder. Use the installed copy for browser integration. See [Portable mode](portable.md).
-4. On Linux and macOS, MDM sets browser integration up itself each time it starts: start MDM once. **Test browser integration** says what went wrong if it couldn't, such as **The helper program the browsers start is missing**: **Set it up** puts it back.
-5. Restart the browser after setting it up.
-6. **Zen, Helium, Brave Origin or another browser built on Firefox or Chromium, as your only browser on Linux or macOS?** Older versions of MDM set browser integration up only for the browsers they knew; the current one also knows Brave Origin and the Beta, Dev and Nightly versions of Brave, Chrome and Edge. Update MDM and start it once.
-7. **The AppImage on Linux:** the AppImage's files are gone once it quits, so MDM keeps a copy of its helper program in its data folder (`~/.local/share/misterdownloadmanager/browser-host`) and points the browsers there. Start MDM once after moving or renaming the AppImage, or after an AppImage manager (Gear Lever, AppImageLauncher and the like) moved it, so the helper knows where to start it from.
-8. **Zen on Windows:** Zen 1.21.15b and later have a bug of their own that keeps add-ons from reaching their helper program ([zen-browser/desktop#15432](https://github.com/zen-browser/desktop/issues/15432)), with any add-on that uses one. Until Zen fixes it, Zen 1.21.14b works.
+4. **Started MDM from inside a zip?** WinRAR, 7-Zip and Windows itself run a program from inside a zip by unpacking it to a temporary folder, which they delete afterwards. A copy run that way can't be connected (**Test browser integration** says **This copy runs from a temporary folder that will be deleted**): unzip it to a folder of its own first. Older versions of MDM did set browser integration up from there, and left the browsers looking for a copy that was gone (**The browsers are set up for a copy that is gone**). Start your installed MDM, up to date, once: it takes browser integration back by itself.
+5. On Linux and macOS, MDM sets browser integration up itself each time it starts: start MDM once. **Test browser integration** says what went wrong if it couldn't, such as **The helper program the browsers start is missing**: **Set it up** puts it back.
+6. Restart the browser after setting it up.
+7. **Zen, Helium, Brave Origin or another browser built on Firefox or Chromium, as your only browser on Linux or macOS?** Older versions of MDM set browser integration up only for the browsers they knew; the current one also knows Brave Origin and the Beta, Dev and Nightly versions of Brave, Chrome and Edge. Update MDM and start it once.
+8. **The AppImage on Linux:** the AppImage's files are gone once it quits, so MDM keeps a copy of its helper program in its data folder (`~/.local/share/misterdownloadmanager/browser-host`) and points the browsers there. Start MDM once after moving or renaming the AppImage, or after an AppImage manager (Gear Lever, AppImageLauncher and the like) moved it, so the helper knows where to start it from.
+9. **Zen on Windows:** Zen 1.21.15b and later have a bug of their own that keeps add-ons from reaching their helper program ([zen-browser/desktop#15432](https://github.com/zen-browser/desktop/issues/15432)), with any add-on that uses one. Until Zen fixes it, Zen 1.21.14b works.
 
 ## MDM didn't start in time {#not-running}
 
@@ -68,6 +69,7 @@ The extension is connected, but MDM's own settings leave this download to the br
 2. The file's type is listed in **Options → File types**.
 3. The site isn't in **Don't start downloading automatically from the following sites**, nor the address in **Don't start downloading automatically from the following addresses**.
 4. The file isn't smaller than **Don't take files smaller than** in **Options → File types**.
+5. For a `.torrent` file: **Open magnet links and .torrent files with Mister Download Manager** is on in **Tasks → Torrent settings**.
 
 Also check the extension's toolbar button: with **Take downloads from this browser** off, everything stays with the browser.
 

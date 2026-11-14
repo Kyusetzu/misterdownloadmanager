@@ -2196,13 +2196,22 @@ fn edit_text_with(
     let opening = crate::dialogs::opening_key(ui.ctx());
     let opened = ui.data(|d| d.get_temp::<u64>(opening)).unwrap_or(0);
     let edit_id = widget_id(ui, ("edit-box", rc.min.x as i32, rc.min.y as i32, opened));
+    let mut frame_right = false;
     if enabled {
         let frame = ui.interact(rc, edit_id.with("frame"), pointer_only());
+        frame_right = frame.interact_pointer_pos().is_some();
         if frame.hovered() {
             ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
         }
         if frame.clicked() {
             ui.memory_mut(|m| m.request_focus(edit_id));
+        }
+        // A right-click on the box around the text opens its menu too, the selection kept
+        // (Windows' boxes: anywhere in the box, #1084).
+        if frame.secondary_clicked()
+            && let Some(p) = frame.interact_pointer_pos()
+        {
+            open_edit_menu(ui.ctx(), edit_id, p);
         }
     }
     // A box that was empty and is then filled by its window, not typed in (a link from the
@@ -2286,12 +2295,14 @@ fn edit_text_with(
             i.events = events;
         });
     }
+    let before = selection_now(ui.ctx(), edit_id);
     let resp = ui.put(inner, |ui: &mut Ui| {
         // The caret in the box's own ink: egui's default (a pale blue in its dark style) was
         // all but invisible on a light box.
         ui.visuals_mut().text_cursor.stroke.color = color;
         ui.add_enabled_ui(enabled, |ui| ui.add(te)).inner
     });
+    keep_selection_on_right_click(&resp, frame_right, before);
     pass_focus_on(ui, &resp, enabled);
     // Named for screen readers by its caption.
     name_from_caption(&resp);
@@ -2476,22 +2487,15 @@ pub fn edit_menu(resp: &Response, value: &mut String, password: bool, multiline:
     // window's thread (clipboard.rs; read here at every frame, a clipboard owner that hung froze
     // the window, #661).
     let clip_key = key.with("clipboard");
-    let open_at = |p: Pos2| {
-        let ask = crate::clipboard::ask();
-        ctx.data_mut(|d| {
-            d.insert_temp(key, p);
-            d.insert_temp(clip_key, ask);
-        });
-    };
     if resp.secondary_clicked()
         && let Some(p) = resp.interact_pointer_pos()
     {
-        open_at(p);
+        open_edit_menu(&ctx, id, p);
     }
     // Shift+F10 (the keyboard's way to a right-click menu) opens it under the box.
     if resp.has_focus() && ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, egui::Key::F10))
     {
-        open_at(resp.rect.left_bottom());
+        open_edit_menu(&ctx, id, resp.rect.left_bottom());
     }
     let Some(at) = ctx.data(|d| d.get_temp::<Pos2>(key)) else {
         return;
@@ -2593,6 +2597,91 @@ pub fn edit_menu(resp: &Response, value: &mut String, password: bool, multiline:
     state.set_undoer(undoer);
     state.store(&ctx, id);
     ctx.memory_mut(|m| m.request_focus(id));
+}
+
+/// Opens the right-click menu of the text box `id` ([`edit_menu`]) at `p`.
+fn open_edit_menu(ctx: &egui::Context, id: egui::Id, p: Pos2) {
+    let key = id.with("edit-menu");
+    // Paste is offered when the clipboard has text: asked as the menu opens (edit_menu).
+    let ask = crate::clipboard::ask();
+    ctx.data_mut(|d| {
+        d.insert_temp(key, p);
+        d.insert_temp(key.with("clipboard"), ask);
+    });
+}
+
+/// The text box `id`'s selection (or caret), as egui keeps it.
+fn selection_now(ctx: &egui::Context, id: egui::Id) -> Option<egui::text::CCursorRange> {
+    egui::text_edit::TextEditState::load(ctx, id).and_then(|s| s.cursor.char_range())
+}
+
+/// A right-click in a text box keeps its selection when it lands on it, so the menu's Copy and
+/// Cut act on it; elsewhere in the box it only moves the caret there, without selecting; and a
+/// drag with the right button selects nothing. So Windows' boxes do, and GTK's and macOS's
+/// (#1084). egui's TextEdit placed the caret at a press of any button: the right-click that
+/// opened the menu dropped the selection it was for (Select all, then Copy, copied nothing).
+/// `before`: the box's selection before its TextEdit saw this pass's pointer
+/// ([`selection_now`]); `resp`: that TextEdit's; `around`: the pointer is on the box around the
+/// text (its frame), whose press took the focus from the text, and egui drops the selection of
+/// a box without the focus: the focus stays, and the selection.
+fn keep_selection_on_right_click(
+    resp: &Response,
+    around: bool,
+    before: Option<egui::text::CCursorRange>,
+) {
+    use egui::PointerButton::{Primary, Secondary};
+    use egui::text::CCursorRange;
+    let ctx = &resp.ctx;
+    let (pressed, right) = ctx.input(|i| {
+        let p = &i.pointer;
+        let right = p.button_down(Secondary) || p.button_released(Secondary);
+        (
+            p.button_pressed(Secondary),
+            right && !p.button_down(Primary),
+        )
+    });
+    let on_text = resp.interact_pointer_pos().is_some();
+    if !right || !(on_text || around) {
+        return;
+    }
+    let refocus = !on_text && !resp.has_focus();
+    if refocus {
+        ctx.memory_mut(|m| m.request_focus(resp.id));
+    }
+    let Some(mut state) = egui::text_edit::TextEditState::load(ctx, resp.id) else {
+        return;
+    };
+    let now = state.cursor.char_range();
+    let kept = match (before, now) {
+        _ if !on_text => before,
+        // The press: on the selection (its ends included, so the box's empty part past the
+        // text when the selection runs to its end) it stays; elsewhere, the caret where egui
+        // put it, one place (not a word: a right press soon after a left click counts as a
+        // double one).
+        (Some(b), Some(n)) if pressed => {
+            let (lo, hi) = (
+                b.primary.index.min(b.secondary.index),
+                b.primary.index.max(b.secondary.index),
+            );
+            if lo < hi && (lo..=hi).contains(&n.primary.index) {
+                Some(b)
+            } else {
+                Some(CCursorRange::one(n.primary))
+            }
+        }
+        _ if pressed => now,
+        // Held or let go: as it was (egui dragged a selection with the right button too).
+        _ => before,
+    };
+    if kept != now {
+        state.cursor.set_char_range(kept);
+        state.store(ctx, resp.id);
+    }
+    // Drawn again with the selection kept: this pass showed egui's caret (or the box without
+    // its focus).
+    if kept != now || refocus {
+        ctx.request_discard("a right-click keeps a text box's selection");
+    }
 }
 
 /// The whole text of the box `id` (`value`) selected, so what is typed next replaces it (a box
@@ -3647,15 +3736,19 @@ pub fn multiline_light(
         })
         .vertical_scroll_offset(off)
         .show(&mut child, |ui| {
-            let resp = ui.add(
-                egui::TextEdit::multiline(value)
-                    .font(tahoma())
-                    .text_color(ink)
-                    .frame(egui::Frame::NONE)
-                    .margin(egui::Margin::ZERO)
-                    .desired_width(inner.width())
-                    .desired_rows(3),
-            );
+            // Its own id, known before it draws (keep_selection_on_right_click).
+            let text_id = ui.unique_id().with("text");
+            let te = egui::TextEdit::multiline(value)
+                .id(text_id)
+                .font(tahoma())
+                .text_color(ink)
+                .frame(egui::Frame::NONE)
+                .margin(egui::Margin::ZERO)
+                .desired_width(inner.width())
+                .desired_rows(3);
+            let before = selection_now(ui.ctx(), text_id);
+            let resp = ui.add(te);
+            keep_selection_on_right_click(&resp, false, before);
             edit_menu(&resp, value, false, true);
             // Enter here is a new line, not the dialog's OK.
             if resp.has_focus() {
@@ -4935,6 +5028,56 @@ pub fn pass_focus_on(ui: &Ui, resp: &Response, enabled: bool) {
 /// so it goes without isolates (#919).
 pub fn file_dialog(title: &str) -> rfd::FileDialog {
     rfd::FileDialog::new().set_title(crate::i18n::os_text(title))
+}
+
+/// The system Save dialog for a download's file (Download File Info's Save As, #1088): `name`
+/// filled in, in `dir` when it is there, and the download's own file type. Built on
+/// [`start_pick`]'s thread (it looks at the disk); its answer goes through [`saved_name`].
+pub fn save_dialog(title: &str, dir: &std::path::Path, name: &str) -> rfd::FileDialog {
+    let mut dialog = file_dialog(title).set_file_name(name);
+    if dir.is_dir() {
+        dialog = dialog.set_directory(dir);
+    }
+    // The type list: the download's type first (Windows adds its extension to a name typed
+    // without one), then All files. Not on macOS: there the types are the only extensions a
+    // name may end with (another one typed gets the download's added after it), and its Save
+    // panel shows no type list; `saved_name` adds a missing extension there the same way.
+    #[cfg(not(target_os = "macos"))]
+    {
+        if let Some(ext) = std::path::Path::new(name)
+            .extension()
+            .and_then(|e| e.to_str())
+            .filter(|e| !e.is_empty())
+        {
+            dialog = dialog.add_filter(ext.to_uppercase(), &[ext]);
+        }
+        dialog = dialog.add_filter(crate::i18n::t("All files"), &["*"]);
+    }
+    dialog
+}
+
+/// The file [`save_dialog`] answered for a download named `was`: the name typed there made a
+/// valid file name (`naming::sanitize`; GTK's and macOS's dialogs take `a:b`), and given `was`'s
+/// extension when typed without one, as Windows' dialog does itself. So on every system
+/// `testName` saves as `testName.7z`, and `testName.zip` as typed.
+pub fn saved_name(was: &str, picked: &std::path::Path) -> std::path::PathBuf {
+    let ext = |n: &str| {
+        std::path::Path::new(n)
+            .extension()
+            .map(|e| e.to_string_lossy().into_owned())
+            .filter(|e| !e.is_empty())
+    };
+    let typed = picked
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut name = mdm_engine::naming::sanitize(&typed);
+    if ext(&name).is_none()
+        && let Some(e) = ext(was)
+    {
+        name = format!("{name}.{e}");
+    }
+    picked.with_file_name(name)
 }
 
 /// A system file or folder dialog's answer, from its thread.
@@ -6529,6 +6672,35 @@ pub mod caption {
 mod tests {
     use super::*;
 
+    /// #1088: the name typed in Download File Info's Save dialog is the download's, its
+    /// extension kept or replaced as typed, the same on every system.
+    #[test]
+    fn a_name_typed_in_the_save_dialog_is_the_one_saved() {
+        let dir = std::env::temp_dir().join("mdm-1088");
+        let was = "MPC-BE.1.9.3.x86.7z";
+        // As a dialog answers, the name whole after the folder (`join` would read `a:` as a
+        // drive on Windows).
+        let saved = |typed: &str| {
+            let picked = format!("{}{}{typed}", dir.display(), std::path::MAIN_SEPARATOR);
+            saved_name(was, std::path::Path::new(&picked))
+        };
+        // Typed without an extension (GTK's and macOS's dialogs keep it so): the download's.
+        assert_eq!(saved("testName"), dir.join("testName.7z"));
+        // With Windows' own (it added the type's extension): as it is.
+        assert_eq!(saved("testName.7z"), dir.join("testName.7z"));
+        // Another extension typed: replaced, as typed.
+        assert_eq!(saved("testName.zip"), dir.join("testName.zip"));
+        assert_eq!(saved("my.file.v2.zip"), dir.join("my.file.v2.zip"));
+        // The name unchanged: the same file.
+        assert_eq!(saved(was), dir.join(was));
+        // A name Windows can't hold (a Linux or macOS dialog lets these through): made valid.
+        assert_eq!(saved("a:b?.7z"), dir.join("a_b_.7z"));
+        assert_eq!(saved("con"), dir.join("_con.7z"));
+        assert_eq!(saved("name. . "), dir.join("name.7z"));
+        // A download without an extension adds none.
+        assert_eq!(saved_name("README", &dir.join("notes")), dir.join("notes"));
+    }
+
     /// `r` already gives the screen rect (mirrored in RTL); `rect` around it mirrors it back,
     /// so the thing stays at its English place in Arabic (#170: the browser offer window's logo
     /// over its subline). No window does that.
@@ -7281,6 +7453,225 @@ mod tests {
     fn a_paste_into_one_line_is_one_clean_line() {
         assert_eq!(single_line("https://x/a.zip\r\n"), "https://x/a.zip");
         assert_eq!(single_line("a\r\nb\tc\u{7}"), "a b c");
+    }
+
+    /// A text box ([`edit`]) driven by the pointer and the keys, pass after pass: what each pass
+    /// copied (egui's output: the system clipboard is never touched).
+    struct TextBoxRun {
+        ctx: egui::Context,
+        rc: Rect,
+        value: String,
+        id: Option<egui::Id>,
+        t: f64,
+        /// A multi-line box ([`multiline_light`]) instead.
+        lines: bool,
+    }
+
+    impl TextBoxRun {
+        fn new(value: &str) -> Self {
+            Self::with(value, false)
+        }
+
+        fn with(value: &str, lines: bool) -> Self {
+            let ctx = egui::Context::default();
+            let mut defs = egui::FontDefinitions::default();
+            install_fonts(&mut defs, None);
+            ctx.set_fonts(defs);
+            let mut run = Self {
+                ctx,
+                rc: Rect::from_min_size(
+                    pos2(20.0, 20.0),
+                    egui::vec2(400.0, if lines { 80.0 } else { 21.0 }),
+                ),
+                value: value.to_owned(),
+                id: None,
+                t: 0.0,
+                lines,
+            };
+            run.pass(Vec::new());
+            run
+        }
+
+        fn pass(&mut self, events: Vec<egui::Event>) -> Vec<String> {
+            self.t += 0.05;
+            let raw = egui::RawInput {
+                time: Some(self.t),
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, egui::vec2(600.0, 400.0))),
+                events,
+                ..Default::default()
+            };
+            let (rc, value, id, lines) = (self.rc, &mut self.value, &mut self.id, self.lines);
+            let mut out = self.ctx.run_ui(raw, |ui| {
+                *id = Some(if lines {
+                    multiline_light(ui, rc, value, "t1084", true).id
+                } else {
+                    edit(ui, rc, value, true, false).id
+                });
+            });
+            out.textures_delta.clear();
+            out.platform_output
+                .commands
+                .into_iter()
+                .filter_map(|c| match c {
+                    egui::OutputCommand::CopyText(t) => Some(t),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        /// Long enough after the last click that the next is not a double one.
+        fn wait(&mut self) {
+            self.t += 2.0;
+            self.pass(Vec::new());
+        }
+
+        fn button(p: Pos2, button: egui::PointerButton, pressed: bool) -> egui::Event {
+            egui::Event::PointerButton {
+                pos: p,
+                button,
+                pressed,
+                modifiers: Default::default(),
+            }
+        }
+
+        /// A click of `button` at `p`: down in one pass, up in the next.
+        fn click(&mut self, p: Pos2, button: egui::PointerButton) {
+            self.wait();
+            self.pass(vec![
+                egui::Event::PointerMoved(p),
+                Self::button(p, button, true),
+            ]);
+            self.pass(vec![Self::button(p, button, false)]);
+            self.pass(Vec::new());
+        }
+
+        /// A drag with the left button from `a` to `b`.
+        fn drag(&mut self, a: Pos2, b: Pos2) {
+            use egui::PointerButton::Primary;
+            self.wait();
+            self.pass(vec![
+                egui::Event::PointerMoved(a),
+                Self::button(a, Primary, true),
+            ]);
+            for k in 1..=4 {
+                self.pass(vec![egui::Event::PointerMoved(a.lerp(b, k as f32 / 4.0))]);
+            }
+            self.pass(vec![Self::button(b, Primary, false)]);
+            self.pass(Vec::new());
+        }
+
+        /// The menu's item with the access key `key` (its underlined letter), as Windows' menus
+        /// take it; what that copied.
+        fn choose(&mut self, key: egui::Key) -> Vec<String> {
+            let copied = self.pass(vec![egui::Event::Key {
+                key,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: Default::default(),
+            }]);
+            self.pass(Vec::new());
+            copied
+        }
+
+        /// The selection, in characters (lo, hi).
+        fn selection(&self) -> (usize, usize) {
+            let r = egui::TextEdit::load_state(&self.ctx, self.id.expect("drawn"))
+                .and_then(|s| s.cursor.char_range())
+                .expect("a caret");
+            let (a, b) = (r.primary.index.0, r.secondary.index.0);
+            (a.min(b), a.max(b))
+        }
+    }
+
+    /// #1084: a right-click on a text box's selection keeps it, and its menu's Copy copies it, as
+    /// in Windows' boxes. Select all from the menu, a right-click anywhere in the box, Copy: the
+    /// whole text (it copied nothing: the right-click had put the caret where it was).
+    #[test]
+    fn select_all_then_a_right_click_then_copy_copies_everything() {
+        use egui::PointerButton::Secondary;
+        let text = "https://example.com/files/archive.zip"; // a value typed in, not a text to translate
+        let mut b = TextBoxRun::new(text);
+        let rc = b.rc;
+        let mid = baseline_in(rc.top(), rc.height()) - 4.0;
+        // The menu, Select all.
+        b.click(pos2(rc.left() + 60.0, mid), Secondary);
+        assert!(b.choose(egui::Key::A).is_empty());
+        assert_eq!(b.selection(), (0, text.chars().count()));
+        // A right-click on the text, past its end, and on the box's edge around it.
+        for at in [
+            pos2(rc.left() + 60.0, mid),
+            pos2(rc.right() - 20.0, mid),
+            pos2(rc.left() + 120.0, rc.top() + 2.0),
+        ] {
+            b.click(at, Secondary);
+            assert_eq!(b.selection(), (0, text.chars().count()), "at {at:?}");
+            assert_eq!(b.choose(egui::Key::C), [text], "at {at:?}");
+        }
+        // Cut takes it all.
+        b.click(pos2(rc.left() + 60.0, mid), Secondary);
+        assert_eq!(b.choose(egui::Key::T), [text]);
+        assert_eq!(b.value, "");
+    }
+
+    /// #1084: the same in a multi-line box (a list of sites).
+    #[test]
+    fn a_multi_line_box_keeps_its_selection_under_a_right_click() {
+        use egui::PointerButton::Secondary;
+        let text = "example.com
+example.org"; // values typed in, not texts to translate
+        let mut b = TextBoxRun::with(text, true);
+        let at = b.rc.left_top() + egui::vec2(30.0, 8.0);
+        b.click(at, Secondary);
+        assert!(b.choose(egui::Key::A).is_empty());
+        assert_eq!(b.selection(), (0, text.chars().count()));
+        b.click(at, Secondary);
+        assert_eq!(b.selection(), (0, text.chars().count()));
+        assert_eq!(b.choose(egui::Key::C), [text]);
+    }
+
+    /// #1084: text selected by dragging stays selected under a right-click on it, and Copy copies
+    /// it; a right-click away from it only moves the caret there (Copy greyed); a drag with the
+    /// right button selects nothing.
+    #[test]
+    fn a_dragged_selection_then_a_right_click_then_copy_copies_it() {
+        use egui::PointerButton::Secondary;
+        let text = "https://example.com/files/archive.zip"; // a value typed in, not a text to translate
+        let n = text.chars().count();
+        let mut b = TextBoxRun::new(text);
+        let rc = b.rc;
+        let mid = baseline_in(rc.top(), rc.height()) - 4.0;
+        b.drag(pos2(rc.left() + 30.0, mid), pos2(rc.left() + 120.0, mid));
+        let (lo, hi) = b.selection();
+        assert!(0 < lo && lo < hi && hi < n, "{lo}..{hi} of {n}");
+        let chosen: String = text.chars().skip(lo).take(hi - lo).collect();
+        b.click(pos2(rc.left() + 75.0, mid), Secondary);
+        assert_eq!(b.selection(), (lo, hi));
+        assert_eq!(b.choose(egui::Key::C), [chosen.as_str()]);
+        assert_eq!(b.selection(), (lo, hi));
+        // Away from it, past the text's end: the caret there, nothing selected, Copy greyed.
+        b.click(pos2(rc.right() - 20.0, mid), Secondary);
+        assert_eq!(b.selection(), (n, n));
+        assert!(b.choose(egui::Key::C).is_empty());
+        b.choose(egui::Key::Escape);
+        // A drag with the right button selects nothing.
+        b.wait();
+        b.pass(vec![
+            egui::Event::PointerMoved(pos2(rc.left() + 8.0, mid)),
+            TextBoxRun::button(pos2(rc.left() + 8.0, mid), Secondary, true),
+        ]);
+        let (from, to) = b.selection();
+        assert_eq!(from, to, "a right press off the selection: a caret");
+        for x in [40.0, 90.0, 150.0] {
+            b.pass(vec![egui::Event::PointerMoved(pos2(rc.left() + x, mid))]);
+            assert_eq!(b.selection(), (from, to), "right-dragged to {x}");
+        }
+        b.pass(vec![TextBoxRun::button(
+            pos2(rc.left() + 150.0, mid),
+            Secondary,
+            false,
+        )]);
+        assert_eq!(b.selection(), (from, to));
     }
 
     #[test]

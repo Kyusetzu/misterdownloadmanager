@@ -69,6 +69,9 @@ core-foundation = "0.10.1"
 core-foundation-sys = "0.8.7"
 
 [dev-dependencies]
+# Counts every allocation of the memory test (tests/memory.rs): what the connections hold for
+# the disk, as allocated.
+cap = { version = "0.1.2", features = ["stats"] }
 # The free-space probe's test compares it with the volume list it replaced (#224).
 sysinfo.workspace = true
 mdm-labserver.workspace = true

@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "«استفاده از یکپارچه‌سازی پیشرفته مرورگر» در گزینه‌ها ← عمومی خاموش است."
   },
+  "declined_torrents": {
+    "message": "این یک تورنت است و «باز کردن پیوندهای مگنت و فایل‌های .torrent با Mister Download Manager» در تنظیمات تورنت خاموش است."
+  },
   "declined_site_access": {
     "message": "افزونه اجازه خواندن این سایت را ندارد (دسترسی سایت مرورگر)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "اصلی"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "پنهان کردن دکمه بارگیری در حالت تمام‌صفحه"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "در حالی که صفحه در حالت تمام‌صفحه است، ویدیوهای آن دکمه «بارگیری ویدیو» را نشان نمی‌دهند"
   }
 }

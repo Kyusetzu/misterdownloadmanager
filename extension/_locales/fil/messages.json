@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Naka-off ang Gumamit ng advanced na integrasyon ng browser sa Mga Opsyon → Pangkalahatan."
   },
+  "declined_torrents": {
+    "message": "Ito ay isang torrent, at naka-off ang Buksan ang mga magnet link at .torrent file gamit ang Mister Download Manager sa mga setting ng Torrent."
+  },
   "declined_site_access": {
     "message": "Hindi pinapayagan ang extension na basahin ang site na ito (pag-access ng site ng browser)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "orihinal"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Itago ang download button sa full screen"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Habang nasa full screen ang page, walang Download video button na ipinapakita ang mga video nito"
   }
 }

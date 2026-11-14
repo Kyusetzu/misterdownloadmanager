@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Použít pokročilou integraci prohlížeče je vypnuto v Možnosti → Obecné."
   },
+  "declined_torrents": {
+    "message": "Je to torrent a v nastavení torrentů je vypnutá možnost Otevřít magnetické odkazy a soubory .torrent pomocí Mister Download Manager."
+  },
   "declined_site_access": {
     "message": "Rozšíření nemá povoleno číst tento web (přístup prohlížeče k webu)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "původní"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Skrýt tlačítko stahování v režimu celé obrazovky"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Když je stránka v režimu celé obrazovky, její videa nezobrazují tlačítko Stáhnout video"
   }
 }

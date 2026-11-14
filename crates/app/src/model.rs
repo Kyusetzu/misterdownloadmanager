@@ -40,7 +40,14 @@ pub struct CustomCategory {
 static CUSTOM: std::sync::RwLock<Vec<CustomCategory>> = std::sync::RwLock::new(Vec::new());
 
 pub fn set_custom(list: &[CustomCategory]) {
-    *CUSTOM.write().unwrap() = list.to_vec();
+    // The rules' lock first, as `rules` takes it: nobody matches a name against half a change.
+    let mut rules = RULES.write().unwrap();
+    let mut custom = CUSTOM.write().unwrap();
+    if *custom != list {
+        *custom = list.to_vec();
+        *rules = None;
+        CHANGES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
 }
 
 pub fn custom(id: u32) -> Option<CustomCategory> {
@@ -69,7 +76,51 @@ pub struct BuiltinEdit {
 static BUILTIN: std::sync::RwLock<Vec<BuiltinEdit>> = std::sync::RwLock::new(Vec::new());
 
 pub fn set_builtin(list: &[BuiltinEdit]) {
-    *BUILTIN.write().unwrap() = list.to_vec();
+    let mut rules = RULES.write().unwrap();
+    let mut builtin = BUILTIN.write().unwrap();
+    if *builtin != list {
+        *builtin = list.to_vec();
+        *rules = None;
+        CHANGES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+/// The file types each category takes, in the order [`Category::of`] tries them: the user's
+/// categories, then the built-in ones not deleted. Worked out from `CUSTOM` and `BUILTIN` once,
+/// and again after they change (`None` until then): `of` runs for each link of a list of
+/// thousands, and listing every category's types again for each name held the window (#1063).
+type Rules = Vec<(Category, Vec<String>)>;
+static RULES: std::sync::RwLock<Option<Rules>> = std::sync::RwLock::new(None);
+
+/// How many times the categories changed (`set_custom`, `set_builtin`): what was worked out
+/// from them (a link's category) is worked out again when this moves.
+static CHANGES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// See [`CHANGES`].
+pub fn categories_changed() -> u64 {
+    CHANGES.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// `f` with the rules, worked out first if the categories changed since.
+fn rules<R>(f: impl FnOnce(&Rules) -> R) -> R {
+    if let Some(rules) = RULES.read().unwrap().as_ref() {
+        return f(rules);
+    }
+    let mut rules = RULES.write().unwrap();
+    f(rules.get_or_insert_with(|| {
+        let custom: Vec<Category> = CUSTOM
+            .read()
+            .unwrap()
+            .iter()
+            .map(|c| Category::Custom(c.id))
+            .collect();
+        // A deleted built-in takes no file: its types go to another category, or to General.
+        custom
+            .into_iter()
+            .chain(Category::BUILT_IN.into_iter().filter(|c| !c.deleted()))
+            .map(|c| (c, c.extensions()))
+            .collect()
+    }))
 }
 
 fn builtin(cat: Category) -> Option<BuiltinEdit> {
@@ -91,12 +142,13 @@ fn parse_types(types: &str) -> Vec<String> {
         .collect()
 }
 
-/// Does `ext` (lower case) match a file-type pattern (`mp4`, `r0*`)?
+/// Does `ext` match a file-type pattern (`mp4`, `r0*`), in any case?
 fn type_matches(pattern: &str, ext: &str) -> bool {
-    let pattern = pattern.to_ascii_lowercase();
     match pattern.strip_suffix('*') {
-        Some(prefix) => ext.starts_with(prefix),
-        None => ext == pattern,
+        Some(prefix) => ext
+            .get(..prefix.len())
+            .is_some_and(|start| start.eq_ignore_ascii_case(prefix)),
+        None => ext.eq_ignore_ascii_case(pattern),
     }
 }
 
@@ -257,18 +309,41 @@ impl Category {
 
     /// The category a file name falls into: the user's categories first (that is why they made
     /// one), then IDM's; Torrents only by source, never by name.
+    /// Nothing is listed or copied for a name: the categories' types are worked out once
+    /// ([`RULES`], #1063).
     pub fn of(file_name: &str) -> Category {
         let Some((_, ext)) = file_name.rsplit_once('.') else {
             return Category::General;
         };
+        rules(|rules| {
+            rules
+                .iter()
+                .find(|(_, types)| types.iter().any(|p| type_matches(p, ext)))
+                .map_or(Category::General, |(c, _)| *c)
+        })
+    }
+
+    /// [`Self::of`] as it was before #1063 (every category's types listed again for each
+    /// name), for the tests that show both give the same answers.
+    #[cfg(test)]
+    pub fn of_as_before(file_name: &str) -> Category {
+        let Some((_, ext)) = file_name.rsplit_once('.') else {
+            return Category::General;
+        };
         let ext = ext.to_ascii_lowercase();
+        let type_matches = |pattern: &str, ext: &str| {
+            let pattern = pattern.to_ascii_lowercase();
+            match pattern.strip_suffix('*') {
+                Some(prefix) => ext.starts_with(prefix),
+                None => ext == pattern,
+            }
+        };
         let custom: Vec<Category> = CUSTOM
             .read()
             .unwrap()
             .iter()
             .map(|c| Category::Custom(c.id))
             .collect();
-        // A deleted built-in takes no file: its types go to another category, or to General.
         custom
             .into_iter()
             .chain(Category::BUILT_IN.into_iter().filter(|c| !c.deleted()))
@@ -455,6 +530,10 @@ pub struct Item {
     /// own copy is `context.referer`; this one follows it (`set_referer`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub referer: Option<String>,
+    /// The web page it was started from in the browser, whole (#607), where its Referer is
+    /// often the site's address only. Refresh download address opens it; kept with the list.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<String>,
     /// A video's (its `url` is the page): the address its file came from, the first stream of
     /// its last run as yt-dlp gave it to MDM's engine (#795). The windows' "Address".
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -891,6 +970,7 @@ impl Item {
             preexisting_folder: false,
             moved_away: false,
             referer: None,
+            page: None,
             file_url: None,
             live: None,
             torrent_check: None,
@@ -1128,14 +1208,16 @@ impl Item {
     }
 
     /// The web page it was obtained from (#795): a video's or a gallery's is its own address
-    /// (the page yt-dlp, gallery-dl look up), a file's the page the browser sent as its referer.
+    /// (the page yt-dlp, gallery-dl look up); a file's the page the browser started it from
+    /// (#607), else the one it sent as its referer (an older extension's, Import's, File
+    /// Properties'). Refresh download address opens it.
     pub fn web_page(&self) -> Option<&str> {
         if self.video.is_some() || self.gallery.is_some() {
             return Some(self.url.as_str());
         }
-        self.context
-            .referer
+        self.page
             .as_deref()
+            .or(self.context.referer.as_deref())
             .or(self.referer.as_deref())
             .filter(|r| !r.is_empty())
     }
@@ -1597,6 +1679,11 @@ mod file_address_tests {
             f.context.referer.as_deref(),
             Some("https://www.example.com/get")
         );
+        // The page the browser started it from, whole, before its Referer (#607): a referrer
+        // policy often cuts that to the site's address.
+        f.set_referer(Some("https://www.example.com/".into()));
+        f.page = Some("https://www.example.com/files/a.html".into());
+        assert_eq!(f.web_page(), Some("https://www.example.com/files/a.html"));
     }
 
     /// The referer and a video's file address are kept with the list (#795); the browser's
@@ -1618,6 +1705,25 @@ mod file_address_tests {
             .replace(&format!(",\"file_url\":\"{STREAM}\""), "");
         let back: Item = serde_json::from_str(&old).unwrap();
         assert_eq!((back.referer, back.file_url), (None, None));
+    }
+
+    /// The page a download was started from is kept with the list (#607), and none is written
+    /// for a download without one.
+    #[test]
+    fn the_page_it_was_started_from_is_saved() {
+        let mut f = Item::new(
+            3,
+            "https://cdn.example.net/a.zip".parse().unwrap(),
+            PathBuf::from("a.zip"),
+            Category::Compressed,
+        );
+        assert!(!serde_json::to_string(&f).unwrap().contains("\"page\""));
+        f.page = Some("https://www.example.com/files/a.html".into());
+        let back: Item = serde_json::from_str(&serde_json::to_string(&f).unwrap()).unwrap();
+        assert_eq!(
+            back.web_page(),
+            Some("https://www.example.com/files/a.html")
+        );
     }
 }
 

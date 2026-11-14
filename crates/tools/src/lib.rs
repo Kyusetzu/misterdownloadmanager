@@ -5,6 +5,7 @@
 //! atomically, never downgrade, and keep the previous version for rollback.
 
 pub mod chosen;
+pub mod declared;
 pub mod ffmpeg;
 mod folder;
 pub mod gallery;
@@ -24,6 +25,7 @@ mod system;
 pub mod update;
 pub mod video;
 pub mod workdir;
+pub mod youtube;
 
 use std::path::{Path, PathBuf};
 

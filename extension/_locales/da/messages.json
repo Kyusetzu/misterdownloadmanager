@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Brug avanceret browserintegration er slået fra i Indstillinger → Generelt."
   },
+  "declined_torrents": {
+    "message": "Det er en torrent, og Åbn magnetlinks og .torrent-filer med Mister Download Manager er slået fra i Torrent-indstillinger."
+  },
   "declined_site_access": {
     "message": "Udvidelsen har ikke tilladelse til at læse dette websted (browserens webstedsadgang)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "original"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Skjul downloadknappen i fuldskærm"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Mens siden er i fuldskærm, viser dens videoer ingen downloadknap"
   }
 }

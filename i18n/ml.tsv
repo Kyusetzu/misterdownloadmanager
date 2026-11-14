@@ -4488,6 +4488,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	ബ്രൗസറിന്റെ പ്രോക്സിക്ക് (ഒരു VPN അല്ലെങ്കിൽ പ്രോക്സി എക്സ്റ്റൻഷൻ) ആ എക്സ്റ്റൻഷന് മാത്രമുള്ള ഒരു ലോഗിൻ ആവശ്യമാണ്: VPN-ന്റെ സ്വന്തം ആപ്പ് ഉപയോഗിക്കുക, അല്ലെങ്കിൽ ഓപ്ഷനുകൾ → പ്രോക്സി / SOCKS-ൽ അതിന്റെ നെറ്റ്‌വർക്ക് അഡാപ്റ്റർ തിരഞ്ഞെടുക്കുക
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	ബ്രൗസറുകൾ നീക്കം ചെയ്ത ഒരു കോപ്പിക്ക് വേണ്ടി സജ്ജീകരിച്ചിരിക്കുന്നു:
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	ബ്രൗസറുകൾക്ക് Mister Download Manager കണ്ടെത്താനാകും
@@ -4878,6 +4882,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	ഈ കമ്പ്യൂട്ടർ മാത്രം (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	ഈ കോപ്പി താൽക്കാലിക ഫോൾഡറിൽ നിന്നാണ് പ്രവർത്തിക്കുന്നത്, അത് ഇല്ലാതാക്കപ്പെടും
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -6178,6 +6186,10 @@ extension	Help	സഹായം
 #, machine
 extension	Hide on this video	ഈ വീഡിയോയിൽ മാത്രം മറയ്ക്കുക
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	ഫുൾ സ്ക്രീനിൽ ഡൗൺലോഡ് ബട്ടൺ മറയ്ക്കുക
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	ബ്രൗസറിനെക്കൊണ്ട് ഡൗൺലോഡ് ചെയ്യാൻ, ഒരു ലിങ്കിൽ ക്ലിക്ക് ചെയ്യുമ്പോൾ Alt അമർത്തിപ്പിടിക്കുക.
@@ -6193,6 +6205,10 @@ extension	It didn't work. Try again.	ഇത് പ്രവർത്തിച്
 #. pairing failed: the other MDM shows no pairing code; Pair a device is its button
 #, machine
 extension	It shows no code now: click Pair a device there first.	ഇത് ഇപ്പോൾ കോഡ് കാണിക്കുന്നില്ല: ആദ്യം അവിടെയുള്ള ഒരു ഉപകരണം ജോടിയാക്കുക എന്നതിൽ ക്ലിക്ക് ചെയ്യുക.
+#. text in the browser extension
+#. why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it
+#, machine
+extension	It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.	ഇതൊരു ടോറന്റാണ്, കൂടാതെ ടോറന്റ് ക്രമീകരണങ്ങളിൽ Mister Download Manager ഉപയോഗിച്ച് മാഗ്നറ്റ് ലിങ്കുകളും .torrent ഫയലുകളും തുറക്കുക എന്നത് ഓഫാണ്.
 #. text in the browser extension
 #. why a download stayed with the browser: the file is smaller than the app's minimum size setting
 #, machine
@@ -6442,6 +6458,10 @@ extension	Video	വീഡിയോ
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	ഒരു നിമിഷം കാത്തിരിക്കുക, തുടർന്ന് വീണ്ടും ശ്രമിക്കുക.
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	പേജ് ഫുൾ സ്ക്രീനിൽ ആയിരിക്കുമ്പോൾ, അതിലെ വീഡിയോകളിൽ ഡൗൺലോഡ് വീഡിയോ ബട്ടൺ കാണിക്കില്ല
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

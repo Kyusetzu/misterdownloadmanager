@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Använd avancerad webbläsarintegrering är avstängd i Alternativ → Allmänt."
   },
+  "declined_torrents": {
+    "message": "Det är en torrent, och Öppna magnetlänkar och .torrent-filer med Mister Download Manager är avstängt i Torrentinställningar."
+  },
   "declined_site_access": {
     "message": "Tillägget får inte läsa den här webbplatsen (webbläsarens webbplatsåtkomst)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "original"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Dölj nedladdningsknappen i helskärm"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Medan sidan är i helskärm visas ingen nedladdningsknapp för dess videor"
   }
 }

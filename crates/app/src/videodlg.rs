@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use egui::{Pos2, Ui, pos2};
+use mdm_tools::declared::Declared;
 use mdm_tools::resolve::{Choice, Looked, SubChoice, Video};
 use mdm_tools::video::{ALL_UPLOADERS, Subs};
 
@@ -66,7 +67,10 @@ pub struct VideoDialog {
     /// Save to was last set for a sound-only choice.
     sound: bool,
     name: String,
-    lookup: Option<Slot<Looked>>,
+    lookup: Option<Slot<(Looked, Option<Declared>)>>,
+    /// The video the page looked up declares its own (#1076): what the download is added with
+    /// (its address, the page as its Referer), while the address is still the one looked up.
+    declared: Option<Declared>,
     /// The yt-dlp and the browser's context the look-up ran with (a list is listed with them).
     looking: Option<(PathBuf, mdm_tools::proc::FromBrowser)>,
     /// The page is a playlist or a channel: its videos (#69).
@@ -180,6 +184,7 @@ impl VideoDialog {
             folder,
             name: String::new(),
             lookup: None,
+            declared: None,
             looking: None,
             list: None,
             confirmed: None,
@@ -367,9 +372,13 @@ impl VideoDialog {
         let looked = self.lookup.as_ref().and_then(|s| s.lock().unwrap().take());
         if let Some(res) = looked {
             self.lookup = None;
+            self.declared = None;
             match res {
-                Ok(Looked::Video(v)) => self.set_video(v),
-                Ok(Looked::List(l)) => {
+                Ok((Looked::Video(v), declared)) => {
+                    self.declared = declared;
+                    self.set_video(v);
+                }
+                Ok((Looked::List(l), _)) => {
                     if let Some((exe, browser)) = self.looking.take() {
                         self.list = Some(crate::playlistdlg::PlaylistView::start(
                             &exe,
@@ -478,6 +487,16 @@ impl VideoDialog {
         let c = choices.get(self.chosen.min(choices.len().checked_sub(1)?))?;
         let name = mdm_engine::naming::sanitize(self.name.trim());
         let chosen = self.chosen_subs();
+        // The video the page declares (#1076): its address, the page as its Referer.
+        let declared = self
+            .declared
+            .as_ref()
+            .filter(|_| self.looked_up == self.page.trim())
+            .and_then(|d| Some((url::Url::parse(&d.address).ok()?, d)));
+        let (page, context) = match declared {
+            Some((address, d)) => (address, declared_context(&self.context(), d)),
+            None => (page, self.context()),
+        };
         Some(VideoOut::One(VideoAdd {
             page,
             selector: c.selector.clone(),
@@ -485,7 +504,7 @@ impl VideoDialog {
             category: self.category(),
             size: c.size,
             start_now,
-            context: self.context(),
+            context,
             subs: subs_for_choice(c, &chosen),
             remember: (!self.subs.is_empty()).then_some(chosen),
             preloaded: None,
@@ -630,7 +649,7 @@ impl VideoDialog {
         {
             // A typed or pasted address too (#359); the box shows what is looked up.
             self.page = mdm_tools::pages::video_address(self.page.trim());
-            let slot: Slot<Looked> = Arc::new(Mutex::new(None));
+            let slot: Slot<(Looked, Option<Declared>)> = Arc::new(Mutex::new(None));
             let (out, exe, page, ctx, rt) = (
                 slot.clone(),
                 tool.exe.clone(),
@@ -1352,20 +1371,53 @@ pub(crate) fn file_name(title: &str, c: &Choice) -> String {
     format!("{stem}.{}", c.ext)
 }
 
-/// yt-dlp's look-up of `page` with the browser's context, as the Download video window and the
-/// browser's quality menu make it: a plain file's size is asked of its server, as yt-dlp doesn't
-/// say it (#320).
+/// The Download video window's look-up of `page` with the browser's context: yt-dlp's, or, when
+/// yt-dlp read the page generically, the video the page declares its own (#1076,
+/// `mdm_tools::declared`, the page read as Options says MDM's own requests go), which the
+/// download then keeps as its address. A plain file's size is asked of its server, as yt-dlp
+/// doesn't say it (#320).
 pub(crate) fn look_up(
     exe: &std::path::Path,
     page: &str,
     browser: &mdm_tools::proc::FromBrowser,
     rt: &tokio::runtime::Handle,
-) -> Result<Looked, String> {
-    look_up_kept(exe, page, browser, rt).0
+) -> Result<(Looked, Option<Declared>), String> {
+    let reader = mdm_tools::streams::Engine {
+        handle: rt.clone(),
+        opts: crate::settings::own_net(),
+    };
+    let (mut looked, _, declared) =
+        mdm_tools::declared::look_up(exe, page, browser, &reader).map_err(|e| e.to_string())?;
+    if let Looked::Video(v) = &mut looked
+        && v.needs_size()
+    {
+        let size = match &declared {
+            Some(d) => direct_size(rt, &d.address, &d.browser(browser)),
+            None => direct_size(rt, page, browser),
+        };
+        if let Some(size) = size {
+            v.set_size(size);
+        }
+    }
+    Ok((looked, declared))
 }
 
-/// [`look_up`], with yt-dlp's answer as it gave it, when it gave one (the browser's quality menu
-/// keeps it for the download chosen there, `mdm_tools::video::Preloaded`).
+/// The browser's request context `context` for the video a page declares (#1076, `d`), as its
+/// download keeps it: the page as its Referer, the browser's User-Agent and cookie jar, not the
+/// page's own Cookie header nor a stream's Origin (`Declared::browser`).
+fn declared_context(context: &mdm_ipc::Command, d: &Declared) -> mdm_ipc::Command {
+    mdm_ipc::Command {
+        referer: Some(d.page.clone()),
+        origin: None,
+        cookies: None,
+        ..context.clone()
+    }
+}
+
+/// yt-dlp's look-up of `page` with the browser's context, as the browser's quality menu makes it
+/// (videolookup.rs), with its answer as it gave it, when it gave one (kept for the download
+/// chosen there, `mdm_tools::video::Preloaded`): a plain file's size is asked of its server, as
+/// yt-dlp doesn't say it (#320).
 pub(crate) fn look_up_kept(
     exe: &std::path::Path,
     page: &str,
@@ -1937,6 +1989,30 @@ mod tests {
         }
     }
 
+    /// A film whose video plays in another site's player, in a frame (Vimeo's on a film site),
+    /// as a browser saw it (`tests/data/embedded-player-title.json`): yt-dlp knows the stream
+    /// the button sends only by its address (`playlist`), and the title the extension sends
+    /// with it (the tab's, without the site's name: tools/extension/test.mjs) names the video
+    /// in the window and its file. It was the player frame's own, "Before The - Short Film from
+    /// Justin Barry on Vimeo".
+    #[test]
+    fn a_stream_from_an_embedded_player_is_named_by_the_pages_title() {
+        let film: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/data/embedded-player-title.json")).unwrap();
+        let text = |k: &str| film[k].as_str().unwrap().to_owned();
+        let v = mdm_tools::resolve::parse(film["ytdlp"].to_string().as_bytes()).unwrap();
+        assert_eq!(v.title, "playlist");
+        let context = mdm_ipc::Command {
+            video_title: Some(text("sent")),
+            ..Default::default()
+        };
+        let title = page_title(&context, &v, &text("stream")).unwrap();
+        assert_eq!(title, text("sent"));
+        let best = &mdm_tools::resolve::choices(&v, true)[0];
+        assert_eq!(best.height, Some(2160));
+        assert_eq!(file_name(title, best), text("file"));
+    }
+
     /// #661: a page's address from the clipboard comes a frame or more after the window opens:
     /// it fills an empty box only, and only with a web address.
     #[test]
@@ -2002,6 +2078,46 @@ mod tests {
             Some(VideoOut::One(add)) => (add.dest.parent().unwrap().to_owned(), add.category),
             _ => panic!("a video is added"),
         }
+    }
+
+    /// #1076: the video a page declares is what the download keeps (its address, the page as its
+    /// Referer, the browser's User-Agent, not the page's Cookie header), so the download's own
+    /// look-up, when it starts, finds that one again; until the address is edited.
+    #[test]
+    fn a_declared_video_is_added_at_its_own_address() {
+        let page = "https://films.example/films/before";
+        let mut d = looked_up(false);
+        d.page = page.into();
+        d.from_browser = page.into();
+        d.looked_up = page.into();
+        d.context = mdm_ipc::Command {
+            user_agent: Some("UA".into()),
+            cookies: Some("session=1".into()),
+            referer: Some("https://search.example/".into()),
+            ..Default::default()
+        };
+        d.declared = Some(Declared {
+            address: "https://player.vimeo.com/video/1244858801".into(),
+            page: page.into(),
+            name: Some("Before".into()),
+        });
+        let added = |d: &VideoDialog| match d.added() {
+            Some(VideoOut::One(add)) => add,
+            _ => panic!("a video is added"),
+        };
+        let add = added(&d);
+        assert_eq!(
+            add.page.as_str(),
+            "https://player.vimeo.com/video/1244858801"
+        );
+        assert_eq!(add.context.referer.as_deref(), Some(page));
+        assert_eq!(add.context.user_agent.as_deref(), Some("UA"));
+        assert_eq!(add.context.cookies, None);
+        // An address edited since: that address, as typed.
+        d.page = "https://films.example/films/other".into();
+        let add = added(&d);
+        assert_eq!(add.page.as_str(), "https://films.example/films/other");
+        assert_eq!(add.context.referer, None);
     }
 
     /// #611: a sound-only choice saves in the Music category's folder and is listed under Music;

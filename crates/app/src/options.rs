@@ -61,6 +61,8 @@ enum Sub {
 
 /// Options → Remote's page number (the tabs' numbers).
 const REMOTE_PAGE: usize = 11;
+/// Test browser integration: from a check's line to the path under it (#818).
+const DETAIL_H: f32 = 18.0;
 
 /// Connection → DNS's sub-dialog: a copy of the DNS fields, kept on OK.
 struct DnsEdit {
@@ -3833,7 +3835,9 @@ impl OptionsDialog {
                 }
             }
             Sub::Test(mut checks) => {
-                let h = 120.0 + checks.len() as f32 * 22.0;
+                // A check's path takes a line of its own (#818).
+                let details = checks.iter().filter(|c| c.detail.is_some()).count();
+                let h = 120.0 + checks.len() as f32 * 22.0 + details as f32 * DETAIL_H;
                 let mut set_up = false;
                 let out = window(
                     ctx,
@@ -3845,8 +3849,8 @@ impl OptionsDialog {
                     LIGHT_BG(),
                     |ui, o| {
                         let p = ui.painter().clone();
+                        let mut y = o.y + 22.0;
                         for (k, c) in checks.iter().enumerate() {
-                            let y = o.y + 22.0 + k as f32 * 22.0;
                             let (mark, color) = if c.ok {
                                 ("\u{2714}", winui::SUCCESS())
                             } else {
@@ -3854,6 +3858,20 @@ impl OptionsDialog {
                             };
                             winui::text_in_window(ui, &p, o.x + 14.0, y, mark, color);
                             winui::text_in_window(ui, &p, o.x + 34.0, y, &c.text, LIGHT_TEXT());
+                            if let Some(path) = &c.detail {
+                                y += DETAIL_H;
+                                winui::fit_middle(
+                                    ui,
+                                    &p,
+                                    o.x + 34.0,
+                                    y,
+                                    path,
+                                    LIGHT_TEXT(),
+                                    o.x + 440.0 - 14.0,
+                                    ("test-detail", k),
+                                );
+                            }
+                            y += 22.0;
                         }
                         let first = checks.iter().find(|c| !c.ok);
                         let y = h - 46.0;
@@ -3881,8 +3899,11 @@ impl OptionsDialog {
                             {
                                 crate::help::open_page(&mdm_ipc::extension::help_doc(why));
                             }
+                            // Not from a portable copy, nor one in a temporary folder: neither
+                            // registers (#818).
                             if c.why == Some("not-installed")
                                 && mdm_ipc::portable_dir().is_none()
+                                && !crate::extension::temporary_copy()
                                 && winui::button_light(
                                     ui,
                                     r(o, set_up_at.0, y, set_up_at.1, 25.0),

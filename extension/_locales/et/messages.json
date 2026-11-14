@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Valik „Kasuta täiustatud brauseri integreerimist” on valikutes Suvandid → Üldine välja lülitatud."
   },
+  "declined_torrents": {
+    "message": "See on torrent ja „Ava magnetlingid ja .torrent-failid programmiga Mister Download Manager” on torrenti sätetes välja lülitatud."
+  },
   "declined_site_access": {
     "message": "Laiendil pole lubatud seda saiti lugeda (brauseri saidi juurdepääs)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "algne"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Peida allalaadimisnupp täisekraanil"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Kui leht on täisekraanil, ei kuvata selle videote kohal nuppu „Laadi video alla”"
   }
 }

@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Uporabi napredno integracijo brskalnika je izklopljeno v Možnosti → Splošno."
   },
+  "declined_torrents": {
+    "message": "To je torrent, možnost »Odpri magnetne povezave in datoteke .torrent z Mister Download Manager« pa je v nastavitvah torrentov izklopljena."
+  },
   "declined_site_access": {
     "message": "Razširitvi ni dovoljeno brati tega spletnega mesta (dostop brskalnika do spletnega mesta)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "izvirno"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Skrij gumb za prenos v celozaslonskem načinu"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Ko je stran v celozaslonskem načinu, se na videoposnetkih ne prikaže gumb Prenesi video"
   }
 }

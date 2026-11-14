@@ -1489,10 +1489,10 @@ impl App {
             if settings.launch_on_startup && mdm_ipc::portable_dir().is_none() {
                 crate::unix::update_run_at_startup();
             }
-            if mdm_ipc::portable_dir().is_none() && !crate::offscreen() {
-                crate::unix::register_browsers();
-            }
         }
+        // Browser integration: a registration that leads nowhere is repaired (#818); Linux and
+        // macOS, which have no installer step, register with each browser here too.
+        crate::extension::repair_at_start();
         // The categories, for code that only has a `Category` (the list's own below too).
         settings.publish_categories();
         // The remote control (#141): off unless Options → Remote turned it on.
@@ -2274,6 +2274,8 @@ impl App {
         // The browser had started it: the host is already sending the file (#44).
         item.direct = crate::debrid::browser_started(&context);
         item.referer = context.referer.clone().filter(|r| !r.is_empty());
+        // The page it was started from (#607), whole: Refresh download address opens it.
+        item.page = context.page_url.clone().filter(|p| !p.is_empty());
         item.context = context;
         self.items.push(item);
         self.dirty = true;
@@ -5012,6 +5014,44 @@ impl App {
             .collect()
     }
 
+    /// Torrent settings' switch just turned on (#1091): when Windows still opens magnet links or
+    /// .torrent files with another program (a choice in Default apps, which no program may
+    /// change), say which and open Settings at MDM's Default apps page, where the user picks it.
+    /// An instance off the screens (a test's) never asks this computer: it takes the names in
+    /// MDM_TEST_TORRENT_DEFAULTS (`;` between them), and its log says what would have opened.
+    #[cfg(windows)]
+    fn tell_torrent_defaults(&mut self) {
+        let others = if crate::offscreen() {
+            std::env::var("MDM_TEST_TORRENT_DEFAULTS")
+                .unwrap_or_default()
+                .split(';')
+                .map(str::trim)
+                .filter(|n| !n.is_empty())
+                .map(str::to_owned)
+                .collect()
+        } else {
+            crate::win32::torrent_defaults_elsewhere()
+        };
+        if others.is_empty() {
+            return;
+        }
+        tracing::info!(
+            "torrents: Windows opens magnet links or .torrent files with {}",
+            others.join(", ")
+        );
+        self.notice = Some((
+            crate::i18n::mark("Torrent settings"),
+            crate::i18n::fmt(
+                // i18n: after ticking "Open magnet links and .torrent files with Mister Download Manager", when Windows' Default apps keeps another app; {apps}: their names. "MAGNET" as Windows' Default apps lists it
+                crate::i18n::t(
+                    "Windows still opens magnet links or .torrent files with {apps}, chosen in Windows' Default apps, where only you can change it. Settings opens there now: pick Mister Download Manager for MAGNET and .torrent.",
+                ),
+                &[("apps", &crate::i18n::isolate(&others.join(", ")))],
+            ),
+        ));
+        crate::launch::open_page(&crate::win32::default_apps_page());
+    }
+
     /// The hashes librqbit should keep or restore in its session.
     fn session_hashes(&self) -> std::collections::HashSet<String> {
         let limits = self.settings.sharing_limits();
@@ -6791,12 +6831,14 @@ impl App {
             Cmd::RefreshAddress => {
                 // As IDM: the page the link came from opens, so a fresh link can be taken
                 // there; Properties takes the new address and the download resumes from it.
+                // The page the browser started it from, whole, not its Referer, which is often
+                // the site's home page alone (#607); the Referer when that isn't known.
                 if let Some(id) = target {
                     let page = self
                         .items
                         .iter()
                         .find(|i| i.id == id)
-                        .and_then(|i| i.context.referer.clone());
+                        .and_then(|i| i.web_page().map(str::to_owned));
                     if let Some(page) = page {
                         crate::launch::open(page);
                     }
@@ -9607,12 +9649,14 @@ impl App {
                     context,
                     crate::i18n::mark("by Link grabber"),
                 );
-                if let Some(i) = self.items.iter_mut().find(|i| i.id == id) {
+                // The download just added is the list's last: not looked for among them all,
+                // for each link (#1063: 37,000 links took seconds).
+                if let Some(i) = self.items.last_mut().filter(|i| i.id == id) {
                     i.package = Some(tag.clone());
-                }
-                // A name the server didn't give (none looked up) may still change.
-                if size.is_none() {
-                    self.name_guessed(id, true);
+                    // A name the server didn't give (none looked up) may still change.
+                    if size.is_none() {
+                        i.name_from_url = true;
+                    }
                 }
                 self.queues[0].items.push(id);
                 added.push(id);
@@ -9624,6 +9668,7 @@ impl App {
             .then(|| added.first().copied())
             .flatten();
         if let Some(g) = group {
+            let added: std::collections::HashSet<u64> = added.iter().copied().collect();
             for i in self.items.iter_mut().filter(|i| added.contains(&i.id)) {
                 i.group = Some(g);
             }
@@ -10335,8 +10380,40 @@ impl App {
         }
         if !self.torrents_started {
             self.torrents_started = true;
-            // The handlers follow the exe (a portable copy may have moved).
-            if self.settings.torrent_associations {
+            // Torrent settings' switch never decided (a list from before #1058, a new one):
+            // settled once, as the user chose (the installer's task, an earlier tick, or what the
+            // system opens .torrent files with now), and saved for the browser integration. An
+            // instance off the screens (a test's, MDM_OFFSCREEN) never reads this computer's
+            // installer value or associations: off, unless its list ticked it before.
+            if self.settings.torrent_associations.is_none() {
+                let system = !crate::offscreen();
+                #[cfg(windows)]
+                let installer = (system && mdm_ipc::portable_dir().is_none())
+                    .then(crate::win32::install_torrents)
+                    .flatten();
+                #[cfg(not(windows))]
+                let installer: Option<bool> = None;
+                let registered = || {
+                    #[cfg(windows)]
+                    return system && crate::win32::torrent_handler_is_ours();
+                    #[cfg(unix)]
+                    return system && crate::unix::torrent_handler_is_ours();
+                };
+                if self.settings.settle_torrent_handler(installer, registered) {
+                    tracing::info!(
+                        "torrents: Open magnet links and .torrent files with MDM settled {}",
+                        if self.settings.torrent_associations == Some(true) {
+                            "on"
+                        } else {
+                            "off"
+                        }
+                    );
+                    self.dirty = true;
+                }
+            }
+            // The handlers follow the exe (a portable copy may have moved). Never from an
+            // instance off the screens (a test's build would take this computer's associations).
+            if self.settings.torrent_associations == Some(true) && !crate::offscreen() {
                 #[cfg(windows)]
                 crate::win32::set_torrent_handlers(true);
                 #[cfg(unix)]
@@ -10398,12 +10475,22 @@ impl App {
                             share,
                         );
                     }
-                    if assoc != self.settings.torrent_associations {
-                        self.settings.torrent_associations = assoc;
+                    if Some(assoc) != self.settings.torrent_associations {
+                        self.settings.torrent_associations = Some(assoc);
+                        // Not from an instance off the screens (a test's), as at start.
+                        if !crate::offscreen() {
+                            #[cfg(windows)]
+                            crate::win32::set_torrent_handlers(assoc);
+                            #[cfg(unix)]
+                            crate::unix::set_torrent_handlers(assoc);
+                        }
+                        // Windows: a choice recorded in Default apps for another program stays
+                        // first, and only the user can change it (#1091): MDM says so and opens
+                        // its page there. Linux and macOS: the switch made MDM the default.
                         #[cfg(windows)]
-                        crate::win32::set_torrent_handlers(assoc);
-                        #[cfg(unix)]
-                        crate::unix::set_torrent_handlers(assoc);
+                        if assoc {
+                            self.tell_torrent_defaults();
+                        }
                     }
                     self.dirty = true;
                 }

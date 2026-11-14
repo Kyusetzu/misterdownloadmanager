@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Bruk avansert nettleserintegrasjon er deaktivert i Alternativer → Generelt."
   },
+  "declined_torrents": {
+    "message": "Det er en torrent, og «Åpne magnetkoblinger og .torrent-filer med Mister Download Manager» er slått av i torrentinnstillingene."
+  },
   "declined_site_access": {
     "message": "Utvidelsen har ikke tillatelse til å lese dette nettstedet (nettleserens nettstedstilgang)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "original"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Skjul nedlastingsknappen i fullskjerm"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Mens siden er i fullskjerm, viser videoene ingen nedlastingsknapp"
   }
 }

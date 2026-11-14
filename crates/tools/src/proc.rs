@@ -149,15 +149,15 @@ fn browser_cookie_args(args: &[String], chosen: Option<&BrowserCookies>) -> Vec<
 /// yt-dlp's "no cookies from any browser": a run told this gets none of the chosen browser's.
 const NO_COOKIES: &str = "--no-cookies-from-browser";
 
-/// `ours` for a look-up without cookies (#352): the cookie file taken out, the browser's store
+/// `ours` for a run without cookies (#352, #686): the cookie file taken out, the browser's store
 /// refused.
-fn without_cookies(ours: &[String]) -> Vec<String> {
+pub fn without_cookies(ours: &[String]) -> Vec<String> {
     let mut out = Vec::with_capacity(ours.len() + 1);
     let mut args = ours.iter();
     while let Some(a) = args.next() {
         if a == "--cookies" || a == "--cookies-from-browser" {
             args.next();
-        } else {
+        } else if a != NO_COOKIES {
             out.push(a.clone());
         }
     }
@@ -165,12 +165,29 @@ fn without_cookies(ours: &[String]) -> Vec<String> {
     out
 }
 
-/// Does a run with arguments `ours` have cookies (its own, or the chosen browser's)?
+/// Does a run with arguments `ours` have cookies (its own, or the chosen browser's)? One told
+/// [`NO_COOKIES`] has none: the chosen browser's store isn't read for it.
 fn with_cookies(ours: &[String], chosen: Option<&BrowserCookies>) -> bool {
-    chosen.is_some()
-        || ours
-            .iter()
-            .any(|a| a == "--cookies" || a == "--cookies-from-browser")
+    !ours.iter().any(|a| a == NO_COOKIES)
+        && (chosen.is_some()
+            || ours
+                .iter()
+                .any(|a| a == "--cookies" || a == "--cookies-from-browser"))
+}
+
+/// Does a run of yt-dlp with arguments `ours` send cookies: the browser's extension's (a cookie
+/// file), or those of the browser Options → Sites Logins names?
+pub fn has_cookies(ours: &[String]) -> bool {
+    with_cookies(ours, browser_cookies().as_ref())
+}
+
+/// Is a look-up of `url` that failed with cookies (`message`) to be made once more without
+/// them? Any site's that left no format to choose (#352), and YouTube's refusals of a signed-in
+/// viewer, which a private window gets past (#686, [`crate::youtube::refused_signed_in`]): a
+/// private or a members' video, which needs them, fails as it did.
+fn refused_with_cookies(url: &str, message: &str) -> bool {
+    crate::servers::format_unavailable(message)
+        || (crate::youtube::is_youtube(url) && crate::youtube::refused_signed_in(message))
 }
 
 /// A page's `-J` output, whether it took looking the page up without cookies, and yt-dlp's
@@ -186,9 +203,13 @@ pub struct LookedUp {
 /// asks only the players that need a JavaScript runtime to decode their links, and without one
 /// (it looks for Deno alone) every video is dropped: "Requested format is not available". The
 /// same page without the cookies lists its qualities, so a look-up that fails this way and had
-/// cookies is made once more without them; if that fails too, the first error is the one told.
+/// cookies is made once more without them, as is a YouTube look-up refused for its signed-in
+/// viewer (#686: the bot check, a 403, a PO token; [`refused_with_cookies`]); if that fails too,
+/// the first error is the one told.
 /// A look-up whose secure connection failed for a certificate yt-dlp doesn't trust is made once
 /// more with the system's certificates ([`with_system_certs`], #955).
+///
+/// Each try waits [`QUICK_SOCKET`] on a server first, then yt-dlp's own time ([`quick_first`]).
 pub fn look_up(
     exe: &Path,
     ours: &[String],
@@ -197,8 +218,10 @@ pub fn look_up(
 ) -> Result<LookedUp, ProcError> {
     // A plain file a server's program sends gets its real type (#695).
     let run = |args: &[String]| {
-        output_warned(ytdlp(exe, &[], args, url)?, "yt-dlp", timeout)
-            .map(|(json, warnings)| (crate::resolve::typed_scripts(json), warnings))
+        quick_first(args, |args| {
+            output_warned(ytdlp(exe, &[], args, url)?, "yt-dlp", timeout)
+                .map(|(json, warnings)| (crate::resolve::typed_scripts(json), warnings))
+        })
     };
     match with_system_certs(&SYSTEM_CERTS, || run(ours)) {
         Ok((json, warnings)) => Ok(LookedUp {
@@ -208,15 +231,25 @@ pub fn look_up(
         }),
         Err(first)
             if with_cookies(ours, browser_cookies().as_ref())
-                && crate::servers::format_unavailable(&first.to_string()) =>
+                && refused_with_cookies(url, &first.to_string()) =>
         {
             match run(&without_cookies(ours)) {
-                Ok((json, warnings)) => Ok(LookedUp {
-                    json,
-                    without_cookies: true,
-                    warnings,
-                }),
-                Err(_) => Err(first),
+                Ok((json, warnings)) => {
+                    tracing::info!(
+                        "yt-dlp's look-up failed with the browser's cookies ({first}); without them, it worked"
+                    );
+                    Ok(LookedUp {
+                        json,
+                        without_cookies: true,
+                        warnings,
+                    })
+                }
+                Err(e) => {
+                    tracing::info!(
+                        "yt-dlp's look-up failed with the browser's cookies ({first}), and without them ({e})"
+                    );
+                    Err(first)
+                }
             }
         }
         Err(e) => Err(e),
@@ -275,6 +308,61 @@ fn with_system_certs<T>(
         }
         done => done,
     }
+}
+
+/// How long a look-up's first try lets a server keep it waiting, in seconds (`--socket-timeout`;
+/// yt-dlp's own is 20). yt-dlp tries a host's addresses one after the other, each for that long,
+/// and a host the network drops without a word (#1053: YouTube's HLS manifest server, where a
+/// network blocks it; a dead first address, as broken IPv6 gives) cost each look-up 20 s before
+/// yt-dlp went on without it. A page's servers answer within a second when they answer.
+pub const QUICK_SOCKET: &str = "5";
+
+/// `run` with `args`, [`QUICK_SOCKET`] and no retries of yt-dlp's own, then, only when that try
+/// failed on the network ([`network_failure`]: a server too slow for it among them), once more
+/// with `args` alone: yt-dlp's own wait and retries, so a slow server still gets its time. The
+/// first try retries nothing itself: yt-dlp retries a request that timed out up to 3 times, and a
+/// server answering in 8 s cost 41 s before it gave up, against 11 s with them off (#1053). A
+/// caller's own `--socket-timeout` or `--extractor-retries` is kept as it is, tried once.
+pub(crate) fn quick_first<T>(
+    args: &[String],
+    mut run: impl FnMut(&[String]) -> Result<T, ProcError>,
+) -> Result<T, ProcError> {
+    if args
+        .iter()
+        .any(|a| a == "--socket-timeout" || a == "--extractor-retries")
+    {
+        return run(args);
+    }
+    let mut quick = args.to_vec();
+    quick.extend(["--socket-timeout", QUICK_SOCKET, "--extractor-retries", "0"].map(str::to_owned));
+    match run(&quick) {
+        Err(ProcError::Failed { message, .. }) if network_failure(&message) => run(args),
+        other => other,
+    }
+}
+
+/// Does yt-dlp's error say the network failed it, as its own retries would have tried again: a
+/// server that didn't answer in time ("Read timed out. (read timeout=5.0)", "Connection to …
+/// timed out. (connect timeout=5.0)", "The read operation timed out"), a connection that broke,
+/// or a server's error (HTTP 5xx)?
+pub(crate) fn network_failure(message: &str) -> bool {
+    // A certificate yt-dlp doesn't trust is no network trouble: `with_system_certs` asks again.
+    if message.contains("CERTIFICATE_VERIFY_FAILED") {
+        return false;
+    }
+    let m = message.to_ascii_lowercase();
+    [
+        "timed out",
+        "read timeout",
+        "connect timeout",
+        "transporterror",
+        "connection reset",
+        "connection aborted",
+        "remote end closed",
+        "http error 5",
+    ]
+    .iter()
+    .any(|k| m.contains(k))
 }
 
 /// Did yt-dlp's look-up say YouTube's qualities went missing for want of a JavaScript runtime
@@ -1219,6 +1307,100 @@ pub fn output_warned(
 mod tests {
     use super::*;
 
+    /// #1053: a look-up waits 5 s on a server first; only a try that failed for a server that
+    /// didn't answer in time is made again, once, with yt-dlp's own wait.
+    #[test]
+    fn a_look_up_waits_briefly_then_once_as_long_as_ytdlp_would() {
+        let args = vec!["-J".to_owned()];
+        let quick: Vec<String> = [
+            "-J",
+            "--socket-timeout",
+            QUICK_SOCKET,
+            "--extractor-retries",
+            "0",
+        ]
+        .map(str::to_owned)
+        .to_vec();
+        let failed = |message: &str| ProcError::Failed {
+            tool: "yt-dlp".into(),
+            message: message.into(),
+        };
+        // Answered: one try, with the short wait.
+        let mut tried = Vec::new();
+        let r = quick_first(&args, |a| {
+            tried.push(a.to_vec());
+            Ok::<_, ProcError>("json")
+        });
+        assert_eq!(r.unwrap(), "json");
+        assert_eq!(tried, std::slice::from_ref(&quick));
+        // A server too slow for it: again with yt-dlp's own wait, which answers.
+        let mut tried = Vec::new();
+        let r = quick_first(&args, |a| {
+            tried.push(a.to_vec());
+            if tried.len() == 1 {
+                Err(failed(
+                    "ERROR: [generic] Unable to download webpage: HTTPSConnectionPool(host='slow.test', port=443): Read timed out. (read timeout=5.0)",
+                ))
+            } else {
+                Ok("json")
+            }
+        });
+        assert_eq!(r.unwrap(), "json");
+        assert_eq!(tried, [quick.clone(), args.clone()]);
+        // Timed out both times: twice only, the second error told.
+        let mut tried = 0;
+        let r: Result<(), _> = quick_first(&args, |_| {
+            tried += 1;
+            Err(failed(&format!(
+                "try {tried}: The read operation timed out"
+            )))
+        });
+        assert_eq!(tried, 2);
+        assert!(r.unwrap_err().to_string().contains("try 2"));
+        // Any other failure, or MDM's own limit on the whole run: not made again.
+        for e in [
+            failed("ERROR: [youtube] x: Video unavailable"),
+            ProcError::Timeout("yt-dlp".into()),
+        ] {
+            let mut tried = 0;
+            let mut e = Some(e);
+            let r: Result<(), _> = quick_first(&args, |_| {
+                tried += 1;
+                Err(e.take().unwrap())
+            });
+            assert!(r.is_err());
+            assert_eq!(tried, 1);
+        }
+        // A caller's own wait or retries stay, tried once.
+        for own in [["--socket-timeout", "60"], ["--extractor-retries", "9"]] {
+            let own = own.map(str::to_owned).to_vec();
+            let mut tried = Vec::new();
+            let _ = quick_first(&own, |a| {
+                tried.push(a.to_vec());
+                Err::<(), _>(failed("Read timed out."))
+            });
+            assert_eq!(tried, std::slice::from_ref(&own));
+        }
+        // yt-dlp's words for the network failing it, which its own retries would try again.
+        for m in [
+            "Read timed out. (read timeout=5.0)",
+            "HTTPSConnectionPool(host='x', port=443): Max retries exceeded (Caused by ConnectTimeoutError(<…>, 'Connection to x timed out. (connect timeout=5.0)'))",
+            "<urlopen error The read operation timed out>",
+            "Unable to download API page: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')) (caused by TransportError(...))",
+            "Unable to download webpage: HTTP Error 503: Service Unavailable",
+        ] {
+            assert!(network_failure(m), "{m}");
+        }
+        for m in [
+            "HTTP Error 403: Forbidden",
+            "Video unavailable",
+            "Requested format is not available",
+            "Unable to download webpage: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1032)> (caused by TransportError(...))",
+        ] {
+            assert!(!network_failure(m), "{m}");
+        }
+    }
+
     /// A program is looked for in absolute folders only: `.` on the PATH would be wherever MDM
     /// was started from.
     #[test]
@@ -1852,6 +2034,53 @@ foreach ($d in $env:PATH.Split(';')) {
         assert!(!with_cookies(&["-J".to_owned()], None));
         // Told so, the chosen browser's cookies aren't read either.
         assert_eq!(yt(Some(&firefox), &["-J", NO_COOKIES]), ["-J", NO_COOKIES]);
+        // #686: a run made without them has none, the chosen browser's neither, and taking them
+        // out twice is taking them out once.
+        let plain = without_cookies(&ours);
+        assert!(!with_cookies(&plain, None));
+        assert!(!with_cookies(&plain, Some(&firefox)));
+        assert_eq!(without_cookies(&plain), plain);
+    }
+
+    /// #686: which look-ups that failed with cookies are made once more without them: any
+    /// site's with no format left (#352); on YouTube only, its refusals of a signed-in viewer,
+    /// in yt-dlp's real words (`tests/fixtures/ytdlp-refusals`), never a video that needs the
+    /// sign-in.
+    #[test]
+    fn a_look_up_refused_with_cookies_is_made_without_them_on_youtube_only() {
+        let error = |stderr: &str| {
+            stderr
+                .lines()
+                .find_map(|l| l.strip_prefix("ERROR:"))
+                .unwrap()
+                .trim()
+                .to_owned()
+        };
+        let yt = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
+        let other = "https://video.example/watch?v=1";
+        let bot = error(include_str!(
+            "../tests/fixtures/ytdlp-refusals/bot-check.stderr"
+        ));
+        let api = error(include_str!(
+            "../tests/fixtures/ytdlp-refusals/api-403.stderr"
+        ));
+        for e in [&bot, &api] {
+            assert!(refused_with_cookies(yt, e), "{e}");
+            assert!(!refused_with_cookies(other, e), "another site: {e}");
+        }
+        for stderr in [
+            include_str!("../tests/fixtures/ytdlp-refusals/private.stderr"),
+            include_str!("../tests/fixtures/ytdlp-refusals/age.stderr"),
+            include_str!("../tests/fixtures/ytdlp-refusals/members.stderr"),
+        ] {
+            let e = error(stderr);
+            assert!(!refused_with_cookies(yt, &e), "{e}");
+        }
+        let none = error(include_str!(
+            "../tests/fixtures/ytdlp-js-runtime/challenge-failed.stderr"
+        ));
+        assert!(refused_with_cookies(yt, &none));
+        assert!(refused_with_cookies(other, &none), "#352, every site");
     }
 
     /// #229: why the browser's cookies didn't help stays on the failure's message.

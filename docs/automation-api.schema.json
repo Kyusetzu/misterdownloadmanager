@@ -439,6 +439,13 @@
             "null"
           ]
         },
+        "page_url": {
+          "description": "From the browser (#607): the web page the download was started from, whole (its tab's\naddress; a link's opened in a tab of its own, the tab that opened it), where the Referer\nis often cut to the site's address by the page's referrer policy. Kept with the download:\nRefresh download address opens it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "pair": {
           "default": false,
           "description": "The remote control (#157, `misterdownloadmanager-cli pair`): show a new pairing code;\nanswered with it, the page's addresses and a QR code to scan ([`api::PairAnswer`]).",
@@ -631,7 +638,7 @@
         },
         "video_title": {
           "default": null,
-          "description": "The title of the page the button was clicked on: a video yt-dlp knows only by its address\nis named by it.",
+          "description": "The title of the page the button was clicked on (the tab's, for a player in a frame of\nit), without the site's name (`Film | Site` is `Film`: the extension's `withoutSiteName`):\na video yt-dlp knows only by its address is named by it.",
           "type": [
             "string",
             "null"
@@ -759,7 +766,7 @@
         },
         "title": {
           "default": null,
-          "description": "The title of the page the button was clicked on: a video yt-dlp knows only by its address\nis named by it (as [`Command::video_title`]).",
+          "description": "The title of the page the button was clicked on, as [`Command::video_title`] has it: a\nvideo yt-dlp knows only by its address is named by it.",
           "type": [
             "string",
             "null"

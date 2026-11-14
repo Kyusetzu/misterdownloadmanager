@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "L’option « Utiliser l’intégration avancée du navigateur » est désactivée dans Options → Général."
   },
+  "declined_torrents": {
+    "message": "C’est un torrent, et « Ouvrir les liens magnet et les fichiers .torrent avec Mister Download Manager » est désactivé dans les paramètres Torrent."
+  },
   "declined_site_access": {
     "message": "L’extension n’est pas autorisée à lire ce site (accès au site du navigateur)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "original"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Masquer le bouton de téléchargement en plein écran"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Lorsque la page est en plein écran, ses vidéos n’affichent pas de bouton Télécharger la vidéo"
   }
 }

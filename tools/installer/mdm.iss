@@ -106,6 +106,11 @@ Root: HKCU; Subkey: "Software\MisterDownloadManager"; ValueType: string; ValueNa
 ; Start with Windows: the same value Options -> "Launch on startup" writes and reads, with the
 ; argument that starts MDM in the notification area (#226; win32.rs startup_command).
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "MisterDownloadManager"; ValueData: """{app}\{#AppExe}"" /startup"; Flags: uninsdeletevalue; Tasks: startup
+; The "torrents" task, ticked or not: Torrent settings' switch on the app's first start that hasn't
+; decided it (#1058: it then also decides whether the browser hands .torrent downloads over;
+; settings.rs settle_torrent_handler). Only read, once.
+Root: HKCU; Subkey: "Software\MisterDownloadManager"; ValueType: string; ValueName: "InstallTorrents"; ValueData: "1"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: torrents
+Root: HKCU; Subkey: "Software\MisterDownloadManager"; ValueType: string; ValueName: "InstallTorrents"; ValueData: "0"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: not torrents
 ; .torrent files and magnet links (HKA: the user's or everyone's classes, as installed).
 Root: HKA; Subkey: "Software\Classes\MisterDownloadManager.torrent"; ValueType: string; ValueName: ""; ValueData: "Torrent file"; Flags: uninsdeletekey; Tasks: torrents
 Root: HKA; Subkey: "Software\Classes\MisterDownloadManager.torrent\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExe},0"; Tasks: torrents
@@ -116,6 +121,21 @@ Root: HKA; Subkey: "Software\Classes\magnet"; ValueType: string; ValueName: ""; 
 Root: HKA; Subkey: "Software\Classes\magnet"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Tasks: torrents
 Root: HKA; Subkey: "Software\Classes\magnet\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExe},0"; Tasks: torrents
 Root: HKA; Subkey: "Software\Classes\magnet\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: torrents
+; Windows' Default apps (#1091): MDM listed for MAGNET and .torrent, where the user picks it (a
+; choice recorded there for another program stays first, and no program may change it). The
+; same keys and names as win32.rs set_torrent_handlers; ApplicationName matches the
+; RegisteredApplications value's name, and each association has an MDM-only ProgID. The app
+; writes its description in the interface language for the user's own registration.
+Root: HKA; Subkey: "Software\Classes\MisterDownloadManager.Magnet"; ValueType: string; ValueName: ""; ValueData: "URL:Magnet link"; Flags: uninsdeletekey; Tasks: torrents
+Root: HKA; Subkey: "Software\Classes\MisterDownloadManager.Magnet"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Tasks: torrents
+Root: HKA; Subkey: "Software\Classes\MisterDownloadManager.Magnet\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"",0"; Tasks: torrents
+Root: HKA; Subkey: "Software\Classes\MisterDownloadManager.Magnet\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: torrents
+Root: HKA; Subkey: "Software\MisterDownloadManager\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#AppName}"; Flags: uninsdeletekey; Tasks: torrents
+Root: HKA; Subkey: "Software\MisterDownloadManager\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "Downloads files, videos and torrents"; Tasks: torrents
+Root: HKA; Subkey: "Software\MisterDownloadManager\Capabilities"; ValueType: string; ValueName: "ApplicationIcon"; ValueData: """{app}\{#AppExe}"",0"; Tasks: torrents
+Root: HKA; Subkey: "Software\MisterDownloadManager\Capabilities\FileAssociations"; ValueType: string; ValueName: ".torrent"; ValueData: "MisterDownloadManager.Torrent"; Tasks: torrents
+Root: HKA; Subkey: "Software\MisterDownloadManager\Capabilities\UrlAssociations"; ValueType: string; ValueName: "magnet"; ValueData: "MisterDownloadManager.Magnet"; Tasks: torrents
+Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "{#AppName}"; ValueData: "Software\MisterDownloadManager\Capabilities"; Flags: uninsdeletevalue; Tasks: torrents
 
 [Run]
 Filename: "{app}\{#HostExe}"; Parameters: "--register"; Flags: runhidden; Tasks: browser; Check: not IsAdminInstallMode
@@ -197,6 +217,13 @@ begin
     ForgetIfOurs('Software\Classes\magnet', ExpandConstant('{app}\{#AppExe}'));
     if RegQueryStringValue(HKA, 'Software\Classes\.torrent', '', Value) and (Value = 'MisterDownloadManager.torrent') then
       RegDeleteValue(HKA, 'Software\Classes\.torrent', '');
+    { Default apps (#1091): what the app registered for this user (Torrent settings' switch),
+      also when this install was everyone's. }
+    if RegQueryStringValue(HKCU, 'Software\RegisteredApplications', '{#AppName}', Value) and (CompareText(Value, 'Software\MisterDownloadManager\Capabilities') = 0) then
+      RegDeleteValue(HKCU, 'Software\RegisteredApplications', '{#AppName}');
+    RegDeleteKeyIncludingSubkeys(HKCU, 'Software\MisterDownloadManager\Capabilities');
+    if RegQueryStringValue(HKCU, 'Software\Classes\MisterDownloadManager.Magnet\shell\open\command', '', Value) and (Pos(Lowercase(ExpandConstant('{app}\{#AppExe}')), Lowercase(Value)) > 0) then
+      RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Classes\MisterDownloadManager.Magnet');
     RemoveData := False;
     if DirExists(Data) and not UninstallSilent() then
       RemoveData := MsgBox(CustomMessage('KeepData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES;

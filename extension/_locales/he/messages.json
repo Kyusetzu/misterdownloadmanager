@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "האפשרות 'השתמש בשילוב דפדפן מתקדם' כבויה ב'אפשרויות' ← 'כללי'."
   },
+  "declined_torrents": {
+    "message": "זהו קובץ טורנט, והאפשרות ״פתיחת קישורי magnet וקובצי .torrent באמצעות Mister Download Manager״ כבויה בהגדרות הטורנט."
+  },
   "declined_site_access": {
     "message": "אין הרשאה להרחבה לקרוא אתר זה (גישת האתר של הדפדפן)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "מקורית"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "הסתרת לחצן ההורדה במסך מלא"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "כאשר הדף במסך מלא, הסרטונים שלו לא מציגים את לחצן ״הורד סרטון״"
   }
 }

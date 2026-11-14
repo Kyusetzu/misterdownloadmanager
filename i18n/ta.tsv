@@ -4488,6 +4488,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	உலாவியின் ப்ராக்ஸி (VPN அல்லது ப்ராக்ஸி நீட்டிப்பு) உள்நுழைவைக் கேட்கிறது; அதற்கான உள்நுழைவு விவரங்கள் அந்த நீட்டிப்பிடம் மட்டுமே உள்ளன: VPN-இன் சொந்த பயன்பாட்டைப் பயன்படுத்தவும் அல்லது விருப்பங்கள் → ப்ராக்ஸி / SOCKS என்பதில் அதன் பிணைய அடாப்டரைத் தேர்ந்தெடுக்கவும்
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	உலாவிகள் நீக்கப்பட்ட நகலுக்காக அமைக்கப்பட்டுள்ளன:
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	உலாவிகளால் Mister Download Managerஐக் கண்டறிய முடியும்
@@ -4878,6 +4882,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	இந்தக் கணினி மட்டும் (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	இந்த நகல் நீக்கப்படும் ஒரு தற்காலிக கோப்புறையிலிருந்து இயங்குகிறது
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -6178,6 +6186,10 @@ extension	Help	உதவி
 #, machine
 extension	Hide on this video	இந்த வீடியோவில் மட்டும் மறைக்கவும்
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	முழுத்திரையில் பதிவிறக்க பொத்தானை மறை
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	ஒரு இணைப்பைக் கிளிக் செய்யும்போது Alt ஐ அழுத்திப் பிடித்தால், உலாவி அதைப் பதிவிறக்கும்.
@@ -6193,6 +6205,10 @@ extension	It didn't work. Try again.	அது வேலை செய்யவ�
 #. pairing failed: the other MDM shows no pairing code; Pair a device is its button
 #, machine
 extension	It shows no code now: click Pair a device there first.	அது இப்போது குறியீட்டைக் காட்டவில்லை: முதலில் அங்குள்ள சாதனத்தை இணை என்பதைக் கிளிக் செய்யவும்.
+#. text in the browser extension
+#. why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it
+#, machine
+extension	It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.	இது ஒரு டோரண்ட், மேலும் Mister Download Manager உடன் காந்த இணைப்புகள் மற்றும் .torrent கோப்புகளைத் திறப்பது டோரண்ட் அமைப்புகளில் முடக்கப்பட்டுள்ளது.
 #. text in the browser extension
 #. why a download stayed with the browser: the file is smaller than the app's minimum size setting
 #, machine
@@ -6442,6 +6458,10 @@ extension	Video	வீடியோ
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	ஒரு கணம் காத்திருந்து, மீண்டும் முயற்சிக்கவும்.
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	பக்கம் முழுத்திரையில் இருக்கும்போது, அதன் வீடியோக்கள் பதிவிறக்க வீடியோ பொத்தானைக் காட்டாது
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

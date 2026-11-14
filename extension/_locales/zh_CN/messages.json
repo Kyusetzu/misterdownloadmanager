@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "“选项”→“常规”中已关闭“使用高级浏览器集成”。"
   },
+  "declined_torrents": {
+    "message": "这是一个种子文件，并且“在 Torrent 设置中用 Mister Download Manager 打开磁力链接和 .torrent 文件”已关闭。"
+  },
   "declined_site_access": {
     "message": "此扩展不允许读取此网站(浏览器的网站访问)。"
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "原始"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "全屏时隐藏下载按钮"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "页面全屏时，视频上不会显示“下载视频”按钮"
   }
 }

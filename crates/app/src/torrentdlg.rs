@@ -1068,7 +1068,7 @@ impl TorrentSettings {
         let net = Net::of(s);
         TorrentSettings {
             share: s.torrent_keep_sharing,
-            assoc: s.torrent_associations,
+            assoc: s.torrent_associations == Some(true),
             port: if net.port == 0 {
                 String::new()
             } else {

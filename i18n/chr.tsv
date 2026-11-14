@@ -4378,6 +4378,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	ᏗᎦᎳᎥᏙᏗ ᎤᏤᎵ proxy (VPN ᎠᎴ proxy ᏗᎧᏅᏍᏙᏗ) ᎤᏤᎵᏉ ᏗᏴᏍᏙᏗ ᎤᏔᏲᎭ: VPN ᎤᏤᎵ ᏗᏟᎶᏍᏔᏅᎯ ᎢᏨᏗ, ᎠᎴ ᎤᏤᎵ ᏓᎦwiązᏗ ᏗᎦᏁᏟᏴᏍᏗ ᎢመርᎦ ᎾᎿ Options → Proxy / Socks
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	ᏗᏓᎴᏂᏍᎩ ᏚᎾᏓᏁᏟᏴᎡᎸ ᎾᏍᎩᏯᎢ ᎾᎿ ᎤᏲᏨᎯ:
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	ᏗᏓᏂᏴᏗ ᏗᏕᎬᏔᏅᎢ ᏗᏓᏂᏴᏗ ᏗᏕᎬᏔᏅᎢ Mister Download Manager
@@ -4738,6 +4742,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	ᎪᎯ ᎢᏗᏢᏗᏍᎩ ᎤᏩᏒ (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	ᏗᎦᎴᏴᏔᏅᎯ ᏗᎦᎴᏴᏔᏅᎯ ᏗᎦᎴᏴᏔᏅᎯ ᏗᎦᎴᏴᏔᏅᎯ
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -5989,6 +5997,10 @@ extension	Help	ᎠᎵᏍᏕᎸᏙᏗ
 #, machine
 extension	Hide on this video	ᎦᏙᎬᎢ ᎯᎠ ᏗᏓᏟᎶᏍᏗ ᎦᎸᎳᏗᏢ
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	ᎢᎬᎾᏗᏢ ᏗᏓᏟᎶᏍᏔᏅᎯ ᎨᏒ ᎥᏝ ᏯᏙᎴᎰᏍᎦ
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	Alt ᏗᏓᏂᏴᏗ ᏗᏕᎬᏔᏅᎢ ᏗᏓᏂᏴᏗ ᏗᏕᎬᏔᏅᎢ ᏗᏓᏂᏴᏗ ᏗᏕᎬᏔᏅᎢ ᏗᏓᏂᏴᏗ ᏗᏕᎬᏔᏅᎢ.
@@ -6253,6 +6265,10 @@ extension	Video	ᏗᎪᏪᎵ
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	ᎣᏍᏓ ᎢᏣᎦᏘᏓ, ᎿᏉᏃ ᏔᎵᏁ ᎢᏣᏢᏓᎳ.
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	ᎢᎬᎾᏗᏢ ᏗᏓᏟᎶᏍᏔᏅᎯ ᎨᏒ ᎥᏝ ᏯᏙᎴᎰᏍᎦ
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

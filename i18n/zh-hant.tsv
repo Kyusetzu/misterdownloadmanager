@@ -4488,6 +4488,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	瀏覽器的 Proxy (VPN 或 Proxy 擴充功能) 要求只有該擴充功能才有的登入資訊：請使用 VPN 自己的應用程式，或在「選項」→「Proxy / SOCKS」中選擇其網路介面卡
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	瀏覽器已設定為已移除的副本：
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	瀏覽器可以找到 Mister Download Manager
@@ -4878,6 +4882,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	僅限此電腦 (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	此副本從將被刪除的暫存資料夾執行
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -6178,6 +6186,10 @@ extension	Help	說明
 #, machine
 extension	Hide on this video	僅在此影片上隱藏
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	全螢幕時隱藏下載按鈕
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	按住 Alt 鍵並按一下連結，讓瀏覽器下載。
@@ -6193,6 +6205,10 @@ extension	It didn't work. Try again.	失敗。請再試一次。
 #. pairing failed: the other MDM shows no pairing code; Pair a device is its button
 #, machine
 extension	It shows no code now: click Pair a device there first.	它現在沒有顯示代碼：請先按一下「配對裝置」。
+#. text in the browser extension
+#. why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it
+#, machine
+extension	It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.	這是 torrent 檔案，且「在 Torrent 設定中以 Mister Download Manager 開啟磁力連結和 .torrent 檔案」已關閉。
 #. text in the browser extension
 #. why a download stayed with the browser: the file is smaller than the app's minimum size setting
 #, machine
@@ -6442,6 +6458,10 @@ extension	Video	影片
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	請稍候片刻，然後再試一次。
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	當頁面處於全螢幕模式時，其影片不會顯示「下載影片」按鈕
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

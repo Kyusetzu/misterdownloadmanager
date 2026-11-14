@@ -34,8 +34,13 @@ use crate::sites::{self, PageSays, Refusal};
 use crate::sparse;
 use crate::state::{ResumeState, Validators, state_path};
 
-/// Bytes buffered per connection before claiming and writing them.
+/// Bytes buffered per connection before claiming and writing them. Each batch is one buffer of
+/// exactly this capacity, filled and never grown (`Writer::push`): what a connection holds in
+/// memory is what it counts (`Writer::in_memory`).
 const BATCH: usize = 256 * 1024;
+/// Written batches a connection keeps for the next ones rather than freeing them and asking
+/// the allocator again (`Writer::spare`): one write's worth.
+const SPARE_MAX: usize = WRITE_MAX / BATCH;
 /// Received bytes are written at least this often, so a slow connection shows progress and a
 /// pause keeps what arrived.
 const FLUSH_EVERY: Duration = Duration::from_secs(1);
@@ -3228,18 +3233,18 @@ async fn read_up_to(
 
 /// The most of a web page [`page_links`] reads.
 const PAGE_LINKS_MAX: usize = 8 << 20;
+/// The most of a web page [`page_videos`] reads: what it declares is in its head, or near it.
+const PAGE_VIDEOS_MAX: usize = 2 << 20;
 
-/// The links on the web page at `url`, for Link grabber (#705): an address given on its own
-/// (pasted, copied, in a list) that is a page lists the page's links, as the browser's
-/// "Download all links" does. Asked as a download's look asks (`get`: the user's proxy and
-/// agent, the redirects and waiting pages it follows), read up to `PAGE_LINKS_MAX`, and its
-/// links found by [`html::links`] against the address the page came from, which comes back
-/// too. An answer that isn't a web page has no links (its body isn't read).
-pub async fn page_links(
+/// The web page at `url`, asked as a download's look asks (`get`: the user's proxy and agent,
+/// the redirects and waiting pages it follows), read up to `max` bytes, with the address it came
+/// from. None for an answer that isn't a web page (its body isn't read).
+async fn web_page(
     url: Url,
     headers: HeaderMap,
     opts: &Options,
-) -> Result<(Url, Vec<Url>), Error> {
+    max: usize,
+) -> Result<(Url, Option<String>), Error> {
     let cancel = CancellationToken::new();
     let client = http_client(opts, &url)?;
     let (resp, _, _) = get(
@@ -3254,11 +3259,41 @@ pub async fn page_links(
     .await?;
     let at = resp.url().clone();
     if !is_web_page(resp.headers()) {
-        return Ok((at, Vec::new()));
+        return Ok((at, None));
     }
-    let page = read_up_to(resp, PAGE_LINKS_MAX, &cancel).await?;
-    let links = html::links(&String::from_utf8_lossy(&page), &at);
+    let page = read_up_to(resp, max, &cancel).await?;
+    Ok((at, Some(String::from_utf8_lossy(&page).into_owned())))
+}
+
+/// The links on the web page at `url`, for Link grabber (#705): an address given on its own
+/// (pasted, copied, in a list) that is a page lists the page's links, as the browser's
+/// "Download all links" does. Read as [`web_page`] reads it, up to `PAGE_LINKS_MAX`, and its
+/// links found by [`html::links`] against the address the page came from, which comes back
+/// too. An answer that isn't a web page has no links.
+pub async fn page_links(
+    url: Url,
+    headers: HeaderMap,
+    opts: &Options,
+) -> Result<(Url, Vec<Url>), Error> {
+    let (at, page) = web_page(url, headers, opts, PAGE_LINKS_MAX).await?;
+    let links = page.map(|p| html::links(&p, &at)).unwrap_or_default();
     Ok((at, links))
+}
+
+/// The videos the web page at `url` declares its own (#1076: its JSON-LD, Open Graph and
+/// Twitter card, [`html::declared_videos`]), read as [`web_page`] reads it, up to
+/// `PAGE_VIDEOS_MAX`, against the address the page came from, which comes back too. An answer
+/// that isn't a web page declares none.
+pub async fn page_videos(
+    url: Url,
+    headers: HeaderMap,
+    opts: &Options,
+) -> Result<(Url, html::DeclaredVideos), Error> {
+    let (at, page) = web_page(url, headers, opts, PAGE_VIDEOS_MAX).await?;
+    let videos = page
+        .map(|p| html::declared_videos(&p, &at))
+        .unwrap_or_default();
+    Ok((at, videos))
 }
 
 /// Where a page leads on to and after how long, from its `Refresh` value or a meta refresh's
@@ -4540,16 +4575,36 @@ async fn receive(
 /// up to `pos`, then the write the disk is taking now (one at a time, in order), then the
 /// batches waiting in memory (`queue`), then `buf`, the batch still filling. Every byte claimed
 /// and not yet written counts in `Shared::held`.
+///
+/// Every batch is a buffer of `BATCH` capacity that is filled, never grown, and handed to the
+/// disk as it is: the memory the connection holds is its batches, counted by capacity
+/// (`in_memory`), and `hold_cap` bounds that. It counted the bytes once, not the memory: a
+/// batch grew past `BATCH` when a chunk overran it (Vec doubling), and a write joined its
+/// batches into one buffer grown in steps up to `WRITE_MAX`, copying them; 0.5.2 kept one
+/// buffer per connection, grown by doubling up to its share of the cap. A 4 GB download from a
+/// fast server committed 967 MB in 0.5.2's window, 575 MB before this, 523 MB after (235 MB of
+/// it the window's own); `tests/memory.rs` counts every allocation.
 struct Writer<'a> {
     ctx: &'a Ctx,
     id: WorkerId,
     pos: u64,
-    writing: Option<(tokio::task::JoinHandle<io::Result<()>>, u64)>,
+    writing: Option<Writing>,
     queue: std::collections::VecDeque<Vec<u8>>,
     queued: u64,
+    /// The batch filling: no buffer (capacity 0) until bytes come.
     buf: Vec<u8>,
+    /// Written batches, emptied, for the next ones (at most `SPARE_MAX`).
+    spare: Vec<Vec<u8>>,
     /// When `buf` was last closed: received bytes go to the disk at least `FLUSH_EVERY`.
     closed_at: std::time::Instant,
+}
+
+/// The write the disk is taking (`Writer::send`): its task, which hands the batches back once
+/// written, and how many bytes and batches it carries.
+struct Writing {
+    task: tokio::task::JoinHandle<io::Result<Vec<Vec<u8>>>>,
+    bytes: u64,
+    batches: usize,
 }
 
 impl<'a> Writer<'a> {
@@ -4561,14 +4616,24 @@ impl<'a> Writer<'a> {
             writing: None,
             queue: Default::default(),
             queued: 0,
-            buf: Vec::with_capacity(BATCH),
+            buf: Vec::new(),
+            spare: Vec::new(),
             closed_at: std::time::Instant::now(),
         }
     }
 
     /// Bytes claimed and not written yet.
     fn pending(&self) -> u64 {
-        self.writing.as_ref().map_or(0, |w| w.1) + self.queued + self.buf.len() as u64
+        self.writing.as_ref().map_or(0, |w| w.bytes) + self.queued + self.buf.len() as u64
+    }
+
+    /// The memory the bytes not written yet take: their batches' capacity.
+    fn in_memory(&self) -> u64 {
+        in_memory(
+            self.writing.as_ref().map_or(0, |w| w.batches),
+            self.queue.len(),
+            self.buf.capacity(),
+        )
     }
 
     /// The next byte to claim.
@@ -4576,25 +4641,41 @@ impl<'a> Writer<'a> {
         self.pos + self.pending()
     }
 
-    fn push(&mut self, data: &[u8]) {
-        self.buf.extend_from_slice(data);
-        let n = data.len() as u64;
-        self.ctx.shared.held.fetch_add(n, Ordering::Relaxed);
+    /// `data` into batches: `buf` filled up to `BATCH` (a spare one, or a new one), then closed.
+    fn push(&mut self, mut data: &[u8]) {
+        self.ctx
+            .shared
+            .held
+            .fetch_add(data.len() as u64, Ordering::Relaxed);
+        while !data.is_empty() {
+            if self.buf.capacity() == 0 {
+                self.buf = self
+                    .spare
+                    .pop()
+                    .unwrap_or_else(|| Vec::with_capacity(BATCH));
+            }
+            let n = (BATCH - self.buf.len()).min(data.len());
+            self.buf.extend_from_slice(&data[..n]);
+            data = &data[n..];
+            if self.buf.len() == BATCH {
+                self.close();
+            }
+        }
     }
 
-    /// After a chunk: once `buf` is a batch (or `FLUSH_EVERY` old) it goes to the disk, or
-    /// waits in memory while the disk still takes an earlier write. Past `hold_cap` waiting,
-    /// the connection waits for the disk. `Some(end)`: the segment is complete.
+    /// After a chunk: once `buf` is a batch (`push` closes it) or `FLUSH_EVERY` old it goes to
+    /// the disk, or waits in memory while the disk still takes an earlier write. Past `hold_cap`
+    /// in memory, the connection waits for the disk. `Some(end)`: the segment is complete.
     async fn step(&mut self, pace: &mut Pace) -> Result<Option<u64>, Error> {
-        if self.writing.as_ref().is_some_and(|w| w.0.is_finished())
+        if self.writing.as_ref().is_some_and(|w| w.task.is_finished())
             && let Some(end) = self.wait().await?
         {
             return Ok(Some(end));
         }
-        if self.buf.len() >= BATCH || self.closed_at.elapsed() >= FLUSH_EVERY {
+        if self.closed_at.elapsed() >= FLUSH_EVERY {
             self.close();
         }
-        if self.writing.is_some() && self.pending() >= hold_cap(self.ctx) {
+        if self.writing.is_some() && self.in_memory() >= hold_cap(self.ctx) {
             let began = std::time::Instant::now();
             let done = self.wait().await;
             pace.waited(self.ctx, began.elapsed());
@@ -4632,44 +4713,63 @@ impl<'a> Writer<'a> {
     fn close(&mut self) {
         self.closed_at = std::time::Instant::now();
         if !self.buf.is_empty() {
-            let batch = std::mem::replace(&mut self.buf, Vec::with_capacity(BATCH));
+            let batch = std::mem::take(&mut self.buf);
+            debug_assert_eq!(batch.capacity(), BATCH, "a batch never grows");
             self.queued += batch.len() as u64;
             self.queue.push_back(batch);
         }
     }
 
     /// Start writing the queue's first batches, up to `WRITE_MAX` (nothing else is being
-    /// written). Small writes keep the waits for a disk that sets the pace short and even.
+    /// written). Small writes keep the waits for a disk that sets the pace short and even. The
+    /// batches go to the disk as they are, one after the other (no copy joins them).
     fn send(&mut self) {
         debug_assert!(self.writing.is_none());
-        let Some(mut data) = self.queue.pop_front() else {
-            return;
-        };
+        let mut batches = Vec::new();
+        let mut n = 0;
         while let Some(next) = self.queue.front()
-            && data.len() + next.len() <= WRITE_MAX
+            && (batches.is_empty() || n + next.len() <= WRITE_MAX)
         {
-            data.extend_from_slice(next);
-            self.queue.pop_front();
+            n += next.len();
+            batches.extend(self.queue.pop_front());
         }
-        let n = data.len() as u64;
+        if batches.is_empty() {
+            return;
+        }
+        let n = n as u64;
         self.queued -= n;
+        let count = batches.len();
         let (file, at) = (self.ctx.file.clone(), self.pos);
         let slow = self.ctx.opts.slow_disk.clone();
-        let task = tokio::task::spawn_blocking(move || match slow {
-            Some(disk) => disk.write(n, || write_all_at(&file, at, &data)),
-            None => write_all_at(&file, at, &data),
+        let task = tokio::task::spawn_blocking(move || {
+            let write = || write_batches(&file, at, &batches);
+            match slow {
+                Some(disk) => disk.write(n, write),
+                None => write(),
+            }
+            .map(|()| batches)
         });
-        self.writing = Some((task, n));
+        self.writing = Some(Writing {
+            task,
+            bytes: n,
+            batches: count,
+        });
     }
 
     /// Wait for the write under way and commit it. `Some(end)`: the segment is complete.
     async fn wait(&mut self) -> Result<Option<u64>, Error> {
-        let Some((task, n)) = self.writing.take() else {
+        let Some(Writing { task, bytes: n, .. }) = self.writing.take() else {
             return Ok(None);
         };
         let written = task.await.expect("writer panicked");
         self.ctx.shared.held.fetch_sub(n, Ordering::Relaxed);
-        written?;
+        // The written batches, emptied, take the next bytes (a few; the rest are freed).
+        for mut batch in written? {
+            if self.spare.len() < SPARE_MAX {
+                batch.clear();
+                self.spare.push(batch);
+            }
+        }
         self.pos += n;
         self.ctx.shared.conn(self.id, |c| c.downloaded += n);
         Ok(self
@@ -4687,10 +4787,16 @@ impl Drop for Writer<'_> {
     }
 }
 
-/// How much a connection may keep in memory while the disk takes its writes (`HOLD_MAX`,
-/// shared by the connections this download may open).
+/// How much memory a connection may fill while the disk takes its writes (`HOLD_MAX`, shared
+/// by the connections this download may open), counted as `Writer::in_memory` counts it.
 fn hold_cap(ctx: &Ctx) -> u64 {
     HOLD_MAX / u64::from(ctx.opts.connections().max(1))
+}
+
+/// The memory a connection's bytes not yet written take: `writing` batches on their way to the
+/// disk, `queued` ones waiting, and `filling`, the capacity of the one filling.
+fn in_memory(writing: usize, queued: usize, filling: usize) -> u64 {
+    ((writing + queued) * BATCH + filling) as u64
 }
 
 /// One response's pace (`receive`): where a connection's speed comes from, for the list and for
@@ -4918,6 +5024,15 @@ fn read_at(file: &File, mut at: u64, len: usize) -> io::Result<Vec<u8>> {
         at += n as u64;
     }
     Ok(buf)
+}
+
+/// `batches` one after the other into `file` from `at`.
+fn write_batches(file: &File, mut at: u64, batches: &[Vec<u8>]) -> io::Result<()> {
+    for b in batches {
+        write_all_at(file, at, b)?;
+        at += b.len() as u64;
+    }
+    Ok(())
 }
 
 fn write_all_at(file: &File, mut at: u64, mut data: &[u8]) -> io::Result<()> {

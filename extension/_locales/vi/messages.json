@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Tích hợp trình duyệt nâng cao đang tắt trong Tùy chọn → Chung."
   },
+  "declined_torrents": {
+    "message": "Đây là torrent, và tùy chọn Mở liên kết magnet và tệp .torrent bằng Mister Download Manager đang tắt trong cài đặt Torrent."
+  },
   "declined_site_access": {
     "message": "Tiện ích không được phép đọc trang web này (quyền truy cập trang web của trình duyệt)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "gốc"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Ẩn nút tải xuống ở chế độ toàn màn hình"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Khi trang ở chế độ toàn màn hình, video của trang sẽ không hiển thị nút Tải xuống video"
   }
 }

@@ -4488,6 +4488,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	బ్రౌజర్ ప్రాక్సీ (VPN లేదా ప్రాక్సీ పొడిగింపు) ఆ పొడిగింపుకు మాత్రమే తెలిసిన లాగిన్ వివరాలను అడుగుతుంది: VPN స్వంత యాప్‌ను ఉపయోగించండి లేదా ఎంపికలు → ప్రాక్సీ / SOCKSలో దాని నెట్‌వర్క్ అడాప్టర్‌ను ఎంచుకోండి
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	బ్రౌజర్‌లు తొలగించబడిన కాపీని ఉపయోగించేలా సెటప్ చేయబడ్డాయి:
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	బ్రౌజర్‌లు Mister Download Managerని కనుగొనగలవు
@@ -4878,6 +4882,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	ఈ కంప్యూటర్ మాత్రమే (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	ఈ కాపీ తొలగించబడే తాత్కాలిక ఫోల్డర్ నుండి నడుస్తుంది
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -6178,6 +6186,10 @@ extension	Help	సహాయం
 #, machine
 extension	Hide on this video	ఈ వీడియోలో దాచు
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	పూర్తి స్క్రీన్‌లో డౌన్‌లోడ్ బటన్‌ను దాచండి
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	బ్రౌజర్ ద్వారా డౌన్‌లోడ్ చేయడానికి లింక్‌ను క్లిక్ చేస్తున్నప్పుడు Alt కీని నొక్కి ఉంచండి.
@@ -6193,6 +6205,10 @@ extension	It didn't work. Try again.	ఇది పని చేయలేదు. 
 #. pairing failed: the other MDM shows no pairing code; Pair a device is its button
 #, machine
 extension	It shows no code now: click Pair a device there first.	ఇది ఇప్పుడు కోడ్‌ను చూపడం లేదు: ముందుగా అక్కడ పరికరాన్ని జత చేయి క్లిక్ చేయండి.
+#. text in the browser extension
+#. why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it
+#, machine
+extension	It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.	ఇది టొరెంట్, మరియు టొరెంట్ సెట్టింగ్‌లలో Mister Download Managerతో మాగ్నెట్ లింక్‌లు మరియు .torrent ఫైల్‌లను తెరవండి ఆఫ్ చేయబడింది.
 #. text in the browser extension
 #. why a download stayed with the browser: the file is smaller than the app's minimum size setting
 #, machine
@@ -6442,6 +6458,10 @@ extension	Video	వీడియో
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	ఒక క్షణం వేచి ఉండి, ఆపై మళ్లీ ప్రయత్నించండి.
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	పేజీ పూర్తి స్క్రీన్‌లో ఉన్నప్పుడు, దాని వీడియోలపై డౌన్‌లోడ్ వీడియో బటన్ కనిపించదు
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

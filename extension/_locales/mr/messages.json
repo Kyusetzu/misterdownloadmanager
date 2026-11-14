@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "पर्याय → सामान्य मध्ये 'प्रगत ब्राउझर एकत्रीकरण वापरा' बंद आहे."
   },
+  "declined_torrents": {
+    "message": "ही एक टॉरेंट फाइल आहे आणि टॉरेंट सेटिंग्जमध्ये Mister Download Manager सह मॅग्नेट लिंक्स आणि .torrent फाइल्स उघडा हे बंद आहे."
+  },
   "declined_site_access": {
     "message": "या साइटला वाचण्याची विस्ताराला परवानगी नाही (ब्राउझरची साइट ॲक्सेस)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "मूळ"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "पूर्ण स्क्रीनमध्ये डाउनलोड बटण लपवा"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "पृष्ठ पूर्ण स्क्रीनमध्ये असताना, त्याच्या व्हिडिओंवर डाउनलोड व्हिडिओ बटण दिसत नाही"
   }
 }

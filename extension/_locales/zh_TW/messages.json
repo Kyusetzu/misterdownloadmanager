@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "「選項 → 一般」中的「使用進階瀏覽器整合」已關閉。"
   },
+  "declined_torrents": {
+    "message": "這是 torrent 檔案，且「在 Torrent 設定中以 Mister Download Manager 開啟磁力連結和 .torrent 檔案」已關閉。"
+  },
   "declined_site_access": {
     "message": "不允許擴充功能讀取此網站 (瀏覽器的網站存取)。"
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "原始"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "全螢幕時隱藏下載按鈕"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "當頁面處於全螢幕模式時，其影片不會顯示「下載影片」按鈕"
   }
 }

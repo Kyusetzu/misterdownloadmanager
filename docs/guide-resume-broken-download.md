@@ -25,7 +25,7 @@ MDM saves each download's progress as it goes, so a Windows crash, a power cut o
 Many sites hand out links that only work for a while, or only while you are signed in. Resuming then fails, because the old address no longer answers.
 
 1. Right-click the download and choose **Refresh download address**.
-2. MDM opens the web page the link came from (when it knows it), and the download's **File Properties**.
+2. MDM opens the web page the link came from (when it knows it), and the download's **File Properties**. For a download the browser handed over, that's the page you started it from; for an older one, the address the browser sent with it (often only the site's home page).
 3. On the web page, start the download again, or copy the new download link (right-click → **Copy link**). If the browser hands the new download to MDM, cancel it there: you only need the address.
 4. Paste the new link into **Address** in **File Properties** and click **OK**.
 5. Click **Resume**. The download continues from where it stopped, using the new address.

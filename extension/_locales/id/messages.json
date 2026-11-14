@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Integrasi browser lanjutan tidak aktif di Opsi → Umum."
   },
+  "declined_torrents": {
+    "message": "Ini adalah torrent, dan Buka tautan magnet dan file .torrent dengan Mister Download Manager tidak aktif di pengaturan Torrent."
+  },
   "declined_site_access": {
     "message": "Ekstensi tidak diizinkan untuk membaca situs ini (akses situs browser)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "asli"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Sembunyikan tombol unduh dalam layar penuh"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Saat halaman dalam layar penuh, videonya tidak menampilkan tombol Unduh video"
   }
 }

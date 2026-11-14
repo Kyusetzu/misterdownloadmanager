@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Opcja „Użyj zaawansowanej integracji z przeglądarką” jest wyłączona w Opcjach → Ogólne."
   },
+  "declined_torrents": {
+    "message": "To jest torrent, a opcja Otwieraj linki magnet i pliki .torrent za pomocą Mister Download Manager jest wyłączona w ustawieniach torrentów."
+  },
   "declined_site_access": {
     "message": "Rozszerzenie nie ma uprawnień do odczytu tej witryny (dostęp rozszerzenia do witryny w przeglądarce)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "oryginalny"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Ukryj przycisk pobierania w trybie pełnoekranowym"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Gdy strona jest w trybie pełnoekranowym, na jej filmach nie wyświetla się przycisk Pobierz wideo"
   }
 }

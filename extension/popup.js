@@ -254,6 +254,15 @@ ext.storage.local.get({ mediaTitleName: false })
 mediaTitleName.addEventListener("change", () =>
   ext.storage.local.set({ mediaTitleName: mediaTitleName.checked }).then(show, () => {}));
 
+// Hide the download button over videos while the page is in full screen (#670), off as installed.
+const hideFullscreen = $("video-hide-fullscreen");
+$("video-hide-fullscreen-row").title = t("popup_video_hide_fullscreen_title");
+ext.storage.local.get({ hideVideoFullscreen: false })
+  .then((v) => (hideFullscreen.checked = Boolean(v.hideVideoFullscreen)))
+  .catch(() => {});
+hideFullscreen.addEventListener("change", () =>
+  ext.storage.local.set({ hideVideoFullscreen: hideFullscreen.checked }).catch(() => {}));
+
 // #42: reading the browser's proxy (a VPN or proxy extension's) is an opt-in, this switch, off as
 // installed. Firefox: the optional "proxy" permission, asked for on it. Chromium can't make that
 // permission optional, so the extension has it from the install, and the switch is a setting of

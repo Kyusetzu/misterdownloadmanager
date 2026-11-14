@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Parinktyse „Bendra“ išjungta „Naudoti išplėstinę naršyklės integraciją“."
   },
+  "declined_torrents": {
+    "message": "Tai torrentas, o „Atidaryti magnetines nuorodas ir .torrent failus su Mister Download Manager“ yra išjungta torrentų nustatymuose."
+  },
   "declined_site_access": {
     "message": "Plėtiniui neleidžiama skaityti šios svetainės (naršyklės prieiga prie svetainės)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "originalas"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Slėpti atsisiuntimo mygtuką viso ekrano režimu"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Kai puslapis yra viso ekrano režimu, jo vaizdo įrašuose nerodomas mygtukas „Atsisiųsti vaizdo įrašą“"
   }
 }

@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "استخدام تكامل المتصفح المتقدم معطل في خيارات ← عام."
   },
+  "declined_torrents": {
+    "message": "إنه تورنت، وخيار «فتح روابط مغناطيسية وملفات .torrent باستخدام Mister Download Manager» متوقف في إعدادات التورنت."
+  },
   "declined_site_access": {
     "message": "لا يسمح للملحق بقراءة هذا الموقع (وصول الملحق إلى الموقع)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "أصلي"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "إخفاء زر التنزيل في وضع ملء الشاشة"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "أثناء وجود الصفحة في وضع ملء الشاشة، لا تعرض مقاطع الفيديو الخاصة بها زر تنزيل الفيديو"
   }
 }

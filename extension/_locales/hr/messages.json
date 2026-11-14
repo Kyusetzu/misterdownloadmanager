@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Opcija „Koristi naprednu integraciju preglednika” isključena je u Mogućnosti → Općenito."
   },
+  "declined_torrents": {
+    "message": "To je torrent, a opcija Otvori magnetne veze i .torrent datoteke s Mister Download Manager isključena je u postavkama torrenta."
+  },
   "declined_site_access": {
     "message": "Proširenje ne smije čitati ovu stranicu (pristup stranici preglednika)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "izvorno"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Sakrij gumb za preuzimanje u načinu cijelog zaslona"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Dok je stranica u načinu cijelog zaslona, njezini videozapisi ne prikazuju gumb Preuzmi videozapis"
   }
 }

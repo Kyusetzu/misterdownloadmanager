@@ -564,6 +564,42 @@ Bug fixes from the first days of 0.5.0, a Safari extension, and more file types.
 
 These ship in the next version.
 
+- ✅ YouTube: a video the browser's button sends with the page's cookies, refused with 403 or the
+  bot check as a signed-in viewer's, is looked up once more without them, as a private window
+  gets it; private, members' and age-restricted videos keep them
+  ([#686](https://github.com/anefzaoui/misterdownloadmanager/issues/686))
+- ✅ **Download File Info**: **...** beside **Save As** opens the system's Save dialog (the
+  folder and the file name, the download's type listed), and the name typed there is the one
+  saved ([#1088](https://github.com/anefzaoui/misterdownloadmanager/issues/1088))
+- ✅ Browser integration: a copy run from inside a zip (a temporary folder) no longer sets it up
+  for itself and leaves the browsers looking for a copy that is gone; MDM takes back a
+  registration that leads nowhere at each start, never one that works, and Test browser
+  integration says which copy is gone
+  ([#818](https://github.com/anefzaoui/misterdownloadmanager/issues/818))
+- ✅ Text boxes keep their selection under a right-click, so the menu's Copy and Cut take it
+  (Select all, then Copy, copied nothing)
+  ([#1084](https://github.com/anefzaoui/misterdownloadmanager/issues/1084))
+- ✅ A page that says which video it is about (its JSON-LD, `og:video` or `twitter:player`) gets
+  that video from Add URL, Download video and the command line, not the first player written in
+  its HTML (a hidden welcome video)
+  ([#1076](https://github.com/anefzaoui/misterdownloadmanager/issues/1076))
+- ✅ The browser extension's popup has **Hide the download button in full screen**, off as installed: a page in full screen shows no **Download video** button, for watching without it in the way ([#670](https://github.com/anefzaoui/misterdownloadmanager/issues/670))
+- ✅ Windows: MDM listed in Settings → Default apps for MAGNET and .torrent, and Torrent
+  settings' switch says when another app chosen there still opens them, and opens that page
+  ([#1091](https://github.com/anefzaoui/misterdownloadmanager/issues/1091))
+- ✅ A .torrent downloaded in the browser stays with the browser (and your own torrent program)
+  while Torrent settings' **Open magnet links and .torrent files with Mister Download Manager**
+  is off ([#1058](https://github.com/anefzaoui/misterdownloadmanager/issues/1058))
+- ✅ A video in a player embedded from another site (Vimeo's on a film site) is named after the
+  page's title, without the site's name, instead of the player's own title
+- ✅ No freeze of the window in Link grabber with thousands of links (a big page's links): each
+  link's category is worked out once, and a frame goes over the links once, however many
+  packages they make ([#1063](https://github.com/anefzaoui/misterdownloadmanager/issues/1063))
+- ✅ **Refresh download address** opens the page the download was started from, not the site's
+  home page ([#607](https://github.com/anefzaoui/misterdownloadmanager/issues/607))
+- ✅ A video's look-up no longer waits 20 s on a server the network drops: 5 s, and once more
+  with yt-dlp's own wait only when the look-up failed for a slow server
+  ([#1053](https://github.com/anefzaoui/misterdownloadmanager/issues/1053))
 - ✅ MediaFire: a download resumed after its address expired asks the file's MediaFire page for a
   fresh one and goes on; a MediaFire file page's link downloads the file
   ([#952](https://github.com/anefzaoui/misterdownloadmanager/issues/952))
@@ -619,6 +655,8 @@ These ship in the next version.
 - ✅ The progress window shows no scroll bars over content that fits at an interface size above
   100 % (125 %), where the window's client comes back a pixel short of its content
   ([#672](https://github.com/anefzaoui/misterdownloadmanager/issues/672))
+- ✅ Less memory during fast downloads to a slower disk: what waits for the disk stays within its
+  256 MB as allocated (a 4 GB download: 967 MB in 0.5.2, 523 MB now with the window open)
 - ✅ Windows and macOS: **Options → General → Shortcut to show or hide window**: a global
   shortcut of two or three keys that shows or hides MDM's window from any program
   ([#558](https://github.com/anefzaoui/misterdownloadmanager/issues/558))
@@ -951,8 +989,9 @@ These ship in the next version.
   [#583](https://github.com/anefzaoui/misterdownloadmanager/issues/583),
   [#513](https://github.com/anefzaoui/misterdownloadmanager/issues/513))
 - ✅ Windows: no crash when the clipboard is read in two places at once (the clipboard monitor and
-  Add URL): every read and write of it goes one at a time
-  ([#629](https://github.com/anefzaoui/misterdownloadmanager/issues/629))
+  Add URL, or a paste in a text box): every read and write of it goes one at a time
+  ([#629](https://github.com/anefzaoui/misterdownloadmanager/issues/629),
+  [#1103](https://github.com/anefzaoui/misterdownloadmanager/issues/1103))
 - ✅ The window no longer waits on the program that owns the clipboard when it doesn't answer (Linux
   especially): a text box's right-click menu, Add URL, Add batch download, Add torrent and Download
   video read the clipboard beside the window, and fill in a copied link when it comes (follows

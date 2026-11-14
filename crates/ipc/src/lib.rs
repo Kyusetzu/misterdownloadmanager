@@ -34,6 +34,12 @@ pub struct Command {
     pub start_queue: bool,
     /// From the browser: request context to reuse.
     pub referer: Option<String>,
+    /// From the browser (#607): the web page the download was started from, whole (its tab's
+    /// address; a link's opened in a tab of its own, the tab that opened it), where the Referer
+    /// is often cut to the site's address by the page's referrer policy. Kept with the download:
+    /// Refresh download address opens it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_url: Option<String>,
     /// From the browser (#900): the `Origin` its page's player sent with a video's stream or
     /// file (`video_page`, `video_lookup`), sent again with it, its playlists and each of its
     /// pieces, as a site's video server may serve its own pages' players only.
@@ -108,8 +114,9 @@ pub struct Command {
     /// From the browser's download button over a video: open the Download video window for this
     /// page (its address; an embedded player's own).
     pub video_page: Option<String>,
-    /// The title of the page the button was clicked on: a video yt-dlp knows only by its address
-    /// is named by it.
+    /// The title of the page the button was clicked on (the tab's, for a player in a frame of
+    /// it), without the site's name (`Film | Site` is `Film`: the extension's `withoutSiteName`):
+    /// a video yt-dlp knows only by its address is named by it.
     pub video_title: Option<String>,
     /// From the browser's quality menu over a video (the button's click): look this video up
     /// with yt-dlp, off the window, and answer at once with a token to ask about it
@@ -172,8 +179,8 @@ pub struct VideoLookup {
     /// What yt-dlp looks up: the video's own file or its stream's manifest when the page plays
     /// one, else the page.
     pub address: String,
-    /// The title of the page the button was clicked on: a video yt-dlp knows only by its address
-    /// is named by it (as [`Command::video_title`]).
+    /// The title of the page the button was clicked on, as [`Command::video_title`] has it: a
+    /// video yt-dlp knows only by its address is named by it.
     pub title: Option<String>,
     /// The browser's cookie store the page is in (Firefox's containers): a choice is only taken
     /// from the same one.

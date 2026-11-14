@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "„Erweiterte Browserintegration verwenden“ ist in „Optionen → Allgemein“ deaktiviert."
   },
+  "declined_torrents": {
+    "message": "Es ist ein Torrent, und „Magnet-Links und .torrent-Dateien mit Mister Download Manager öffnen“ ist in den Torrent-Einstellungen deaktiviert."
+  },
   "declined_site_access": {
     "message": "Die Erweiterung darf diese Website nicht lesen (Websitezugriff des Browsers)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "Original"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Download-Schaltfläche im Vollbildmodus ausblenden"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Wenn die Seite im Vollbildmodus ist, wird für Videos keine Download-Schaltfläche angezeigt."
   }
 }

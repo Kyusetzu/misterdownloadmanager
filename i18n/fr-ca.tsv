@@ -4488,6 +4488,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	Le serveur proxy du navigateur (un RPV ou une extension de proxy) demande une connexion que seule cette extension possède : utilisez l’application du RPV ou choisissez son adaptateur réseau dans Options → Proxy/SOCKS.
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	Les navigateurs sont configurés pour une copie qui n’existe plus :
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	Les navigateurs peuvent trouver Mister Download Manager
@@ -4878,6 +4882,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	Cet ordinateur seulement (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	Cette copie s’exécute à partir d’un dossier temporaire qui sera supprimé
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -6178,6 +6186,10 @@ extension	Help	Aide
 #, machine
 extension	Hide on this video	Masquer sur cette vidéo
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	Masquer le bouton de téléchargement en plein écran
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	Maintenez la touche Alt enfoncée en cliquant sur un lien pour laisser le navigateur le télécharger.
@@ -6193,6 +6205,10 @@ extension	It didn't work. Try again.	Échec. Réessayez.
 #. pairing failed: the other MDM shows no pairing code; Pair a device is its button
 #, machine
 extension	It shows no code now: click Pair a device there first.	Il n’affiche aucun code maintenant : cliquez d’abord sur Jumeler un appareil.
+#. text in the browser extension
+#. why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it
+#, machine
+extension	It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.	C’est un torrent, et « Ouvrir les liens magnet et les fichiers .torrent avec Mister Download Manager » est désactivé dans les paramètres de torrent.
 #. text in the browser extension
 #. why a download stayed with the browser: the file is smaller than the app's minimum size setting
 #, machine
@@ -6442,6 +6458,10 @@ extension	Video	Vidéo
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	Attendez un instant, puis réessayez.
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	Lorsque la page est en plein écran, ses vidéos n’affichent pas de bouton Télécharger la vidéo
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

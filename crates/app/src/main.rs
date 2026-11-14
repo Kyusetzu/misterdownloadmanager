@@ -155,9 +155,12 @@ pub fn clipboard_text() -> Option<String> {
     // Nor in unit tests: the person's clipboard isn't theirs, and tests opening a window that
     // reads it (Download video's) on parallel threads corrupted the heap (Windows' clipboard,
     // opened from two threads at once).
-    read_clipboard(offscreen() || cfg!(test), || {
-        arboard::Clipboard::new().ok()?.get_text().ok()
-    })
+    read_clipboard(offscreen() || cfg!(test), system_clipboard_text)
+}
+
+/// The system clipboard's text, read with arboard (under [`clipboard_lock`], [`read_clipboard`]).
+fn system_clipboard_text() -> Option<String> {
+    arboard::Clipboard::new().ok()?.get_text().ok()
 }
 
 /// A number that changes whenever the clipboard does, so the watch for copied links
@@ -617,29 +620,76 @@ mod tests {
         assert_eq!(most.load(Ordering::SeqCst), 1, "reads at the same moment");
     }
 
-    /// #629 on the real clipboard: several threads read it at once for a few seconds, and the
-    /// process lives. Ignored by default (it reads the clipboard of the person at the computer;
-    /// it never writes it, and what it reads is dropped unseen):
-    /// `cargo test -p mdm-app --bin misterdownloadmanager -- --ignored real_clipboard`.
+    /// #629, #1103 on Windows' real clipboard, a private one (win32.rs `private_clipboard`: the
+    /// person's is neither read nor written): MDM's reads (the clipboard monitor's, Add URL's) and
+    /// writes, and egui's paste and copy in a text box, all at once from their threads for two
+    /// seconds. Every read finds a whole text that was copied, and the heap stays whole: without
+    /// the one lock they share, the process ended with STATUS_HEAP_CORRUPTION. Windows only:
+    /// Linux and macOS have no window stations, and arboard keeps their clipboard on its own
+    /// thread there.
+    #[cfg(windows)]
     #[test]
-    #[ignore = "reads the real clipboard"]
-    fn real_clipboard_reads_from_many_threads_live() {
-        let _one = clipboard_test();
-        let until = std::time::Instant::now() + std::time::Duration::from_secs(3);
-        let threads: Vec<_> = (0..6)
-            .map(|_| {
-                std::thread::spawn(move || {
-                    let mut reads = 0u32;
-                    while std::time::Instant::now() < until {
-                        std::hint::black_box(super::clipboard_text().map(|t| t.len()));
-                        reads += 1;
+    fn clipboard_uses_from_many_threads_at_once_leave_the_heap_whole() {
+        use crate::win32::private_clipboard::{
+            egui_clipboard, in_private_clipboard, process_heap_is_whole,
+        };
+        use std::sync::atomic::{AtomicU32, Ordering};
+        in_private_clipboard(
+            "tests::clipboard_uses_from_many_threads_at_once_leave_the_heap_whole",
+            |clip| {
+                let long = "https://long.example/".to_owned() + &"a/".repeat(5000);
+                let texts = [
+                    "https://first.example/a.zip".to_owned(),
+                    "https://例子.example/下载.zip".to_owned(),
+                    long,
+                    "x".to_owned(),
+                ];
+                assert!(super::set_clipboard(&texts[0]));
+                let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+                let (reads, found) = (AtomicU32::new(0), AtomicU32::new(0));
+                std::thread::scope(|s| {
+                    for who in 0..6 {
+                        let (texts, reads, found) = (&texts, &reads, &found);
+                        s.spawn(move || {
+                            clip.join();
+                            let mut egui = egui_clipboard();
+                            let mut i = who;
+                            while std::time::Instant::now() < until {
+                                i += 1;
+                                let text = &texts[i % texts.len()];
+                                let got = match who {
+                                    // The clipboard monitor's and Add URL's reads.
+                                    0 | 1 => {
+                                        super::read_clipboard(false, super::system_clipboard_text)
+                                    }
+                                    // A text box's paste.
+                                    2 | 3 => egui.get(),
+                                    // Copy… in a menu.
+                                    4 => {
+                                        assert!(super::set_clipboard(text));
+                                        continue;
+                                    }
+                                    // A text box's copy.
+                                    _ => {
+                                        egui.set_text(text.clone());
+                                        continue;
+                                    }
+                                };
+                                reads.fetch_add(1, Ordering::Relaxed);
+                                if let Some(got) = got {
+                                    assert!(texts.contains(&got), "read {} chars", got.len());
+                                    found.fetch_add(1, Ordering::Relaxed);
+                                }
+                            }
+                        });
                     }
-                    reads
-                })
-            })
-            .collect();
-        let reads: u32 = threads.into_iter().map(|t| t.join().unwrap()).sum();
-        assert!(reads > 0);
+                });
+                assert!(process_heap_is_whole(), "the heap is corrupted");
+                let (reads, found) = (reads.into_inner(), found.into_inner());
+                println!("{reads} reads, {found} found a text");
+                assert!(found > 100, "{found} of {reads} reads found a text");
+            },
+        );
     }
 
     /// Every window carries the application's id (#940): the main window, the dialogs, the

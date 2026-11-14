@@ -291,8 +291,19 @@ pub struct Settings {
     /// Torrents keep sharing after they finish (D-018: off; a finished torrent stops, like any
     /// download).
     pub torrent_keep_sharing: bool,
-    /// Windows opens magnet links and .torrent files with MDM (D-018: opt-in, current user).
-    pub torrent_associations: bool,
+    /// Torrent settings' "Open magnet links and .torrent files with Mister Download Manager":
+    /// the system opens them with MDM (D-018: opt-in, current user), and the browser hands a
+    /// .torrent download over (#1058: off, it stays with the browser for the user's own torrent
+    /// client). None: never decided, settled once at the first start (`settle_torrent_handler`)
+    /// and saved. Saved as `torrent_handler`, which mdm_ipc::capture::CaptureRules reads (None
+    /// there: taken, as before): every list before #1058 saved `torrent_associations: false`,
+    /// unticked and never looked at alike.
+    #[serde(rename = "torrent_handler")]
+    pub torrent_associations: Option<bool>,
+    /// The switch as lists before #1058 saved it, read only: true was the user's tick; false
+    /// says nothing (`settle_torrent_handler`).
+    #[serde(rename = "torrent_associations", skip_serializing)]
+    pub torrent_associations_before: bool,
     /// Torrent settings → Network (#40, `torrent_config`): accept incoming connections, map
     /// the port with the router's UPnP, a fixed port (0: any, picked at each start), the DHT,
     /// finding peers on the local network.
@@ -496,7 +507,8 @@ impl Default for Settings {
             remote_port: mdm_remote::PORT,
             remote_listen: String::new(),
             torrent_keep_sharing: false,
-            torrent_associations: false,
+            torrent_associations: None,
+            torrent_associations_before: false,
             torrent_incoming: true,
             torrent_upnp: true,
             torrent_port: 0,
@@ -534,6 +546,26 @@ impl Default for Settings {
 }
 
 impl Settings {
+    /// #1058: Torrent settings' switch as the user chose it, for a list that never decided it
+    /// (None): ticked in an earlier version (a saved true was the user's), else what the
+    /// installer's task left (`installer`: ticked or not; None for a portable copy or no
+    /// installer), else whether this program is what the system opens .torrent files with now
+    /// (`registered`, asked only then). Once decided, the box and the browser's hand-off follow
+    /// the saved value only: a later look at the system would tick it again after the user
+    /// unticked it while everyone's association (HKLM) stays. True when it changed (to save).
+    pub fn settle_torrent_handler(
+        &mut self,
+        installer: Option<bool>,
+        registered: impl FnOnce() -> bool,
+    ) -> bool {
+        if self.torrent_associations.is_some() {
+            return false;
+        }
+        let on = self.torrent_associations_before || installer.unwrap_or_else(registered);
+        self.torrent_associations = Some(on);
+        true
+    }
+
     /// The settings as the list file writes them (#44, secrets.rs): each secret's field holds
     /// its keychain reference once the keychain holds it, else the secret sealed as before
     /// (and the keychain is asked to take it). Serialized inside `secrets::prepared`, where these
@@ -1245,6 +1277,87 @@ mod tests {
             (c.port, c.listen, c.dht, c.lsd),
             (Some(51413), true, true, true)
         );
+    }
+
+    /// #1058: the browser integration (the native host, mdm_ipc::capture::CaptureRules) reads
+    /// the capture settings from the saved list by the app's own names: Torrent settings' switch
+    /// too, as settled; not decided yet, it takes torrents, as before.
+    #[test]
+    fn the_host_reads_the_capture_settings_as_saved() {
+        use mdm_ipc::capture::CaptureRules;
+        let read = |s: &Settings| -> CaptureRules {
+            serde_json::from_value(serde_json::to_value(s).unwrap()).unwrap()
+        };
+        let d = Settings::default();
+        let r = read(&d);
+        assert_eq!((d.torrent_associations, r.torrent_handler), (None, None));
+        assert!(r.takes_torrents());
+        assert_eq!(r.auto_types, d.auto_types);
+        assert_eq!(r.capture_min_kb, d.capture_min_kb);
+        for on in [false, true] {
+            let s = Settings {
+                torrent_associations: Some(on),
+                capture_min_kb: 7,
+                ..Settings::default()
+            };
+            let r = read(&s);
+            assert_eq!(r.torrent_handler, Some(on));
+            assert_eq!(r.takes_torrents(), on);
+            assert_eq!(r.capture_min_kb, 7);
+        }
+    }
+
+    /// #1058: Torrent settings' switch is settled once, as the user chose it.
+    #[test]
+    fn the_torrent_switch_is_settled_once_as_chosen() {
+        let undecided = Settings::default;
+        let settle = |mut s: Settings, installer: Option<bool>, registered: bool| {
+            let changed = s.settle_torrent_handler(installer, || registered);
+            (s.torrent_associations, changed)
+        };
+        // Never decided: MDM opens .torrent files now (the installer's task, an earlier tick,
+        // an all-users association) → on; it doesn't → off.
+        assert_eq!(settle(undecided(), None, true), (Some(true), true));
+        assert_eq!(settle(undecided(), None, false), (Some(false), true));
+        // The installer's value wins over what the system says.
+        assert_eq!(settle(undecided(), Some(false), true), (Some(false), true));
+        assert_eq!(settle(undecided(), Some(true), false), (Some(true), true));
+        // An earlier version's tick stays.
+        let ticked = Settings {
+            torrent_associations_before: true,
+            ..Settings::default()
+        };
+        assert_eq!(settle(ticked, Some(false), false), (Some(true), true));
+        // Decided: kept, whatever the system says (an everyone's association, HKLM, that
+        // unticking couldn't remove), and the system isn't asked.
+        for on in [false, true] {
+            let mut s = Settings {
+                torrent_associations: Some(on),
+                ..Settings::default()
+            };
+            assert!(!s.settle_torrent_handler(Some(!on), || panic!("asked")));
+            assert_eq!(s.torrent_associations, Some(on));
+        }
+        // A list saved before #1058: its false is undecided, its true ticked.
+        let old: Settings = serde_json::from_str(r#"{"torrent_associations":false}"#).unwrap();
+        assert_eq!(
+            (old.torrent_associations, old.torrent_associations_before),
+            (None, false)
+        );
+        let old: Settings = serde_json::from_str(r#"{"torrent_associations":true}"#).unwrap();
+        assert_eq!(
+            (old.torrent_associations, old.torrent_associations_before),
+            (None, true)
+        );
+        // Settled and saved, it reads back decided: no second settling.
+        let mut s = old;
+        s.settle_torrent_handler(None, || false);
+        let json = serde_json::to_value(&s).unwrap();
+        assert_eq!(json["torrent_handler"], serde_json::json!(true));
+        assert!(json.get("torrent_associations").is_none(), "{json}");
+        let mut back: Settings = serde_json::from_value(json).unwrap();
+        assert!(!back.settle_torrent_handler(Some(false), || false));
+        assert_eq!(back.torrent_associations, Some(true));
     }
 
     /// #41: a list saved before Zen was known gets it, captured; a choice made is kept.

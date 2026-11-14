@@ -599,6 +599,32 @@ fn look_up(exe: &Path, url: &str, browser: &[String]) -> Result<(serde_json::Val
 
 type Child = Arc<Mutex<Option<proc::Spawned>>>;
 
+/// The browser's cookies for one video's download (#686). Signed in, YouTube may refuse what
+/// yt-dlp asks as that viewer (its look-up, or the streams it gave) where a private window gets
+/// the video: once its look-up worked only without them, or its streams were refused with them,
+/// every later run of this video (a new address, another try, the subtitles) goes without them.
+/// Another video still gets them first, and other sites' runs keep them.
+#[derive(Default)]
+struct Cookies {
+    /// This video goes without them from now on.
+    without: std::cell::Cell<bool>,
+    /// The last run looked the YouTube page up with them, and anyone may watch the video: its
+    /// streams refused may be the signed-in viewer's refusal.
+    droppable: std::cell::Cell<bool>,
+}
+
+impl Cookies {
+    /// `args` (yt-dlp's for a run of this video) as it goes now: without the cookies once it
+    /// goes without them.
+    fn args(&self, args: &[String]) -> Vec<String> {
+        if self.without.get() {
+            proc::without_cookies(args)
+        } else {
+            args.to_vec()
+        }
+    }
+}
+
 /// How one run of yt-dlp ended.
 enum Attempt {
     /// The video saved, the subtitles that didn't come with it, and the quality yt-dlp chose
@@ -661,7 +687,11 @@ fn relaxed(selector: &str) -> Option<String> {
 /// - the chosen quality not offered at all (left out by the move, #94) falls back to the nearest
 ///   one below it, said in the log; never the whole download's failure while another quality
 ///   is there;
-/// - no video left at all after the move: once more on the page's own servers, unmoved.
+/// - no video left at all after the move: once more on the page's own servers, unmoved;
+/// - a YouTube video looked up with the browser's cookies whose streams YouTube refused (#686,
+///   [`crate::youtube::refused_signed_in`]): once more without the cookies, as a private window
+///   gets it, unless only a signed-in viewer may watch it. That video goes without them from then
+///   on ([`Cookies`]).
 ///
 /// Whenever it is given up, yt-dlp's whole job is ended (#79).
 #[allow(clippy::too_many_arguments)]
@@ -685,6 +715,7 @@ fn supervise(
     let mut relaxed_to: Option<String> = None;
     let mut reroute = true;
     let mut last = String::from("yt-dlp stopped");
+    let cookies = Cookies::default();
     for _ in 0..5 {
         let page = preloaded.take();
         match attempt(
@@ -700,10 +731,16 @@ fn supervise(
             reroute,
             page.as_ref(),
             engine,
+            &cookies,
         ) {
             Attempt::Stopped => return,
             Attempt::Done(f, problems, quality) => {
                 end(child);
+                // Which way it worked (#686): the browser's cookies are the usual way, unsaid.
+                if cookies.without.get() && proc::has_cookies(browser) {
+                    note(progress, "Downloaded without the browser's cookies".into());
+                    tracing::info!("A video was downloaded without the browser's cookies (#686)");
+                }
                 // Named for what it holds (#569): HLS pieces joined without ffmpeg.
                 let f = named_for_content(f);
                 if relaxed_to.is_some()
@@ -761,6 +798,18 @@ fn supervise(
                         );
                     }
                     dead.extend(gone);
+                } else if cookies.droppable.get() && crate::youtube::refused_signed_in(&error) {
+                    // Refused as a signed-in viewer (#686): the private window's way, once.
+                    cookies.without.set(true);
+                    note(
+                        progress,
+                        format!(
+                            "{error}; YouTube refused the video with the browser's cookies: looking it up again without them, as a private window would"
+                        ),
+                    );
+                    tracing::info!(
+                        "YouTube refused a video's streams with the browser's cookies ({error}); trying without them"
+                    );
                 } else if servers::format_unavailable(&error) && rerouted && !looked_again {
                     looked_again = true;
                     note(progress, format!("{error}; looking the page up again"));
@@ -1356,26 +1405,42 @@ fn attempt(
     reroute: bool,
     preloaded: Option<&Preloaded>,
     engine: Option<&ByEngine>,
+    cookies: &Cookies,
 ) -> Attempt {
     let failed = |error: String, rerouted: bool| Attempt::Failed { error, rerouted };
+    cookies.droppable.set(false);
     let page = match preloaded.and_then(|p| preloaded_page(p, progress)) {
         Some(page) => Ok(page),
         // Stopped while waiting for it: nothing more to do.
         None if progress.lock().unwrap().state == State::Stopped => return Attempt::Stopped,
-        None => look_up(exe, url, browser),
+        None => look_up(exe, url, &cookies.args(browser)),
     };
     let mut info = match page {
         Ok((v, without_cookies)) => {
-            if without_cookies {
+            // The look-up worked only without them (#352, #686). On YouTube, so does the rest of
+            // this video's download: the streams it gave are a visitor's.
+            if without_cookies && !cookies.without.get() {
+                cookies
+                    .without
+                    .set(crate::youtube::is_youtube(url) && proc::has_cookies(browser));
                 note(
                     progress,
-                    "The site offered no format with the browser's cookies; looked the page up without them".into(),
+                    "The site refused the look-up with the browser's cookies, or offered no format with them; looked the page up without them".into(),
                 );
             }
             v
         }
         Err(e) => return failed(e, false),
     };
+    // Looked up with the cookies, a YouTube video anyone may watch: refused streams may be the
+    // signed-in viewer's (#686). Every run from here takes the arguments as decided.
+    cookies.droppable.set(
+        !cookies.without.get()
+            && proc::has_cookies(browser)
+            && crate::youtube::is_youtube(url)
+            && !crate::youtube::signed_in_only(&info),
+    );
+    let (ours, browser) = (&cookies.args(ours)[..], &cookies.args(browser)[..]);
     let changed = moved(&mut info, dead, reroute);
     for (gone, alt) in &changed.swaps {
         note(
@@ -1401,7 +1466,7 @@ fn attempt(
     // MDM's engine downloads the streams (#769); yt-dlp then finds them in place.
     let mut by_engine = false;
     if let Some(e) = engine {
-        match e.fetch(exe, url, browser, &file, progress, dead, reroute) {
+        match e.fetch(exe, url, browser, &file, progress, dead, reroute, cookies) {
             Engined::Ready => by_engine = true,
             Engined::Helper(why) => {
                 note(
@@ -1480,7 +1545,14 @@ fn attempt(
             return Attempt::Done(video, Vec::new(), quality);
         }
         let codes: Vec<String> = refused.iter().map(|(c, _)| c.clone()).collect();
-        match run(exe, &r.args(&codes), &file, progress, child, None) {
+        match run(
+            exe,
+            &cookies.args(&r.args(&codes)),
+            &file,
+            progress,
+            child,
+            None,
+        ) {
             Ok(Some(again)) if again.status.as_ref().is_ok_and(|s| s.success()) => {
                 still = subtitle_failures(&again.warnings);
             }
@@ -1605,7 +1677,8 @@ impl crate::streams::Report for Reporter<'_> {
 impl ByEngine {
     /// Choose the formats on the page looked up into `file` and download their streams with the
     /// engine; a stream's address that dies is asked for again with a new look-up (`url`, as
-    /// the browser asked, `browser`; servers moved as this run moved them).
+    /// the browser asked, `browser`; servers moved as this run moved them; with the browser's
+    /// cookies or without them, as `cookies` decided).
     #[allow(clippy::too_many_arguments)]
     fn fetch(
         &self,
@@ -1616,8 +1689,10 @@ impl ByEngine {
         progress: &Mutex<Progress>,
         dead: &std::collections::BTreeSet<String>,
         reroute: bool,
+        cookies: &Cookies,
     ) -> Engined {
-        let chosen = match choose(exe, &self.choose, file) {
+        let choose_args = cookies.args(&self.choose);
+        let chosen = match choose(exe, &choose_args, file) {
             Ok(c) => c,
             Err(e) => return Engined::Failed(e),
         };
@@ -1638,7 +1713,7 @@ impl ByEngine {
         }
         let relink: crate::streams::Relink = {
             let (exe, url, browser) = (exe.to_owned(), url.to_owned(), browser.to_vec());
-            let (choose, dead) = (self.choose.clone(), dead.clone());
+            let (choose, dead) = (choose_args, dead.clone());
             Arc::new(move |id: &str| relink(&exe, &url, &browser, &choose, &dead, reroute, id))
         };
         let out = crate::streams::fetch(

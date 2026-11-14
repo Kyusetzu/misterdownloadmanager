@@ -23,6 +23,10 @@ use mdm_crash::protocol::{AppState, Busy, Freeze, Panic, Session};
 /// A frame running this long is a freeze (Windows calls a window "Not responding" after 5 s).
 pub const FREEZE_AFTER: Duration = Duration::from_secs(8);
 
+/// A stretch of a frame running this long is logged (with what it was doing): the window
+/// answered, but slowly enough to be felt (#1063 took seconds per frame before it froze).
+const SLOW_FRAME: Duration = Duration::from_millis(500);
+
 /// The first minute after the computer wakes is the computer's: its disk, its network and its
 /// screen come back, and MDM's memory, given back while it waited in the notification area
 /// (#72), is read back in. Two windows hidden there didn't answer for 16 and 23 s right after a
@@ -156,9 +160,21 @@ fn stretch_begin(part: u8) {
     FRAME_START.store(now_ms() + 1, Ordering::Release);
 }
 
-/// The stretch ended: no freeze (or no more of one).
+/// The stretch ended: no freeze (or no more of one); a slow one is logged.
 fn stretch_end() {
-    FRAME_START.store(0, Ordering::Release);
+    let start = FRAME_START.swap(0, Ordering::AcqRel);
+    let took = now_ms().saturating_sub(start.saturating_sub(1));
+    if start != 0 && took >= SLOW_FRAME.as_millis() as u64 {
+        let part = if PART.load(Ordering::Relaxed) == LOGIC {
+            "logic"
+        } else {
+            "UI"
+        };
+        tracing::info!(
+            "a slow frame: its {part} took {took} ms (at {})",
+            Step::now().label()
+        );
+    }
     let waking = WAKING.swap(false, Ordering::AcqRel);
     if FROZEN.swap(false, Ordering::AcqRel) {
         tracing::warn!("the window answers again");

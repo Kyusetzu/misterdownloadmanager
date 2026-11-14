@@ -29,7 +29,10 @@
   // ---- Safari: the file types to hold links for (Options, as background.js keeps them) --------
 
   let patterns = [];
+  // The app's Torrent settings leave .torrent files to the browser (#1058).
+  let noTorrents = false;
   const learn = (rules) => {
+    noTorrents = Boolean(rules && rules.torrents === false);
     // As background.js typePatterns reads the list: names separated by spaces, `*` any run.
     patterns =
       rules && rules.capture
@@ -121,7 +124,7 @@
     // Safari: a plain click (or Cmd/Shift: a link opened elsewhere is held the same).
     if (SAFARI && e.type === "click" && e.button === 0 && patterns.length) {
       const type = typeOf(a);
-      if (type && patterns.some((p) => p.test(type))) hold(e, a);
+      if (type && !(noTorrents && /^torrent$/i.test(type)) && patterns.some((p) => p.test(type))) hold(e, a);
     }
   };
   addEventListener("pointerdown", press, true);

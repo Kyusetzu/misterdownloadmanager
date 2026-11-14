@@ -613,7 +613,9 @@ async fn run(cmd: Cmd, json: bool, accounts: Option<&dyn Accounts>) -> anyhow::R
             let dir = mdm_tools::tools_dir().ok_or_else(|| anyhow::anyhow!("no data folder"))?;
             let tool = mdm_tools::installed(&dir)
                 .ok_or_else(|| anyhow::anyhow!("yt-dlp is not installed (install-ytdlp)"))?;
-            let v = match mdm_tools::resolve::look_up(&tool.exe, &url, &Default::default())? {
+            // The page's own declared video when yt-dlp read it generically (#1076).
+            let (looked, declared) = look_up_page(&tool.exe, &url, Options::default())?;
+            let v = match looked {
                 mdm_tools::resolve::Looked::Video(v) => v,
                 mdm_tools::resolve::Looked::List(l) => {
                     let size = l.total.map_or(String::new(), |n| format!(", {n} videos"));
@@ -655,11 +657,15 @@ async fn run(cmd: Cmd, json: bool, accounts: Option<&dyn Accounts>) -> anyhow::R
                     "choices": choices,
                     "subtitles": subs,
                     "needs_js_runtime": v.needs_js_runtime,
+                    "declared": declared.as_ref().map(|d| &d.address),
                 }));
                 return Ok(());
             }
             if v.needs_js_runtime {
                 eprintln!("{}", js_runtime_note());
+            }
+            if let Some(d) = &declared {
+                eprintln!("{}", declared_note(d));
             }
             println!("{}", v.title);
             for c in choices {
@@ -965,10 +971,32 @@ async fn run(cmd: Cmd, json: bool, accounts: Option<&dyn Accounts>) -> anyhow::R
             let dir = mdm_tools::tools_dir().ok_or_else(|| anyhow::anyhow!("no data folder"))?;
             let tool = mdm_tools::installed(&dir)
                 .ok_or_else(|| anyhow::anyhow!("yt-dlp is not installed (install-ytdlp)"))?;
-            let v = mdm_tools::resolve::resolve(&tool.exe, &url, &Default::default())?;
+            // The page's own declared video when yt-dlp read it generically (#1076): the one
+            // downloaded, asked with the page as its Referer.
+            let page_opts = Options {
+                route: route.clone().unwrap_or_default(),
+                ..Options::default()
+            };
+            let (looked, declared) = look_up_page(&tool.exe, &url, page_opts)?;
+            let v = match looked {
+                mdm_tools::resolve::Looked::Video(v) => v,
+                mdm_tools::resolve::Looked::List(l) => {
+                    anyhow::bail!(
+                        "yt-dlp failed: the address is a list of videos ({})",
+                        l.title
+                    )
+                }
+            };
             if v.needs_js_runtime {
                 eprintln!("{}", js_runtime_note());
             }
+            if let Some(d) = &declared {
+                eprintln!("{}", declared_note(d));
+            }
+            let (address, browser) = match &declared {
+                Some(d) => (d.address.clone(), d.browser(&Default::default())),
+                None => (url.clone(), Default::default()),
+            };
             // A stem no file in the folder has, whatever the extension: yt-dlp takes any
             // `<stem>.*` there as its own (#32). The extension only sizes the name.
             let ext = mdm_tools::resolve::audio_conversion(&format).map_or("mp4", |a| a.format);
@@ -981,7 +1009,7 @@ async fn run(cmd: Cmd, json: bool, accounts: Option<&dyn Accounts>) -> anyhow::R
             let ffmpeg = mdm_tools::ffmpeg::installed(&dir).map(|f| f.exe);
             let job = mdm_tools::video::VideoJob::start(
                 &tool.exe,
-                &url,
+                &address,
                 &format,
                 &output,
                 &stem,
@@ -989,7 +1017,7 @@ async fn run(cmd: Cmd, json: bool, accounts: Option<&dyn Accounts>) -> anyhow::R
                 ffmpeg.as_deref(),
                 // No size shown here: the progress steadies itself (video::Meter).
                 None,
-                &Default::default(),
+                &browser,
                 &subs,
                 Some(video_engine(connections, route)),
             )?;
@@ -1129,6 +1157,35 @@ fn video_engine(connections: u32, route: Option<mdm_engine::Route>) -> mdm_tools
             ..opts(connections)
         },
     }
+}
+
+/// yt-dlp's look-up of the page `url` as the app's Download video window makes it (#1076): the
+/// video the page declares its own when yt-dlp read it generically, the page read through
+/// `opts` (`mdm_tools::declared::look_up`). On this runtime's thread, which it holds meanwhile.
+fn look_up_page(
+    exe: &std::path::Path,
+    url: &str,
+    opts: Options,
+) -> Result<
+    (
+        mdm_tools::resolve::Looked,
+        Option<mdm_tools::declared::Declared>,
+    ),
+    mdm_tools::proc::ProcError,
+> {
+    let reader = mdm_tools::streams::Engine {
+        handle: tokio::runtime::Handle::current(),
+        opts,
+    };
+    tokio::task::block_in_place(|| {
+        mdm_tools::declared::look_up(exe, url, &Default::default(), &reader)
+            .map(|(looked, _, declared)| (looked, declared))
+    })
+}
+
+/// What `video-info` and `video-get` say when the page's declared video is the one looked up.
+fn declared_note(d: &mdm_tools::declared::Declared) -> String {
+    format!("the page declares its video: {}", d.address)
 }
 
 /// A download's options: the app's defaults (the default browser's User-Agent, #668, and MDM's

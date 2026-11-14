@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "የላቀ የአሳሽ ውህደትን ተጠቀም በአማራጮች → አጠቃላይ ውስጥ ጠፍቷል።"
   },
+  "declined_torrents": {
+    "message": "ቶረንት ነው፣ እና በቶረንት ቅንብሮች ውስጥ Open magnet links and .torrent files with Mister Download Manager ተሰናክሏል።"
+  },
   "declined_site_access": {
     "message": "ቅጥያው ይህንን ጣቢያ ለማንበብ አልተፈቀደለትም (የአሳሹ የጣቢያ መዳረሻ)።"
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "ኦሪጅናል"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "የማውረጃ ቁልፉን በሙሉ ማያ ገጽ ላይ ደብቅ"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "ገጹ በሙሉ ማያ ገጽ ላይ እያለ፣ ቪዲዮዎቹ የቪዲዮ ማውረጃ ቁልፍ አያሳዩም።"
   }
 }

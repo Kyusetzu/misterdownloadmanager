@@ -4488,6 +4488,10 @@
 #, machine
 	the browser's proxy (a VPN or proxy extension) asks for a login only that extension has: use the VPN's own app, or choose its network adapter in Options → Proxy / Socks	ବ୍ରାଉଜରର ପ୍ରକ୍ସି (ଏକ VPN କିମ୍ବା ପ୍ରକ୍ସି ଏକ୍ସଟେନସନ୍) ଏପରି ଲଗଇନ୍ ମାଗୁଛି ଯାହା କେବଳ ସେହି ଏକ୍ସଟେନସନ୍ ପାଖରେ ଅଛି: VPN ର ନିଜସ୍ୱ ଆପ୍ ବ୍ୟବହାର କରନ୍ତୁ, କିମ୍ବା Options → Proxy / Socks ରେ ଏହାର ନେଟୱର୍କ ଆଡାପ୍ଟର ବାଛନ୍ତୁ
 #. text in extension.rs
+#. a check of Test browser integration: the browsers are pointed at a copy of MDM that was deleted (often one started from inside a zip); that copy's folder shows on the line under it
+#, machine
+	The browsers are set up for a copy that is gone:	ବ୍ରାଉଜର୍‌ଗୁଡ଼ିକ ଏକ କପି ପାଇଁ ସେଟ୍ ହୋଇଛି ଯାହା ଚାଲିଯାଇଛି:
+#. text in extension.rs
 #. a check of Test browser integration: the browsers find MDM's helper program
 #, machine
 	The browsers can find Mister Download Manager	ବ୍ରାଉଜର୍‌ଗୁଡ଼ିକ Mister Download Manager ଖୋଜିପାରୁଛନ୍ତି
@@ -4878,6 +4882,10 @@
 #. Options → Remote → Listen on: only programs on this computer can connect (127.0.0.1)
 #, machine
 	This computer only (127.0.0.1)	କେବଳ ଏହି କମ୍ପ୍ୟୁଟର (127.0.0.1)
+#. text in extension.rs
+#. a check of Test browser integration: MDM was started from inside a zip (or from the temporary folder), which is deleted after it quits, so it can't be connected to the browsers
+#, machine
+	This copy runs from a temporary folder that will be deleted	ଏହି କପି ଏକ ଅସ୍ଥାୟୀ ଫୋଲ୍ଡର୍‌ରୁ ଚାଲୁଛି ଯାହା ଡିଲିଟ୍ ହୋଇଯିବ
 #. text in the Scheduler window
 #. tooltip on the Scheduler's date when it is in the past
 #, machine
@@ -6178,6 +6186,10 @@ extension	Help	ସାହାଯ୍ୟ
 #, machine
 extension	Hide on this video	ଏହି ଭିଡିଓରେ ଲୁଚାନ୍ତୁ
 #. text in the browser extension
+#. Option in the toolbar button's popup: while a web page is in full screen, the Download video button over its videos stays hidden
+#, machine
+extension	Hide the download button in full screen	ଫୁଲ୍ ସ୍କ୍ରିନ୍‌ରେ ଡାଉନଲୋଡ୍ ବଟନ୍ ଲୁଚାନ୍ତୁ
+#. text in the browser extension
 #. hint in the toolbar button's popup; Alt is the keyboard key
 #, machine
 extension	Hold Alt while clicking a link to let the browser download it.	ବ୍ରାଉଜର୍‌କୁ ଡାଉନଲୋଡ୍ କରିବାକୁ ଦେବା ପାଇଁ ଲିଙ୍କ୍‌ରେ କ୍ଲିକ୍ କରିବା ସମୟରେ Alt ଧରି ରଖନ୍ତୁ।
@@ -6193,6 +6205,10 @@ extension	It didn't work. Try again.	ଏହା କାମ କଲାନାହି�
 #. pairing failed: the other MDM shows no pairing code; Pair a device is its button
 #, machine
 extension	It shows no code now: click Pair a device there first.	ଏହା ବର୍ତ୍ତମାନ କୌଣସି କୋଡ୍ ଦେଖାଉ ନାହିଁ: ପ୍ରଥମେ ସେଠାରେ ଏକ ଡିଭାଇସ୍ ଯୋଡ଼ନ୍ତୁ କ୍ଲିକ୍ କରନ୍ତୁ।
+#. text in the browser extension
+#. why a download stayed with the browser: it is a .torrent file and the app's Torrent settings don't open torrents with Mister Download Manager, so the browser keeps it for the user's own torrent program; keep the setting's name as the app shows it
+#, machine
+extension	It's a torrent, and Open magnet links and .torrent files with Mister Download Manager is off in Torrent settings.	ଏହା ଏକ ଟୋରେଣ୍ଟ୍, ଏବଂ ଟୋରେଣ୍ଟ୍ ସେଟିଂସ୍‌ରେ Mister Download Manager ସହିତ ମ୍ୟାଗ୍ନେଟ୍ ଲିଙ୍କ୍ ଏବଂ .torrent ଫାଇଲ୍ ଖୋଲନ୍ତୁ ବନ୍ଦ ଅଛି।
 #. text in the browser extension
 #. why a download stayed with the browser: the file is smaller than the app's minimum size setting
 #, machine
@@ -6442,6 +6458,10 @@ extension	Video	ଭିଡିଓ
 #. pairing failed: codes tried too fast
 #, machine
 extension	Wait a moment, then try again.	କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ, ତା’ପରେ ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।
+#. text in the browser extension
+#. Tooltip of the Hide the download button in full screen option in the toolbar button's popup; Download video is the name of the button over videos
+#, machine
+extension	While the page is in full screen, its videos show no Download video button	ପୃଷ୍ଠା ଫୁଲ୍ ସ୍କ୍ରିନ୍‌ରେ ଥିବାବେଳେ, ଏହାର ଭିଡିଓଗୁଡ଼ିକରେ କୌଣସି ଡାଉନଲୋଡ୍ ଭିଡିଓ ବଟନ୍ ଦେଖାଯାଏ ନାହିଁ
 #. text in the browser extension
 #. pairing failed: the code was wrong
 #, machine

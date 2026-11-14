@@ -786,6 +786,25 @@
   let asking = null;
   let never = false;
   let placed = false;
+  // Hidden while the page is fullscreen, when chosen in the popup (off: it shows, as now).
+  let hideFullscreen = false;
+  try {
+    ext.storage.local.get({ hideVideoFullscreen: false }).then((v) => {
+      hideFullscreen = Boolean(v.hideVideoFullscreen);
+    }).catch(() => {});
+    ext.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes.hideVideoFullscreen) {
+        hideFullscreen = Boolean(changes.hideVideoFullscreen.newValue);
+        // Either way at once: a video already in full screen follows the box as it is ticked.
+        if (document.fullscreenElement && video) {
+          if (hideFullscreen) hide(true);
+          else show(video);
+        }
+      }
+    });
+  } catch {
+    // Without storage: shown, as now.
+  }
   const ASK_MS = 5000;
   const answered = () => allowed !== null && Date.now() - askedAt < ASK_MS;
   let place = { x: 1, y: 0 }; // where on the edge: fractions of the room, top right by default
@@ -1531,6 +1550,7 @@ button:focus-visible { outline: none; }
       if (status && status.state !== "off") endStatus(true);
       current = null;
     }
+    if (hideFullscreen && document.fullscreenElement) return hide(true);
     if (!attach()) return hide(true);
     root.style.setProperty("display", "block", "important");
     const c = describeNow(v);
@@ -1595,6 +1615,7 @@ button:focus-visible { outline: none; }
   function tick() {
     raf = 0;
     if (!video) return hide(true);
+    if (hideFullscreen && document.fullscreenElement) return hide(true);
     const onButton = root.matches(":hover");
     if (!video.isConnected || !eligible(video)) {
       if (!held && lastRect && !isDismissed(video)) held = hold();
@@ -2227,6 +2248,10 @@ button:focus-visible { outline: none; }
       focusedPlayer.focus();
     }
   });
-  document.addEventListener("fullscreenchange", () => video && show(video));
+  document.addEventListener("fullscreenchange", () => {
+    if (!video) return;
+    if (hideFullscreen && document.fullscreenElement) hide(true);
+    else show(video);
+  });
   addEventListener("blur", () => hide());
 })();

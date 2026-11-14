@@ -179,7 +179,7 @@ Control MDM from your phone or another computer on the local network: see
 A few settings live outside this window:
 
 - **Downloads → Speed Limiter → Settings...** — speed limits. See [Connections and speed](connections-and-speed.md#speed-limiter).
-- **Tasks → Torrent settings...** — sharing and file associations. See [Torrents](torrents.md#torrent-settings).
+- **Tasks → Torrent settings...** — sharing and file associations, and whether the browser hands `.torrent` downloads to MDM. See [Torrents](torrents.md#torrent-settings).
 - **View → Dark Mode support**, **Always dark**, **Theme**, **Draw with**, **Interface size** and **Language**. See [Getting started](getting-started.md#themes) and [Troubleshooting](troubleshooting.md).
 - **Help → Check for updates...** — **Check for updates at every start** is in that window.
 

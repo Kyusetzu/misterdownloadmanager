@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "การใช้การผสานรวมเบราว์เซอร์ขั้นสูงถูกปิดใน ตัวเลือก → ทั่วไป"
   },
+  "declined_torrents": {
+    "message": "เป็นทอร์เรนต์ และ “เปิดลิงก์แม่เหล็กและไฟล์ .torrent ด้วย Mister Download Manager” ปิดอยู่ในการตั้งค่าทอร์เรนต์"
+  },
   "declined_site_access": {
     "message": "ส่วนขยายไม่ได้รับอนุญาตให้อ่านไซต์นี้ (การเข้าถึงไซต์ของเบราว์เซอร์)"
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "ต้นฉบับ"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "ซ่อนปุ่มดาวน์โหลดเมื่อเต็มหน้าจอ"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "ขณะที่หน้าเว็บแสดงผลแบบเต็มหน้าจอ วิดีโอจะไม่แสดงปุ่มดาวน์โหลดวิดีโอ"
   }
 }

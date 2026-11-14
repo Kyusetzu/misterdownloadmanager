@@ -1198,6 +1198,7 @@ impl FileInfo {
                 if url.origin() != self.url.origin() {
                     self.context.cookies = None;
                     self.context.referer = None;
+                    self.context.page_url = None;
                     self.request.headers.remove(reqwest::header::COOKIE);
                     self.request.headers.remove(reqwest::header::REFERER);
                 }
@@ -1230,6 +1231,15 @@ impl FileInfo {
             .unwrap_or_default();
         // Fitted to the new folder too (#28): a deeper one leaves a long name less room.
         self.save_as = self.place.name_in(folder, &name);
+        self.edited = true;
+    }
+
+    /// The system Save dialog's answer (`winui::saved_name`): Save As takes its folder and the
+    /// name typed there as a name typed in Save As is taken (#1088): not numbered, and a name
+    /// taken by the time the download starts is numbered then (`Item::number_at_start`), so
+    /// nothing is overwritten.
+    fn set_saved(&mut self, path: &Path) {
+        self.save_as = display_path(path);
         self.edited = true;
     }
 
@@ -1467,25 +1477,22 @@ impl FileInfo {
                         self.set_folder(&folder);
                     }
                 }
-                // "...": choose the folder.
+                // "...": the system's Save dialog, its folder and file name (#1088).
                 if winui::small_button(ui, r(o, 439.0, 64.0, 22.0, 21.0), "...").clicked() {
-                    let now = self
-                        .dest()
-                        .parent()
-                        .map(Path::to_path_buf)
+                    let dest = self.dest();
+                    let dir = dest.parent().map(Path::to_path_buf).unwrap_or_default();
+                    let name = dest
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
                         .unwrap_or_default();
-                    // i18n: title of the folder picker
-                    let title = crate::i18n::t("Select a folder").to_owned();
-                    winui::start_pick(ui.ctx(), "file-info-folder", move || {
-                        let mut pick = crate::winui::file_dialog(&title);
-                        if now.is_dir() {
-                            pick = pick.set_directory(&now);
-                        }
-                        pick.pick_folder()
+                    let title = crate::i18n::t("Save As").to_owned();
+                    winui::start_pick(ui.ctx(), "file-info-save-as", move || {
+                        let picked = winui::save_dialog(&title, &dir, &name).save_file()?;
+                        Some(winui::saved_name(&name, &picked))
                     });
                 }
-                if let Some(dir) = winui::picked(ui.ctx(), "file-info-folder") {
-                    self.set_folder(&dir);
+                if let Some(path) = winui::picked(ui.ctx(), "file-info-save-as") {
+                    self.set_saved(&path);
                 }
 
                 let caption = crate::i18n::fmt(
@@ -4522,6 +4529,32 @@ mod tests {
         let mut save_as = place.name_in(&gone, "a.zip");
         assert_eq!(answered(&mut place, &mut save_as), Some(false));
         assert_eq!(save_as, display_path(&gone.join("a.zip")));
+    }
+
+    /// #1088: a name chosen in the Save dialog that a file there already has is taken as a typed
+    /// one: Save As keeps it as chosen (not renumbered under the user), its folder looked at; the
+    /// download numbers it as it starts (`Item::number_at_start`), so nothing is overwritten.
+    #[test]
+    fn a_name_chosen_in_the_save_dialog_is_kept_as_typed() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(d.path().join("testName.7z"), b"x").unwrap();
+        let mut place = SaveAsPlace::new(None);
+        let _guess = place.name_in(d.path(), "MPC-BE.1.9.3.x86.7z");
+        let chosen = crate::winui::saved_name("MPC-BE.1.9.3.x86.7z", &d.path().join("testName"));
+        let mut save_as = display_path(&chosen);
+        let mut there = None;
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while there.is_none() && std::time::Instant::now() < until {
+            there = place.folder(&mut save_as);
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        assert_eq!(there, Some(true));
+        assert_eq!(resolve_path(&save_as), d.path().join("testName.7z"));
+        // Where the download goes as it starts: the next free name.
+        assert_eq!(
+            mdm_engine::naming::destination(d.path(), "testName.7z"),
+            d.path().join("testName (1).7z")
+        );
     }
 
     /// #743: Start in a dialog whose folder is on a disk slow to answer holds up no frame: the

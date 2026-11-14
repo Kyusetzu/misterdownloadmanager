@@ -1,6 +1,7 @@
 //! Web pages for the browser extension's tests (tools/extension/e2e.mjs): `/page` (links, videos,
 //! audio, adaptive streams; optionally under a strict Content-Security-Policy), `/formpage`
-//! (forms that post to `/form`), `/cookie` (sets cookies) and their `/assets`. Styles and scripts
+//! (forms that post to `/form`), `/cookie` (sets cookies) and their `/assets`; and `/declared`, a
+//! page that declares one video and hides another (#1076, the video look-up's tests). Styles and scripts
 //! are files, never inline, so the pages work under `csp=strict`.
 
 use std::collections::HashMap;
@@ -57,8 +58,29 @@ fn video_tag(id: &str, src: &str, (w, h): (u32, u32), muted_loop: bool) -> Strin
     )
 }
 
+/// The most links `files=N` gives.
+const MAX_FILES: u32 = 50_000;
+
+/// `files=N`: N links to small generated files, as a big page's "Download all links" gives Link
+/// grabber (#1063): two in five a split archive's volumes (`setK.part1.rar`, `setK.part2.rar`:
+/// a package each), the others zips, videos and documents.
+fn file_links(n: u32) -> String {
+    use std::fmt::Write;
+    let mut out = String::new();
+    for k in 0..n {
+        let name = match k % 5 {
+            0 | 1 => format!("set{}.part{}.rar", k / 5, k % 5 + 1),
+            2 => format!("file{k}.zip"),
+            3 => format!("clip{k}.mp4"),
+            _ => format!("doc{k}.pdf"),
+        };
+        let _ = write!(out, "<p><a href=\"/gen/1K/{name}?seed={k}\">{name}</a></p>");
+    }
+    out
+}
+
 /// `/page?title=TEXT&link=PATH&video=PATH|1&w=&h=&muted_loop=1&iframe=1&shadow=1&several=N&audio=PATH|1&
-/// hls=1&dash=1&drm=1&hls2=1&dash2=1&hlsg=SITE&csp=strict`: a web page with what the browser
+/// hls=1&dash=1&drm=1&hls2=1&dash2=1&hlsg=SITE&csp=strict&files=N`: a web page with what the browser
 /// extension acts on (see `HELP`).
 pub(crate) async fn page(RawQuery(q): RawQuery, headers: HeaderMap) -> Response {
     let pairs = pairs(q);
@@ -71,6 +93,8 @@ pub(crate) async fn page(RawQuery(q): RawQuery, headers: HeaderMap) -> Response 
     let size = (num("w", 640), num("h", 360));
     let (muted_loop, iframe, shadow) = (flag("muted_loop"), flag("iframe"), flag("shadow"));
     let several = num("several", 0).min(16);
+    // A big page's links (#1063), for Link grabber.
+    let files = num("files", 0).min(MAX_FILES);
     let csp = m.get("csp") == Some(&"strict");
     // #900: the stream on another site (`hlsg=SITE`), served only to this page's Origin and
     // Referer: SITE's address for this host's guarded stream.
@@ -113,7 +137,11 @@ pub(crate) async fn page(RawQuery(q): RawQuery, headers: HeaderMap) -> Response 
         None if muted_loop
             || iframe
             || shadow
-            || (link.is_none() && audio.is_none() && several == 0 && streams.is_empty()) =>
+            || (link.is_none()
+                && audio.is_none()
+                && several == 0
+                && files == 0
+                && streams.is_empty()) =>
         {
             Some(DEFAULT_VIDEO)
         }
@@ -167,6 +195,7 @@ pub(crate) async fn page(RawQuery(q): RawQuery, headers: HeaderMap) -> Response 
     if let Some(src) = audio {
         body += &format!("<audio id=audio src=\"{}\" controls></audio>", esc(src));
     }
+    body += &file_links(files);
     for (k, (kind, manifest)) in streams.iter().enumerate() {
         let id = if k == 0 {
             "player".to_owned()
@@ -189,6 +218,14 @@ pub(crate) async fn page(RawQuery(q): RawQuery, headers: HeaderMap) -> Response 
         );
     }
     let mut resp = html(body);
+    // `referrer=POLICY` (#607): the page's own referrer policy; `origin` makes its links'
+    // requests carry the site's address only, as a link to another site's file does by default.
+    if let Some(policy) = m
+        .get("referrer")
+        .and_then(|p| header::HeaderValue::from_str(p).ok())
+    {
+        resp.headers_mut().insert(header::REFERRER_POLICY, policy);
+    }
     if csp {
         let media = if !streams.is_empty() {
             "'self' blob:"
@@ -226,6 +263,68 @@ pub(crate) async fn leadon(RawQuery(q): RawQuery) -> Response {
         "{}Thank you<script>location.href = \"{to}\";</script>",
         head("Thank you")
     ))
+}
+
+/// What `/declared` declares and what it hides, by default.
+const DECLARED_FILM: &str = "/gen/2M/film.mp4?seed=3&inline=1";
+const DECLARED_HIDDEN: &str = "/gen/1M/welcome.mp4?seed=2&inline=1";
+
+/// `/declared?film=PATH&hidden=PATH&name=TEXT&title=TEXT&how=jsonld|og|twitter|none`: a page that
+/// declares its video (#1076) but whose HTML plays only another, hidden one (a site's welcome
+/// video in a closed help box): `hidden` in a `<video>` inside `<div hidden>`, and `film`
+/// declared as the page's own by its JSON-LD `VideoObject` (`contentUrl`, `name`), its
+/// `og:video` (`og:title`) or its `twitter:player` (`twitter:title`), or not at all.
+pub(crate) async fn declared(RawQuery(q): RawQuery) -> Response {
+    let m: HashMap<String, String> = pairs(q).into_iter().collect();
+    let get = |k: &str, default: &str| m.get(k).cloned().unwrap_or_else(|| default.to_owned());
+    let (film, hidden, name, title, how) = (
+        get("film", DECLARED_FILM),
+        get("hidden", DECLARED_HIDDEN),
+        get("name", "The Film"),
+        get("title", "The Film | Lab"),
+        get("how", "jsonld"),
+    );
+    let mut body = format!(
+        "<!doctype html><meta charset=utf-8><title>{}</title>",
+        esc(&title)
+    );
+    match how.as_str() {
+        "og" => {
+            body += &format!(
+                "<meta property=og:title content=\"{}\"><meta property=og:video content=\"{}\">\
+                 <meta property=og:video:type content=video/mp4>",
+                esc(&name),
+                esc(&film)
+            );
+        }
+        "twitter" => {
+            body += &format!(
+                "<meta name=twitter:card content=player><meta name=twitter:title content=\"{}\">\
+                 <meta name=twitter:player content=\"{}\">",
+                esc(&name),
+                esc(&film)
+            );
+        }
+        "none" => {}
+        _ => {
+            let ld = serde_json::json!({
+                "@context": "https://schema.org",
+                "@type": "VideoObject",
+                "name": name,
+                "contentUrl": film,
+            });
+            // `</` can't end the script early.
+            let ld = ld.to_string().replace("</", "<\\/");
+            body += &format!("<script type=application/ld+json>{ld}</script>");
+        }
+    }
+    body += &format!(
+        "<link rel=stylesheet href=/assets/page.css><body><h1>{}</h1>\
+         <div class=help hidden><video src=\"{}\" controls></video></div>",
+        esc(&name),
+        esc(&hidden)
+    );
+    html(body)
 }
 
 /// `/formpage?size=1M&name=report.zip&token=abc&with=QUERY`: three forms that post to `/form`

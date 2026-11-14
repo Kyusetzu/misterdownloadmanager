@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Geavanceerde browserintegratie gebruiken is uitgeschakeld in Opties → Algemeen."
   },
+  "declined_torrents": {
+    "message": "Het is een torrent, en 'Magnetlinks en .torrent-bestanden openen met Mister Download Manager' is uitgeschakeld in de Torrent-instellingen."
+  },
   "declined_site_access": {
     "message": "De extensie mag deze site niet lezen (site-toegang van de browser)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "origineel"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Downloadknop verbergen in volledig scherm"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Terwijl de pagina in volledig scherm is, tonen de video's geen downloadknop"
   }
 }

@@ -149,6 +149,9 @@
   "declined_integration_off": {
     "message": "Käytä laajennettua selainintegraatiota on pois päältä kohdassa Asetukset → Yleiset."
   },
+  "declined_torrents": {
+    "message": "Se on torrent, ja Avaa magnet-linkit ja .torrent-tiedostot sovelluksella Mister Download Manager on pois päältä Torrent-asetuksissa."
+  },
   "declined_site_access": {
     "message": "Laajennuksella ei ole lupaa lukea tätä sivustoa (selaimen sivustokäyttö)."
   },
@@ -328,5 +331,11 @@
   },
   "video_original": {
     "message": "alkuperäinen"
+  },
+  "popup_video_hide_fullscreen": {
+    "message": "Piilota latauspainike koko näytön tilassa"
+  },
+  "popup_video_hide_fullscreen_title": {
+    "message": "Kun sivu on koko näytön tilassa, sen videoissa ei näy Lataa video -painiketta"
   }
 }
