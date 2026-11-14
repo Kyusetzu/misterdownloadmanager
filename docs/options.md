@@ -51,6 +51,7 @@ MDM doesn't use a temporary folder: every connection writes straight into the fi
 ![Options on its Downloads page: the start download dialog, Download complete and duplicate links](images/help/options-downloads.webp)
 *Downloads: which windows show, and what a duplicate link does.*
 
+- **Customize "Download progress" dialog → Edit...** — **Show download progress dialog when a download starts**: on by default. Untick it and a download no longer opens its progress window when it starts, from the browser, a link you add, a video or a queue; it goes on in the main window's list, where a double-click opens its progress window. **Download complete** still shows when it finishes, as **Show download complete dialog** below says.
 - **Show start download dialog** — show **Download File Info** for each new download. With it off, downloads start at once, or only join the queue if you tick **Do not start downloading, only add files to the queue**.
 - **Show download complete dialog** — show **Download complete** when a file finishes.
 - **Start downloading immediately while displaying "Download File Info" dialog** — on by default, so the download is already under way while you choose a folder.

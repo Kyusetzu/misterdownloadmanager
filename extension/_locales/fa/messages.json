@@ -92,6 +92,9 @@
       }
     }
   },
+  "popup_undo": {
+    "message": "لغو"
+  },
   "popup_excluded": {
     "message": "دانلودها از $site$ در مرورگر می‌مانند",
     "placeholders": {

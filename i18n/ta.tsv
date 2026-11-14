@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	பதிவிறக்கப் பேனல்கள்
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	பதிவிறக்க முன்னேற்ற உரையாடல்
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager ஒரு உள் பிழையைச் சந்தித்தது
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager பதிவிறக்குகிறது
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	பதிவிறக்கம் முடிந்த உரையாடலைக் காட்டு
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	பதிவிறக்கம் தொடங்கும் போது பதிவிறக்க முன்னேற்ற உரையாடலைக் காட்டு
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	தளத்தின் போட் சரிபார்ப்பு (Cloudflare) yt-dlp ஐ மறுத்துவிட்டது. பக்கம் உங்கள் உலாவியில் திறந்தால், விருப்பத்தேர்வுகள் → தள உள்நுழைவுகள் → வீடியோ தளங்களுக்கான குக்கீகள் என்பதில் அந்த உலாவியைத் தேர்ந்தெடுத்து, பக்கத்தை மீண்டும் பார்க்கவும் அல்லது வீடியோவின் மேல் பதிவிறக்க வீடியோ பொத்தானைப் பயன்படுத்தவும்.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	தளத்தின் பாதுகாப்புச் சான்றிதழ் காலாவதியாகிவிட்டது, எனவே இது உண்மையான தளம் என்று MDM உறுதியாக இருக்க முடியாது (உங்கள் உலாவியும் அதைப் பற்றி எச்சரிக்கிறது)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	தளத்தின் பாதுகாப்புச் சான்றிதழ் மற்றொரு தளப் பெயருக்கானது, எனவே இது உண்மையான தளம் என்று MDM உறுதியாக இருக்க முடியாது (உங்கள் உலாவியும் அதைப் பற்றி எச்சரிக்கிறது)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	தளத்தின் பாதுகாப்புச் சான்றிதழ் நம்பப்படவில்லை (அது சுயமாக கையொப்பமிடப்பட்டது அல்லது அறியப்படாத வழங்குநரிடமிருந்து வந்தது), எனவே இது உண்மையான தளம் என்று MDM உறுதியாக இருக்க முடியாது (உங்கள் உலாவியும் அதைப் பற்றி எச்சரிக்கிறது)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	தளத்தின் பாதுகாப்புச் சான்றிதழ் இன்னும் செல்லுபடியாகவில்லை: இந்த கணினியின் தேதி மற்றும் நேரத்தைச் சரிபார்க்கவும்
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	தளத்தின் பாதுகாப்புச் சான்றிதழ் மறுக்கப்பட்டது, எனவே இது உண்மையான தளம் என்று MDM உறுதியாக இருக்க முடியாது
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	தளத்தின் பாதுகாப்புச் சான்றிதழ் அதன் வழங்குநரால் ரத்து செய்யப்பட்டது, எனவே MDM அதை நம்பாது
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	தளத்தின் சான்றிதழை yt-dlp-உம் இந்தக் கணினியும் நம்பவில்லை: வைரஸ் தடுப்பு நிரலின் வலை வடிகட்டி அல்லது HTTPS இணைப்புகளைப் படிக்கும் ப்ராக்ஸி குறுக்கிடக்கூடும். அதன் HTTPS ஸ்கேனிங்கை அணைக்கவும் அல்லது அதன் சான்றிதழைக் கணினியில் சேர்க்கவும், பின்னர் பக்கத்தை மீண்டும் சரிபார்க்கவும்.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	தளத்தின் பாதுகாப்புச் சான்றிதழ் வலைத்தளங்களுக்காக உருவாக்கப்படவில்லை, எனவே MDM அது உண்மையான தளமா என்பதை உறுதிப்படுத்த முடியாது
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	எப்போது
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	அது முடக்கப்பட்டிருக்கும் போது, பதிவிறக்கங்கள் பிரதான சாளரத்தின் பட்டியலில் தொடரும். அதன் முன்னேற்றத்தைக் காண அங்குள்ள ஒன்றின் மீது இருமுறை கிளிக் செய்யவும்.
 #. text in the Batch download window
 #, machine
 	Wildcard size	வைல்ட்கார்டு அளவு
@@ -6381,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	இயக்கு
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	செயல்தவிர்
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	இந்த நீட்டிப்பு வழங்கும் அனைத்தையும் பயன்படுத்த Mister Download Managerஐப் புதுப்பிக்கவும்
@@ -6513,10 +6559,10 @@ menu	&About Mister Download Manager	Mister Download Manager பற்றி(&A)
 #, machine
 menu	&Add new download	புதிய பதிவிறக்கத்தைச் சேர்(&A)
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	புதிய பதிவிறக்கத்தைச் &சேர்...
+menu	&Automatic	தானி&யங்கு
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6622,11 +6668,6 @@ menu	&Stop All	அனைத்தையும் நிறுத்து(&S)
 #, machine
 menu	&Stop Download	பதிவிறக்கத்தை நிறுத்து(&S)
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	உரை(&X)
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	ட்ரே ஐகான்(&T)
@@ -6643,6 +6684,21 @@ menu	&Undo	&செயல்தவிர்
 #, machine
 menu	&Video downloads	வீடியோ பதிவிறக்கங்கள்(&V)
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	வேலேண்ட்(&W)
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&சாளர அமைப்பு
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	X11 (Xவேலேண்ட்)(&X)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	தொகுப்பு பதிவிறக்கத்தைச் சேர்(&b)
@@ -6651,6 +6707,11 @@ menu	Add &batch download	தொகுப்பு பதிவிறக்கத
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	காந்த இணைப்பைச் சேர்...(&m)
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	புதிய பதிவிறக்கத்தைச் &சேர்...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6866,6 +6927,14 @@ menu	Hide drop target	இழுத்துவிடும் இலக்கை
 #, machine
 menu	High contrast	உயர் மாறுபாடு
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	பயன்பாட்டில் உள்ளது: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	பயன்பாட்டில் உள்ளது: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	தொடங்க முடியவில்லை: பதிவில் காரணம் குறிப்பிடப்பட்டுள்ளது
@@ -7056,6 +7125,11 @@ menu	Stop Download	பதிவிறக்கத்தை நிறுத்த
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	MDM-ஐ ஆ&தரிக்கவும்
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	உரை(&X)
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

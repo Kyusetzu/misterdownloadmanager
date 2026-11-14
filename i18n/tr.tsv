@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	İndirme panelleri
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	İndirme ilerleme iletişim kutusu
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager dahili bir hatayla karşılaştı
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager indiriliyor
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	İndirme tamamlandığında iletişim kutusunu göster
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Bir indirme başladığında indirme ilerleme iletişim kutusunu göster
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Sitenin bot denetimi (Cloudflare) yt-dlp'yi reddetti. Sayfa tarayıcınızda açılıyorsa, Seçenekler → Site Girişleri → Video siteleri için çerezler bölümünde o tarayıcıyı seçin ve sayfayı tekrar arayın veya videonun üzerindeki Video İndir düğmesini kullanın.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	sitenin güvenlik sertifikasının süresi doldu, bu nedenle MDM'nin sitenin gerçek site olduğundan emin olması mümkün değil (tarayıcınız da bu konuda uyarı veriyor)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	sitenin güvenlik sertifikası adresteki site adından farklı bir site adı için düzenlenmiş, bu nedenle MDM'nin sitenin gerçek site olduğundan emin olması mümkün değil (tarayıcınız da bu konuda uyarı veriyor)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	sitenin güvenlik sertifikasına güvenilmiyor (kendinden imzalı veya bilinmeyen bir sertifika yetkilisinden), bu nedenle MDM'nin sitenin gerçek site olduğundan emin olması mümkün değil (tarayıcınız da bu konuda uyarı veriyor)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	sitenin güvenlik sertifikasının geçerlilik süresi henüz başlamadı: bu bilgisayarın tarih ve saatini denetleyin
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	sitenin güvenlik sertifikası reddedildi, bu nedenle MDM bunun gerçek site olduğundan emin olamaz
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	sitenin güvenlik sertifikası sertifika yetkilisi tarafından iptal edildi, bu nedenle MDM bu sertifikaya güvenmeyecek
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Sitenin sertifikası yt-dlp veya bu bilgisayar tarafından güvenilir değil: bir antivirüsün web filtresi veya HTTPS okuyan bir proxy engel olabilir. HTTPS taramasını kapatın veya sertifikasını bilgisayara ekleyin, ardından sayfayı tekrar arayın.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	sitenin güvenlik sertifikası web siteleri için düzenlenmemiş, bu nedenle MDM'nin bağlandığı sitenin gerçek site olduğundan emin olunamıyor
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Ne zaman
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Kapalı olduğunda, indirmeler ana pencerenin listesinde devam eder. İlerlemesini görmek için oradaki birine çift tıklayın.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Joker karakter boyutu
@@ -6381,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Aç
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Geri al
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Bu uzantının sunduğu tüm özellikleri kullanmak için Mister Download Manager uygulamasını güncelle
@@ -6513,10 +6559,10 @@ menu	&About Mister Download Manager	Mister Download Manager &Hakkında
 #, machine
 menu	&Add new download	Yeni &indirme ekle
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Yeni indirme ekle...
+menu	&Automatic	Otomatik(&A)
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6622,11 +6668,6 @@ menu	&Stop All	&Tümünü Durdur
 #, machine
 menu	&Stop Download	&İndirmeyi Durdur
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Metin
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&Sistem tepsisi simgesi
@@ -6643,6 +6684,21 @@ menu	&Undo	&Geri Al
 #, machine
 menu	&Video downloads	&Video indirmeleri
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&Pencere sistemi
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	Toplu &indirme ekle
@@ -6651,6 +6707,11 @@ menu	Add &batch download	Toplu &indirme ekle
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	&Magnet bağlantısı ekle...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Yeni indirme ekle...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6866,6 +6927,14 @@ menu	Hide drop target	Bırakma hedefini gizle
 #, machine
 menu	High contrast	Yüksek karşıtlık
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Kullanımda: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Kullanımda: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Başlatılamadı: günlükte nedeni belirtiliyor
@@ -7056,6 +7125,11 @@ menu	Stop Download	İndirmeyi Durdur
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	MDM'yi &Destekle
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Metin
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

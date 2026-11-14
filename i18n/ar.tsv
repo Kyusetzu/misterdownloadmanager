@@ -1111,6 +1111,10 @@
 #. window title in the Options window
 #. window title: the download button the extension shows over videos
 	Download panels	لوحات التنزيل
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	مربع حوار تقدم التنزيل
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 	Download rules	قواعد التنزيل
@@ -2215,6 +2219,10 @@
 #. crash report window heading: an internal error, MDM still running
 	Mister Download Manager hit an internal error	واجه Mister Download Manager خطأ داخليا
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	يقوم Mister Download Manager بالتنزيل
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 	Mister Download Manager is running the queue "{queue}"	يدير Mister Download Manager قائمة الانتظار "{queue}"
@@ -3199,6 +3207,9 @@
 	Show details >>	إظهار التفاصيل >>
 #. checkbox in the Options window; checkbox in a download's progress window
 	Show download complete dialog	إظهار مربع حوار اكتمال التنزيل
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	إظهار مربع حوار تقدم التنزيل عند بدء التنزيل
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -3763,10 +3774,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	رفض فحص الروبوت الخاص بالموقع (Cloudflare) برنامج yt-dlp. إذا فتحت الصفحة في مستعرضك، فاختر هذا المستعرض في الخيارات ← تسجيلات دخول المواقع ← ملفات تعريف الارتباط لمواقع الفيديو وابحث عن الصفحة مرة أخرى، أو استخدم زر تنزيل الفيديو الموجود فوق الفيديو.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	انتهت صلاحية شهادة أمان الموقع، لذلك لا يمكن لـ MDM التأكد من أنه الموقع الحقيقي (يحذرك مستعرضك منه أيضا)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	شهادة أمان الموقع مخصصة لاسم موقع آخر، لذلك لا يمكن لـ MDM التأكد من أنه الموقع الحقيقي (يحذرك مستعرضك منه أيضا)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	شهادة أمان الموقع غير موثوق بها (موقعة ذاتيا أو صادرة عن جهة إصدار غير معروفة)، لذلك لا يمكن لـ MDM التأكد من أنه الموقع الحقيقي (يحذرك مستعرضك منها أيضا)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	شهادة أمان الموقع غير صالحة بعد: تحقق من تاريخ هذا الكمبيوتر ووقته
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	رفضت شهادة أمان الموقع، لذلك لا يمكن لـ MDM التأكد من أنه الموقع الحقيقي
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	أبطلت جهة الإصدار شهادة أمان الموقع، لذلك لن يثق بها MDM
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	شهادة الموقع غير موثوق بها، لا بواسطة yt-dlp ولا بواسطة هذا الكمبيوتر: قد يكون فلتر الويب الخاص ببرنامج مكافحة الفيروسات أو وكيل يقرأ HTTPS هو السبب. أوقف تشغيل فحص HTTPS الخاص به، أو أضف شهادته إلى الكمبيوتر، ثم ابحث عن الصفحة مرة أخرى.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	شهادة أمان الموقع غير مخصصة لمواقع الويب، لذا لا يمكن لـ MDM التأكد من أنه الموقع الحقيقي
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 	The symbols couldn't be fetched: some lines of the report show addresses instead of names (the developers can still read them).	تعذر جلب الرموز: تظهر بعض أسطر التقرير عناوين بدلا من الأسماء (لا يزال بإمكان المطورين قراءتها).
@@ -4336,6 +4375,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	متى
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	عند إيقاف تشغيله، تستمر التنزيلات في قائمة النافذة الرئيسية. انقر نقرا مزدوجا فوق أحدها هناك لرؤية تقدمه.
 #. text in the Batch download window
 	Wildcard size	عدد أحرف البدل
 #. text in the Scheduler window
@@ -5121,6 +5163,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	تشغيل
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	تراجع
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 extension	Update Mister Download Manager to use everything this extension offers	قم بتحديث Mister Download Manager لاستخدام كل ما يوفره هذا الملحق
 #. text in the browser extension
@@ -5227,9 +5273,10 @@ menu	&About Mister Download Manager	&حول Mister Download Manager
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Add new download	&إضافة تنزيل جديد
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
-menu	Add &new download...	إضافة تنزيل &جديد...
+#, machine
+menu	&Automatic	تلقا&ئي
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -5316,11 +5363,6 @@ menu	&Stop All	&إيقاف الكل
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Stop Download	إيقاف الت&نزيل
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&نص
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Tray icon	أيقونة &علبة النظام
 #. menu command in the main window
@@ -5333,12 +5375,21 @@ menu	&Undo	&تراجع
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Video downloads	تنزيلات ال&فيديو
 #. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	نظام ال&نوافذ
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	Add &batch download	إضافة تنزيل &جماعي
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #. the trailing ... means it opens a window: keep it
 menu	Add &magnet link...	إضافة &رابط مغناطيسي...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+menu	Add &new download...	إضافة تنزيل &جديد...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -5507,6 +5558,14 @@ menu	Hide drop target	إخفاء هدف الإفلات
 #. View → Theme: black and white with strong edges, for low vision
 menu	High contrast	تباين عال
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	قيد الاستخدام: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	قيد الاستخدام: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 menu	It couldn't start: the log says why	تعذر بدء التشغيل: يوضح السجل السبب
 #. menu command in the main window
@@ -5657,6 +5716,11 @@ menu	Stop Download	إيقاف التنزيل
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	Support &MDM	ادعم &MDM
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&نص
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	Tell a &friend	أخبر &صديقا

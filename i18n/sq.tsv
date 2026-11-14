@@ -874,6 +874,11 @@
 #. check box in the update window: look for a new version every time MDM starts
 #, machine
 	Check for updates at every start	Kontrollo për përditësime në çdo nisje
+#. text in errors.rs
+#. what to do when the proxy set in Options didn't let a helper's download connect; {proxy} = the Options tab Proxy / Socks; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Check the proxy in Options → {proxy}, or download {name} yourself and choose it in {helpers} → {other}.	Kontrollo proxy-n te Opsionet → {proxy}, ose shkarko {name} vetë dhe zgjidhe te {helpers} → {other}.
 #. text in helpers.rs
 #, machine
 	Check your connection, then try again, or get them later from the video window.	Kontrollo lidhjen, pastaj provo përsëri ose merrini më vonë nga dritarja e videos.
@@ -1352,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Panelet e shkarkimit
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Dialogu i përparimit të shkarkimit
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2133,6 +2142,11 @@
 #. Options → DNS settings: checkbox: when the chosen DNS can't be reached, use the system's instead
 #, machine
 	If it can't be reached, use the system's DNS	Nëse nuk mund të arrihet, përdor DNS-në e sistemit
+#. text in errors.rs
+#. what to do when a helper's server couldn't be reached; {proxy} = the Options tab Proxy / Socks; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	If you use a proxy, set it in Options → {proxy}. Or download {name} yourself and choose it in {helpers} → {other}.	Nëse përdor një proxy, vendose te Opsionet → {proxy}. Ose shkarko {name} vetë dhe zgjidhe te {helpers} → {other}.
 #. checkbox in the Options window
 #, machine
 	Ignore file modification time changes when resuming a download	Injoro ndryshimet e kohës së modifikimit të skedarit kur rifillon një shkarkim
@@ -2741,6 +2755,10 @@
 #. crash report window heading: an internal error, MDM still running
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager hasi një gabim të brendshëm
+#. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager po shkarkon
 #. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
@@ -4011,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Shfaq dialogun e përfundimit të shkarkimit
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Shfaq dialogun e përparimit të shkarkimit kur nis një shkarkim
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4729,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Kontrolli i robotëve të sajtit (Cloudflare) refuzoi yt-dlp-në. Nëse faqja hapet në shfletuesin tënd, zgjidhe atë shfletues te Cilësimet → Hyrjet e sajteve → Kukitë për sajtet e videove dhe kërkoje faqen përsëri, ose përdor butonin Shkarko video mbi videon.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	certifikata e sigurisë së sajtit ka skaduar, kështu që MDM nuk mund të jetë i sigurt se është sajti i vërtetë (edhe shfletuesi yt paralajmëron për të)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	certifikata e sigurisë së sajtit është për një emër tjetër sajti, kështu që MDM nuk mund të jetë i sigurt se është sajti i vërtetë (edhe shfletuesi yt paralajmëron për të)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	certifikata e sigurisë së sajtit nuk është e besueshme (është e vetë-nënshkruar ose nga një lëshues i panjohur), kështu që MDM nuk mund të jetë i sigurt se është sajti i vërtetë (edhe shfletuesi yt paralajmëron për të)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	certifikata e sigurisë së sajtit nuk është ende e vlefshme: kontrollo datën dhe orën e këtij kompjuteri
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	certifikata e sigurisë së sajtit u refuzua, kështu që MDM nuk mund të jetë i sigurt se është sajti i vërtetë
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	certifikata e sigurisë së sajtit u revokua nga lëshuesi i saj, kështu që MDM nuk do t'i besojë
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Certifikata e sajtit nuk është e besueshme, as nga yt-dlp, as nga ky kompjuter: filtri i uebit i një antivirusi ose një proxy që lexon HTTPS mund të jetë pengesë. Çaktivizo skanimin e tij HTTPS, ose shto certifikatën e tij te kompjuterit, pastaj kërko faqen përsëri.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	certifikata e sigurisë së sajtit nuk është bërë për uebsajte, kështu që MDM nuk mund të jetë i sigurt se është sajti i vërtetë
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5044,6 +5093,15 @@
 #. button in helpers.rs
 #, machine
 	Try again	Provo përsëri
+#. text in errors.rs
+#. what to do when a helper couldn't be downloaded because its server limits requests; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Try again in an hour, or download {name} yourself and choose it in {helpers} → {other}.	Provo sërish pas një ore, ose shkarko {name} vetë dhe zgjidhe te {helpers} → {other}.
+#. text in errors.rs
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Try again later, or download {name} yourself and choose it in {helpers} → {other}.	Provo sërish më vonë, ose shkarko {name} vetë dhe zgjidhe te {helpers} → {other}.
 #. text in the Scheduler window
 #. Tuesday, as short as a calendar's column head (two letters in English)
 #, machine
@@ -5437,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Kur
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Kur është i çaktivizuar, shkarkimet vazhdojnë në listën e dritares kryesore. Kliko dy herë mbi një prej tyre për të parë përparimin e tij.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Madhësia e zëvendësuesit
@@ -6362,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Aktivizo
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Anulo
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Përditëso Mister Download Manager që të përdorësh gjithçka që ofron kjo shtesë
@@ -6494,10 +6559,10 @@ menu	&About Mister Download Manager	Rreth &Mister Download Manager
 #, machine
 menu	&Add new download	&Shto shkarkim të ri
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Shto shkarkim të ri...
+menu	&Automatic	&Automatikisht
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6603,11 +6668,6 @@ menu	&Stop All	&Ndalo të gjitha
 #, machine
 menu	&Stop Download	&Ndalo shkarkimin
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Teksti
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	Ikona e &sirtarit
@@ -6624,6 +6684,21 @@ menu	&Undo	&Zhbëj
 #, machine
 menu	&Video downloads	Shkarkime &videoje
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	Sistemi i &dritareve
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	Shto shkarkim &grupi
@@ -6632,6 +6707,11 @@ menu	Add &batch download	Shto shkarkim &grupi
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	Shto lidhje &magneti...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Shto shkarkim të ri...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6847,6 +6927,14 @@ menu	Hide drop target	Fshih objektivin e lëshimit
 #, machine
 menu	High contrast	Kontrast i lartë
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Në përdorim: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Në përdorim: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Nuk mundi të nisej: regjistri tregon arsyen
@@ -7037,6 +7125,11 @@ menu	Stop Download	Ndalo shkarkimin
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	Mbështet &MDM-në
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Teksti
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

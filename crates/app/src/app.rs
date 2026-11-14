@@ -301,6 +301,10 @@ enum Cmd {
     /// View → Draw with → OpenGL / Direct3D, Vulkan or Metal (#89, #206), from the next start.
     #[cfg(gpu)]
     DrawWith(crate::renderer::Api),
+    /// View → Window system → Automatic (`None`), X11 (XWayland) or Wayland (Linux, #624), from
+    /// the next start.
+    #[cfg(target_os = "linux")]
+    WindowSystem(Option<crate::settings::WindowSystemPick>),
     /// View → Interface size → a size in percent (#262).
     InterfaceSize(u16),
     /// View → Text → Smooth (`true`) or Classic (Windows).
@@ -2149,7 +2153,7 @@ impl App {
                 }
             } else if !live {
                 self.start(id, true);
-            } else if !self.progress.iter().any(|p| p.id == id) {
+            } else if self.settings.show_progress && !self.progress.iter().any(|p| p.id == id) {
                 self.progress
                     .push(Progress::new(id, self.settings.show_complete));
             }
@@ -2844,6 +2848,8 @@ impl App {
                     "sounds" => 8,
                     "regional" => 9,
                     "remote" | "pair" => 11,
+                    // Downloads → Customize "Download progress" dialog → Edit... (#1041).
+                    "progress" => 3,
                     _ => 0,
                 };
                 self.run(Cmd::Options, None, ctx);
@@ -2853,7 +2859,8 @@ impl App {
                 if tab == "panels" {
                     self.options = self.options.take().map(|o| o.with_panels());
                 }
-                // A window over a page (screenshots, #192): options:test, options:account.
+                // A window over a page (screenshots, #192): options:test, options:account,
+                // options:progress.
                 self.options = self.options.take().map(|o| o.with_window(tab));
                 // Remote → Pair a device... (the docs' screenshots, #141).
                 if tab == "pair" {
@@ -2962,6 +2969,13 @@ impl App {
         if let Some(host) = cmd.exclude_site.as_deref() {
             self.settings.excluded_sites =
                 mdm_ipc::capture::add_site(&self.settings.excluded_sites, host);
+            self.dirty = true;
+            return;
+        }
+        // Its Undo (#404): that site's downloads come to MDM again.
+        if let Some(host) = cmd.include_site.as_deref() {
+            self.settings.excluded_sites =
+                mdm_ipc::capture::unlist_site(&self.settings.excluded_sites, host);
             self.dirty = true;
             return;
         }
@@ -3160,8 +3174,10 @@ impl App {
         }
     }
 
-    /// Start or resume a download; `show` opens its progress dialog (IDM's default).
+    /// Start or resume a download; `show` opens its progress dialog (IDM's default), unless
+    /// Options → Downloads → Customize "Download progress" dialog turned it off (#1041).
     fn start(&mut self, id: u64, show: bool) {
+        let show = show && self.settings.show_progress;
         self.stopped_by_hand.remove(&id);
         let rt = self.rt.clone();
         let Some(item) = self.item(id) else { return };
@@ -6402,16 +6418,13 @@ impl App {
                 self.queue_done(q);
             }
         }
-        // The next wake follows the schedules (set again when they change), and a queue that
-        // wakes the computer keeps it awake while it runs (#142).
+        // The next wake follows the schedules (set again when they change). The computer is
+        // kept awake while a queue that woke it runs (#142), and while anything downloads (#939):
+        // its own idle sleep would stop them halfway.
         self.wake.sync(&self.queues);
-        let waking = self
-            .queues
-            .iter()
-            .find(|q| q.running && q.schedule.wake)
-            .map(|q| q.name.clone());
-        self.wake
-            .keep_awake(waking.is_some(), waking.as_deref().unwrap_or_default());
+        let downloading = self.items.iter().any(|i| i.status == Status::Downloading);
+        let why = crate::wake::why_awake(&self.queues, downloading);
+        self.wake.keep_awake(why);
     }
 
     /// Scheduler → Download limits: stop at the limit, go on when the window has room.
@@ -6736,6 +6749,12 @@ impl App {
                 }
                 tracing::info!("draw with {api:?} from the next start");
                 self.settings.renderer = Some(api);
+                self.dirty = true;
+            }
+            #[cfg(target_os = "linux")]
+            Cmd::WindowSystem(pick) => {
+                tracing::info!("windows through {pick:?} from the next start (None: automatic)");
+                self.settings.window_system = pick;
                 self.dirty = true;
             }
             Cmd::Open => {
@@ -7575,6 +7594,11 @@ impl App {
                 at + if cfg!(windows) { 4 } else { 3 },
                 self.draw_with_menu(),
             );
+            // Linux, a Wayland session that runs XWayland too: after Draw with (#624).
+            #[cfg(target_os = "linux")]
+            if crate::unix::window_system().both {
+                menu.insert(at + 4, self.window_system_menu());
+            }
         }
         menu
     }
@@ -7780,6 +7804,52 @@ impl App {
         }
         // i18n: View menu: submenu choosing what draws MDM's windows: OpenGL, or Direct3D, Vulkan or Metal (graphics systems)
         Sub("Draw with", true, items)
+    }
+
+    /// View → Window system (Linux, a Wayland session that runs XWayland too, #624): MDM's own
+    /// choice at each start, X11 through XWayland, or Wayland's own windows; saved, so every
+    /// way MDM starts (its menu entry, the browser's helper, the session's autostart) uses it
+    /// from the next start. A greyed line says which one draws now, and when the choice waits
+    /// for the next start.
+    #[cfg(target_os = "linux")]
+    fn window_system_menu(&self) -> MenuEntry<Cmd> {
+        use crate::settings::WindowSystemPick as P;
+        use MenuEntry::{Item as I, Radio, Sep, Sub};
+        let off = |label| I(label, Cmd::None, false, false);
+        let pick = self.settings.window_system;
+        let ws = crate::unix::window_system();
+        let mut items = vec![
+            // i18n: View → Window system: MDM chooses the window system itself at each start
+            Radio("&Automatic", Cmd::WindowSystem(None), true, pick.is_none()),
+            // i18n: View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+            Radio(
+                "&X11 (XWayland)",
+                Cmd::WindowSystem(Some(P::X11)),
+                true,
+                pick == Some(P::X11),
+            ),
+            // i18n: View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+            Radio(
+                "&Wayland",
+                Cmd::WindowSystem(Some(P::Wayland)),
+                true,
+                pick == Some(P::Wayland),
+            ),
+            Sep,
+            if ws.wayland {
+                // i18n: View → Window system: a greyed note; MDM's windows are Wayland's now
+                off("In use: Wayland")
+            } else {
+                // i18n: View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+                off("In use: X11 (XWayland)")
+            },
+        ];
+        if pick.is_some_and(|p| (p == P::Wayland) != ws.wayland) {
+            // i18n: View → Draw with: a greyed note under the choices; the choice takes effect when MDM is started again
+            items.push(off("Applies the next time MDM starts"));
+        }
+        // i18n: View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+        Sub("&Window system", true, items)
     }
 
     /// Start Queue / Stop Queue drop-downs (and the Downloads menu's submenus).
@@ -9033,7 +9103,7 @@ impl App {
             self.complete.push(Complete::of(i));
         } else if i.live.is_none() {
             self.start(id, true);
-        } else if !self.progress.iter().any(|p| p.id == id) {
+        } else if self.settings.show_progress && !self.progress.iter().any(|p| p.id == id) {
             self.progress
                 .push(Progress::new(id, self.settings.show_complete));
         }

@@ -1311,6 +1311,8 @@ fn popup_level<C: Clone>(
     depth: usize,
     hint: &dyn Fn(&C) -> Option<&'static str>,
 ) {
+    // A system dialog waits for this window to close (winui::start_pick, #615).
+    winui::menu_drawn(ctx);
     let size = menu_size(ctx, entries, hint);
     let kb_key = sub_key.with("kb");
     let kb: Option<usize> = ctx
@@ -2923,6 +2925,80 @@ mod tests {
         assert_eq!(run(&[&tap]), Some(1));
         // The mouse, as before.
         assert_eq!(run(&[&down, &up]), Some(1));
+    }
+
+    /// #615: a menu item that opens a system dialog (View → Theme → Add a theme file) is chosen
+    /// in a frame that still draws its menu; the dialog starts only once a frame has gone by
+    /// without the menu (whose end closed its window): on macOS, started earlier, the menu's
+    /// window stayed on top of every window until MDM quit.
+    #[test]
+    fn a_system_dialog_waits_for_the_menu_to_close() {
+        let [a, b] = ["a", "b"]; // not texts to translate (tools/i18n/extract.py)
+        let entries: Vec<MenuEntry<u8>> = vec![
+            MenuEntry::Item(a, 0, true, false),
+            MenuEntry::Item(b, 1, true, false),
+        ];
+        let ctx = egui::Context::default();
+        let sub_key = egui::Id::unique(("popup-sub", "t615"));
+        let (started, rx) = std::sync::mpsc::channel::<()>();
+        let mut t = 0.0;
+        // One frame: the menu drawn or not, then the dialog asked for or not (as the app runs a
+        // menu's choice after drawing it).
+        let mut frame = |menu: bool, ask: Option<&str>| {
+            t += 0.016;
+            let raw = egui::RawInput {
+                time: Some(t),
+                screen_rect: Some(Rect::from_min_size(
+                    pos2(0.0, 0.0),
+                    egui::vec2(1200.0, 800.0),
+                )),
+                ..Default::default()
+            };
+            let mut out = ctx.run_ui(raw, |ui| {
+                if menu {
+                    let mut result = None;
+                    super::popup_level(
+                        ui.ctx(),
+                        MenuKind::Bar,
+                        "t615",
+                        pos2(100.0, 100.0),
+                        None,
+                        &entries,
+                        sub_key,
+                        &mut result,
+                        0,
+                        &|_| None,
+                    );
+                }
+                if let Some(key) = ask {
+                    let started = started.clone();
+                    crate::winui::start_pick(ui.ctx(), key, move || {
+                        started.send(()).unwrap();
+                        None
+                    });
+                }
+            });
+            out.textures_delta.clear();
+        };
+        let quiet = std::time::Duration::from_millis(300);
+        frame(true, None);
+        // Chosen: the frame still draws the menu.
+        frame(true, Some("t615"));
+        assert!(rx.recv_timeout(quiet).is_err(), "not with the menu drawn");
+        // The frame without the menu: its window closes at its end.
+        frame(false, None);
+        assert!(
+            rx.recv_timeout(quiet).is_err(),
+            "not before the menu's window closed"
+        );
+        frame(false, None);
+        rx.recv_timeout(std::time::Duration::from_secs(10))
+            .expect("started once the menu is gone");
+        // Without a menu (a button, a shortcut): as the next frame begins.
+        frame(false, Some("t615-b"));
+        frame(false, None);
+        rx.recv_timeout(std::time::Duration::from_secs(10))
+            .expect("started on the next frame");
     }
 
     /// #579: the entry under the pointer, separators and padding none.

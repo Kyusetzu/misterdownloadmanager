@@ -4,6 +4,16 @@
 use mdm_ipc::capture::host_matches;
 use serde::{Deserialize, Serialize};
 
+/// View → Window system's choice (Linux, #624), as saved in the settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WindowSystemPick {
+    /// X11's windows: XWayland's in a Wayland session.
+    X11,
+    /// Wayland's own windows.
+    Wayland,
+}
+
 /// A debrid service account (#44), as Options → Accounts keeps it.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -112,6 +122,12 @@ pub struct Settings {
     /// View → Draw with (#89): OpenGL or Direct3D (Windows only), used from the next start.
     /// None: MDM's default (`renderer::DEFAULT`), which may change.
     pub renderer: Option<crate::renderer::Api>,
+    /// View → Window system (Linux, in a Wayland session that also runs XWayland, #624): X11
+    /// (XWayland) or Wayland, used from the next start, however MDM is started (its menu entry,
+    /// the browser's helper, the session's autostart). None: MDM decides at each start
+    /// (`unix::window_system`). `MDM_WAYLAND=1` or `0` overrides it for one start.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub window_system: Option<WindowSystemPick>,
     /// View → Interface size (#262), percent: one of `crate::scale::STEPS` (100 to 200). Every
     /// window drawn that much larger than the display's own scale makes it.
     pub interface_size: u16,
@@ -189,6 +205,9 @@ pub struct Settings {
     pub mark_downloads: bool,
     /// Downloads.
     pub show_start_dialog: bool,
+    /// Downloads → Customize "Download progress" dialog → Edit... (#1041): a download's
+    /// progress window opens when it starts. Off, it runs in the list (double-click opens it).
+    pub show_progress: bool,
     pub only_add_to_queue: bool,
     pub start_immediately: bool,
     pub queue_panel_later: bool,
@@ -404,6 +423,7 @@ impl Default for Settings {
             always_dark: false,
             theme: "classic".into(),
             renderer: None,
+            window_system: None,
             interface_size: 100,
             smooth_text: false,
             limits_on: false,
@@ -437,6 +457,7 @@ impl Default for Settings {
             set_creation_date: false,
             mark_downloads: true,
             show_start_dialog: true,
+            show_progress: true,
             only_add_to_queue: false,
             start_immediately: true,
             queue_panel_later: true,

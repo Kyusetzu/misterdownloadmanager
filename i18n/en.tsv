@@ -1066,6 +1066,9 @@
 #. window title in the Options window
 #. window title: the download button the extension shows over videos
 	Download panels	Download panels
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+	Download progress dialog	Download progress dialog
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 	Download rules	Download rules
@@ -2117,6 +2120,9 @@
 #. crash report window heading: an internal error, MDM still running
 	Mister Download Manager hit an internal error	Mister Download Manager hit an internal error
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+	Mister Download Manager is downloading	Mister Download Manager is downloading
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 	Mister Download Manager is running the queue "{queue}"	Mister Download Manager is running the queue "{queue}"
@@ -3073,6 +3079,8 @@
 	Show details >>	Show details >>
 #. checkbox in the Options window; checkbox in a download's progress window
 	Show download complete dialog	Show download complete dialog
+#. checkbox in the Options window
+	Show download progress dialog when a download starts	Show download progress dialog when a download starts
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 	Show in list	Show in list
@@ -3615,6 +3623,27 @@
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+	the site's security certificate isn't valid yet: check this computer's date and time	the site's security certificate isn't valid yet: check this computer's date and time
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+	the site's security certificate was refused, so MDM can't be sure it's the real site	the site's security certificate was refused, so MDM can't be sure it's the real site
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	the site's security certificate was revoked by its issuer, so MDM won't trust it
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 	The symbols couldn't be fetched: some lines of the report show addresses instead of names (the developers can still read them).	The symbols couldn't be fetched: some lines of the report show addresses instead of names (the developers can still read them).
@@ -4155,6 +4184,8 @@
 #. text in remote.rs
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 	When	When
+#. text in the Options window
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.
 #. text in the Batch download window
 	Wildcard size	Wildcard size
 #. text in the Scheduler window
@@ -4857,6 +4888,9 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #. button on the download button over a video when it is off on this web site: turns it on again here; verb; very short
 extension	Turn on	Turn on
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+extension	Undo	Undo
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 extension	Update Mister Download Manager to use everything this extension offers	Update Mister Download Manager to use everything this extension offers
 #. text in the browser extension
@@ -4956,6 +4990,10 @@ menu	&About Mister Download Manager	&About Mister Download Manager
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Add new download	&Add new download
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+menu	&Automatic	&Automatic
+#. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Classic	&Classic
@@ -5048,6 +5086,18 @@ menu	&Undo	&Undo
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Video downloads	&Video downloads
+#. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+menu	&Window system	&Window system
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+menu	&X11 (XWayland)	&X11 (XWayland)
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	Add &batch download	Add &batch download
@@ -5219,6 +5269,12 @@ menu	Hide drop target	Hide drop target
 #. menu command in the main window
 #. View → Theme: black and white with strong edges, for low vision
 menu	High contrast	High contrast
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+menu	In use: Wayland	In use: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+menu	In use: X11 (XWayland)	In use: X11 (XWayland)
 #. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 menu	It couldn't start: the log says why	It couldn't start: the log says why

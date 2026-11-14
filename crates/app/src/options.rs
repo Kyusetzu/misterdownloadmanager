@@ -41,6 +41,9 @@ enum Sub {
     Panels(bool, String, String),
     /// General → Keys...: (also take the files the browser would open).
     Keys(bool),
+    /// Downloads → Customize "Download progress" dialog → Edit... (#1041): (show it when a
+    /// download starts).
+    Progress(bool),
     /// General → Test browser integration...: the checks, as found when it opened.
     Test(Vec<crate::extension::Check>),
     /// File types → "Don't start downloading automatically from the following addresses" →
@@ -285,12 +288,14 @@ impl OptionsDialog {
         self
     }
 
-    /// With General → Test browser integration's window over it, or Accounts → Add's (`/show
-    /// options:test`, `options:account`: screenshots, #192).
+    /// With General → Test browser integration's window over it, Accounts → Add's, or
+    /// Downloads → Customize "Download progress" dialog's (`/show options:test`,
+    /// `options:account`, `options:progress`: screenshots, #192, #1041).
     pub fn with_window(mut self, name: &str) -> Self {
         match name {
             "test" => self.sub = Some(Sub::Test(crate::extension::checks(&self.s))),
             "account" => self.sub = Some(Sub::Account(AccountEdit::default())),
+            "progress" => self.sub = Some(Sub::Progress(self.s.show_progress)),
             _ => {}
         }
         self
@@ -1223,7 +1228,6 @@ impl OptionsDialog {
             58.0,
             398.0,
         );
-        let s = &mut self.s;
         // Edit... as wide as its label in this language (#192), its caption before it.
         let (edit_x, edit_w) =
             winui::buttons_to_right(&p, 392.0, 0.0, &[("Edit...", 73.0)], 160.0)[0];
@@ -1232,17 +1236,22 @@ impl OptionsDialog {
             o.x + edit_x - 13.0,
             o.y + 104.0,
             crate::i18n::t("Customize \"Download progress\" dialog"),
-            LIGHT_DISABLED(),
+            LIGHT_TEXT(),
         );
-        // The progress dialog customisation dialog is not built yet.
-        winui::button_light(
+        // Whether a download's progress window opens when it starts (#1041).
+        if winui::button_light(
             ui,
             r(o, edit_x, 89.0, edit_w, 21.0),
             // i18n: verb: edit the item
             "Edit...",
-            ButtonKind::Disabled,
+            ButtonKind::Normal,
             false,
-        );
+        )
+        .clicked()
+        {
+            self.sub = Some(Sub::Progress(self.s.show_progress));
+        }
+        let s = &mut self.s;
         winui::checkbox_light(
             ui,
             o + vec2(24.0, 120.0),
@@ -3806,6 +3815,23 @@ impl OptionsDialog {
                     Outcome::Closed => {}
                 }
             }
+            Sub::Progress(mut shown) => {
+                let out = window(
+                    ctx,
+                    "opt-progress",
+                    // i18n: window title: Options → Downloads → Edit... (the progress window's settings)
+                    "Download progress dialog",
+                    [400.0, 150.0],
+                    false,
+                    LIGHT_BG(),
+                    |ui, o| progress_dialog(ui, o, &mut shown),
+                );
+                match out {
+                    Outcome::Open => self.sub = Some(Sub::Progress(shown)),
+                    Outcome::Done(()) => self.s.show_progress = shown,
+                    Outcome::Closed => {}
+                }
+            }
             Sub::Test(mut checks) => {
                 let h = 120.0 + checks.len() as f32 * 22.0;
                 let mut set_up = false;
@@ -4495,6 +4521,31 @@ fn read_sites_file(path: &std::path::Path) -> std::io::Result<String> {
     String::from_utf8(text).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
 }
 
+/// Downloads → Customize "Download progress" dialog → Edit... (#1041): whether a download's
+/// progress window opens when it starts, and where to find it when it doesn't.
+fn progress_dialog(ui: &mut Ui, o: Pos2, shown: &mut bool) -> Outcome<()> {
+    let p = ui.painter().clone();
+    winui::checkbox_light(
+        ui,
+        o + vec2(14.0, 16.0),
+        shown,
+        "Show download progress dialog when a download starts",
+        true,
+    );
+    winui::paragraph(
+        &p,
+        o.x + 14.0,
+        o.y + 58.0,
+        crate::i18n::t(
+            "When it is off, downloads go on in the main window's list. Double-click one there to see its progress.",
+        ),
+        LIGHT_TEXT(),
+        o.x + 386.0,
+        14.0,
+    );
+    ok_cancel(ui, o, 232.0, 117.0, true)
+}
+
 fn ok_cancel(ui: &mut Ui, o: Pos2, x: f32, y: f32, valid: bool) -> Outcome<()> {
     let kind = if valid {
         ButtonKind::Default
@@ -5118,5 +5169,80 @@ mod tests {
         let (back, added) = mdm_ipc::capture::merge_sites("", &text);
         assert_eq!((back.as_str(), added), (sites, 2));
         assert_eq!(mdm_ipc::capture::merge_sites(sites, &text).1, 0);
+    }
+
+    /// One frame of `draw` at the origin, with `events` as its input.
+    fn frame(ctx: &egui::Context, events: Vec<egui::Event>, draw: impl FnMut(&mut Ui)) {
+        let input = egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(430.0, 506.0))),
+            events,
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(input, draw);
+        out.textures_delta.clear();
+    }
+
+    /// A click at `at`, a frame each: there, pressed, released.
+    fn click(ctx: &egui::Context, at: Pos2, mut draw: impl FnMut(&mut Ui)) {
+        let button = |pressed| egui::Event::PointerButton {
+            pos: at,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        };
+        frame(ctx, vec![egui::Event::PointerMoved(at)], &mut draw);
+        frame(ctx, vec![button(true)], &mut draw);
+        frame(ctx, vec![button(false)], &mut draw);
+    }
+
+    fn context() -> egui::Context {
+        let ctx = egui::Context::default();
+        let mut defs = egui::FontDefinitions::default();
+        winui::install_fonts(&mut defs, None);
+        ctx.set_fonts(defs);
+        ctx
+    }
+
+    /// #1041: Downloads → Customize "Download progress" dialog → Edit... opens its dialog, with
+    /// the setting as it is (it did nothing: drawn disabled).
+    #[test]
+    fn edit_opens_the_download_progress_dialog() {
+        let ctx = context();
+        let settings = Settings {
+            show_progress: false,
+            ..Settings::default()
+        };
+        let mut dlg = OptionsDialog::new(&settings, std::path::Path::new("."), Vec::new());
+        let mut edit = Rect::NOTHING;
+        frame(&ctx, Vec::new(), |ui| {
+            let (x, w) =
+                winui::buttons_to_right(ui.painter(), 392.0, 0.0, &[("Edit...", 73.0)], 160.0)[0];
+            edit = Rect::from_min_size(pos2(x, 89.0), vec2(w, 21.0));
+            dlg.downloads(ui, Pos2::ZERO);
+        });
+        assert!(dlg.sub.is_none());
+        click(&ctx, edit.center(), |ui| dlg.downloads(ui, Pos2::ZERO));
+        assert!(matches!(dlg.sub, Some(Sub::Progress(false))));
+    }
+
+    /// #1041: its check box turns the progress window off, and OK keeps it.
+    #[test]
+    fn the_download_progress_dialog_turns_the_window_off() {
+        let ctx = context();
+        let mut shown = true;
+        let mut out = Outcome::Open;
+        frame(&ctx, Vec::new(), |ui| {
+            out = progress_dialog(ui, Pos2::ZERO, &mut shown)
+        });
+        click(&ctx, pos2(20.0, 22.0), |ui| {
+            out = progress_dialog(ui, Pos2::ZERO, &mut shown);
+        });
+        assert!(!shown);
+        assert!(matches!(out, Outcome::Open));
+        click(&ctx, pos2(268.0, 127.0), |ui| {
+            out = progress_dialog(ui, Pos2::ZERO, &mut shown);
+        });
+        assert!(matches!(out, Outcome::Done(())));
+        assert!(!shown);
     }
 }

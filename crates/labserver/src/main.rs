@@ -42,12 +42,22 @@ struct Args {
     /// printed) instead of HTTP: `browser_only` then looks at the TLS handshake too.
     #[arg(long)]
     tls: bool,
+    /// With --tls, a faulty certificate: "expired", "self-signed" or "wrong-name" (the
+    /// certificate errors' tests); "test-ca" (the default) is the good one.
+    #[arg(long, requires = "tls", default_value = "test-ca")]
+    tls_cert: String,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let faults = Faults::parse(&args.faults).context("--faults")?;
+    let cert = mdm_labserver::Cert::parse(&args.tls_cert).with_context(|| {
+        format!(
+            "--tls-cert: {:?} (test-ca, expired, self-signed or wrong-name)",
+            args.tls_cert
+        )
+    })?;
     let file = match &args.log_file {
         Some(p) => Some(Mutex::new(
             std::fs::OpenOptions::new()
@@ -71,6 +81,7 @@ async fn main() -> anyhow::Result<()> {
         files: args.files.clone(),
         rss_dir: args.rss_dir,
         tls: args.tls,
+        cert,
     })
     .await?;
     eprintln!(

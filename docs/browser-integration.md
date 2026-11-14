@@ -108,7 +108,7 @@ A PDF, a song or a video that the browser would show or play itself goes to MDM 
 The extension's button shows whether the browser reaches MDM. A red **!** means it doesn't; click the button to see why, and **How to fix it** opens the matching section of [The browser and MDM aren't connected](browser-help.md). The button also:
 
 - **Take downloads from this browser**: untick it to pause, and every download stays with the browser until you tick it again.
-- **Never take downloads from** the current site: adds it to MDM's excluded sites.
+- **Never take downloads from** the current site: adds it to MDM's excluded sites. The popup then says **Downloads from** the site **stay with the browser**, with **Undo** to take it off the list again; it says the same whenever you open it on that site.
 - **Open Mister Download Manager** and **Options...**.
 - **Media on this page**: what the page has loaded that MDM can download (see below).
 

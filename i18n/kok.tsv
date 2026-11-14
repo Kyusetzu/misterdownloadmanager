@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	डावनलोड पॅनलां
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	डाउनलोड प्रगती संवाद
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager कडेन अंतर्गत त्रुटी जाली
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager डाउनलोड करता
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	डाउनलोड पुराय जाल्लो संवाद दाखय
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	डाउनलोड सुरू जातकच डाउनलोड प्रगती संवाद दाखोवचो
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	साइटाच्या बॉट तपासणीन (Cloudflare) yt-dlp क न्हयकारलें. जर पान तुमच्या ब्राउझरांत उगडटा, जाल्यार ऑप्शन्स → साइट्स लॉगइन्स → व्हिडिओ साइट्सखातीर कुकीज हातूंत तो ब्राउझर निवडात आनी परत पान सोदात, वा व्हिडिओ वयल्या डाउनलोड व्हिडिओ बटणाचो वापर करात.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	साइटचें सुरक्षा प्रमाणपत्र कालबाह्य जालां, देखून MDM ती खरी साइट आसा हाची खात्री करूंक शकना (तुमचो ब्राउझर लेगीत ताचे विशीं इशारो दिता)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	साइटचें सुरक्षा प्रमाणपत्र दुसऱ्या साइट नांवा खातीर आसा, देखून MDM ती खरी साइट आसा हाची खात्री करूंक शकना (तुमचो ब्राउझर लेगीत ताचे विशीं इशारो दिता)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	साइटचें सुरक्षा प्रमाणपत्र विश्वासार्ह ना (तें स्व-सही केल्लें वा अज्ञात जारीकर्त्याचें आसा), देखून MDM ती खरी साइट आसा हाची खात्री करूंक शकना (तुमचो ब्राउझर लेगीत ताचे विशीं इशारो दिता)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	साइटचें सुरक्षा प्रमाणपत्र अजून वैध ना: ह्या संगणकाची तारीख आनी वेळ तपासात
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	साइटचें सुरक्षा प्रमाणपत्र न्हयकारलें, देखून MDM ती खरी साइट आसा हाची खात्री करूंक शकना
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	साइटचें सुरक्षा प्रमाणपत्र ताच्या जारीकर्त्यान रद्द केलें, देखून MDM ताचेर विश्वास दवरचो ना
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	साइटचें प्रमाणपत्र yt-dlp वा ह्या संगणकान विश्वासार्ह मानिल्लें ना: अँटीव्हायरसचें वेब फिल्टर वा HTTPS वाचपी प्रॉक्सी आड येवंक शकता. ताचें HTTPS स्कॅनिंग बंद करात, वा ताचें प्रमाणपत्र संगणकाच्या प्रमाणपत्रांत जोडा, मागीर पानाची परत तपासणी करात.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	साइटचें सुरक्षा प्रमाणपत्र वेबसाइटां खातीर तयार केलें ना, देखून MDM खात्रीन सांगपाक शकना की ती खरी साइट आसा
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	जेन्ना
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	जेन्ना तें बंद आसता, तेन्ना डाउनलोड मुखेल विंडाच्या वळेरेंत चालूच आसतात. ताची प्रगती पळोवपाक थंयच्यान एकाचेर डबल-क्लिक करात.
 #. text in the Batch download window
 #, machine
 	Wildcard size	वाइल्डकार्ड आकार
@@ -6381,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	चालू करात
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	पूर्ववत करात
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	ह्या विस्तारांत दिल्ल्या सगळ्या गजालींचो उपेग करपाक Mister Download Manager अद्ययावित करात
@@ -6513,10 +6559,10 @@ menu	&About Mister Download Manager	Mister Download Manager विशीं(&A)
 #, machine
 menu	&Add new download	नविन डाउनलोड जोडात (&A)
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	नवें डावनलोड &जोडात...
+menu	&Automatic	आपोआप(&A)
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6622,11 +6668,6 @@ menu	&Stop All	सगळे बंद करात (&S)
 #, machine
 menu	&Stop Download	डाउनलोड बंद करात (&S)
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&मजकूर
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	ट्रे आयकॉन (&T)
@@ -6643,6 +6684,21 @@ menu	&Undo	&पूर्ववत करात
 #, machine
 menu	&Video downloads	व्हिडिओ डाउनलोड्स (&V)
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&वेयलँड
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&विंडो प्रणाली
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (Xवेयलँड)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	बॅच डाउनलोड जोडात (&B)
@@ -6651,6 +6707,11 @@ menu	Add &batch download	बॅच डाउनलोड जोडात (&B)
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	मॅग्नेट लिंक जोडात... (&M)
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	नवें डावनलोड &जोडात...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6866,6 +6927,14 @@ menu	Hide drop target	ड्रॉप लक्ष्य लिपयात
 #, machine
 menu	High contrast	उच्च कॉन्ट्रास्ट
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	वापरात: वेयलँड
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	वापरात: X11 (Xवेयलँड)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	तें सुरू जावंक शकलें ना: लॉग सांगता कित्याक
@@ -7056,6 +7125,11 @@ menu	Stop Download	डाउनलोड थांबयात
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	&MDM क समर्थन करा
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&मजकूर
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

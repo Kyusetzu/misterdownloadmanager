@@ -2006,7 +2006,10 @@ async fn a_slow_disk_does_not_stop_the_transfer() {
         behind.shed, behind.received, behind.quiet
     );
     // Measured: none shed, at most 11 ms without a byte (until the last sixteenth, which may
-    // wait for the disk with the rest of its connection's memory).
+    // wait for the disk with the rest of its connection's memory). One flush during the
+    // transfer, then none until the end: a second one right after the first, expected by the
+    // seconds since it rather than the bytes, held the writes for 3 s on GitHub's macOS runners
+    // and nothing arrived for 1.2 to 1.5 s of it (`Synced::expected`).
     assert_eq!(behind.shed, 0, "connections shed for the disk's pace");
     assert!(
         behind.quiet < std::time::Duration::from_millis(1200),

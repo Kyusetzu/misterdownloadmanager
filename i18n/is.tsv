@@ -1352,6 +1352,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Niðurhalssvæði
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Framvindugluggi niðurhals
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2747,6 +2751,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager lenti í innri villu
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager er að hlaða niður
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4016,6 +4024,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Sýna glugga um lokið niðurhal
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Sýna glugga fyrir framvindu niðurhals þegar niðurhal hefst
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4734,10 +4745,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Botvörn vefsvæðisins (Cloudflare) hafnaði yt-dlp. Ef síðan opnast í vafranum þínum skaltu velja þann vafra í Stillingar → Innskráningar vefsvæða → Vafrakökur fyrir myndskeiðssíður og leita síðan aftur að síðunni eða nota hnappinn „Sækja myndskeið“ yfir myndskeiðinu.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	öryggisvottorð síðunnar er útrunnið, svo MDM getur ekki verið viss um að þetta sé raunverulega síðan (vafrinn þinn varar líka við því)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	öryggisvottorð síðunnar er fyrir annað síðunafn, svo MDM getur ekki verið viss um að þetta sé raunverulega síðan (vafrinn þinn varar líka við því)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	öryggisvottorð síðunnar er ekki treystandi (það er sjálfundirritað eða frá óþekktum útgefanda), svo MDM getur ekki verið viss um að þetta sé raunverulega síðan (vafrinn þinn varar líka við því)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	öryggisvottorð síðunnar er ekki gilt enn: athugaðu dagsetningu og tíma tölvunnar
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	öryggisvottorði síðunnar var hafnað, svo MDM getur ekki verið viss um að þetta sé raunverulega síðan
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	útgefandi öryggisvottorðs síðunnar afturkallaði það, svo MDM treystir því ekki
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Vottorð vefsíðunnar er ekki treyst, hvorki af yt-dlp né af þessari tölvu: vefsía vírusvarnar eða proxy sem les HTTPS gæti verið í veginum. Slökktu á HTTPS skönnun hennar, eða bættu vottorði hennar við tölvuna, leitaðu svo aftur á síðunni.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	öryggisvottorð síðunnar er ekki gert fyrir vefsíður, svo MDM getur ekki verið viss um að þetta sé raunveruleg síða
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5451,6 +5490,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Hvenær
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Þegar slökkt er á þessu halda niðurhöl áfram á listanum í aðalglugganum. Tvísmelltu á niðurhal þar til að sjá framvindu þess.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Stærð staðgengils
@@ -6376,6 +6418,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Kveikja
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Afturkalla
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Uppfærðu Mister Download Manager til að nota allt sem þessi viðbót býður upp á
@@ -6508,10 +6554,10 @@ menu	&About Mister Download Manager	&Um Mister Download Manager
 #, machine
 menu	&Add new download	&Bæta við nýju niðurhali
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Bæta við nýrri niðurhalsskrá...
+menu	&Automatic	Sjálf&virkt
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6617,11 +6663,6 @@ menu	&Stop All	&Stöðva allt
 #, machine
 menu	&Stop Download	&Stöðva niðurhal
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Texti
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&Bakkatákn
@@ -6638,6 +6679,21 @@ menu	&Undo	&Afturkalla
 #, machine
 menu	&Video downloads	&Niðurhal myndskeiða
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&Gluggakerfi
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	Bæta við &lotuniðurhali
@@ -6646,6 +6702,11 @@ menu	Add &batch download	Bæta við &lotuniðurhali
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	Bæta við &segultengli...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Bæta við nýrri niðurhalsskrá...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6861,6 +6922,14 @@ menu	Hide drop target	Fela dráttarmark
 #, machine
 menu	High contrast	Mikil birtuskil
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Í notkun: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Í notkun: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Það gat ekki ræst: annállinn segir hvers vegna
@@ -7051,6 +7120,11 @@ menu	Stop Download	Stöðva niðurhal
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	Styðja &MDM
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Texti
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	ແຜງດາວໂຫຼດ
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	ກ່ອງໂຕ້ຕອບຄວາມຄືບໜ້າການດາວໂຫຼດ
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager ພົບບັນຫາພາຍໃນ
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager ກຳລັງດາວໂຫຼດ
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	ສະແດງກ່ອງໂຕ້ຕອບການດາວໂຫຼດສຳເລັດ
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	ສະແດງກ່ອງໂຕ້ຕອບຄວາມຄືບໜ້າການດາວໂຫຼດເມື່ອການດາວໂຫຼດເລີ່ມຕົ້ນ
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	ການກວດສອບບັອດຂອງເວັບໄຊ (Cloudflare) ໄດ້ປະຕິເສດ yt-dlp. ຖ້າໜ້ານີ້ເປີດໃນບຣາວເຊີຂອງທ່ານ, ໃຫ້ເລືອກບຣາວເຊີນັ້ນໃນຕົວເລືອກ → ການເຂົ້າສູ່ລະບົບເວັບໄຊ → ຄຸກກີ້ສຳລັບເວັບໄຊວິດີໂອ ແລະຊອກຫາໜ້ານີ້ໃໝ່ອີກຄັ້ງ, ຫຼືໃຊ້ປຸ່ມດາວໂຫຼດວິດີໂອຢູ່ເທິງວິດີໂອ.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	ໃບຢັ້ງຢືນຄວາມປອດໄພຂອງເວັບໄຊໝົດອາຍຸແລ້ວ, ດັ່ງນັ້ນ MDM ຈຶ່ງບໍ່ແນ່ໃຈວ່າເປັນເວັບໄຊຕົວຈິງ (ບຣາວເຊີກໍເຕືອນຄືກັນ)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	ໃບຢັ້ງຢືນຄວາມປອດໄພຂອງເວັບໄຊເປັນຂອງຊື່ເວັບໄຊອື່ນ, ດັ່ງນັ້ນ MDM ຈຶ່ງບໍ່ແນ່ໃຈວ່າເປັນເວັບໄຊຕົວຈິງ (ບຣາວເຊີກໍເຕືອນຄືກັນ)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	ໃບຢັ້ງຢືນຄວາມປອດໄພຂອງເວັບໄຊບໍ່ໄດ້ຮັບຄວາມໄວ້ວາງໃຈ (ມັນຖືກເຊັນດ້ວຍຕົນເອງ ຫຼື ມາຈາກຜູ້ອອກທີ່ບໍ່ຮູ້ຈັກ), ດັ່ງນັ້ນ MDM ຈຶ່ງບໍ່ແນ່ໃຈວ່າເປັນເວັບໄຊຕົວຈິງ (ບຣາວເຊີກໍເຕືອນຄືກັນ)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	ໃບຢັ້ງຢືນຄວາມປອດໄພຂອງເວັບໄຊຍັງບໍ່ມີຜົນໃຊ້ໄດ້: ກວດສອບວັນທີ ແລະ ເວລາຂອງຄອມພິວເຕີນີ້
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	ໃບຢັ້ງຢືນຄວາມປອດໄພຂອງເວັບໄຊຖືກປະຕິເສດ, ດັ່ງນັ້ນ MDM ຈຶ່ງບໍ່ແນ່ໃຈວ່າເປັນເວັບໄຊຕົວຈິງ
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	ໃບຢັ້ງຢືນຄວາມປອດໄພຂອງເວັບໄຊຖືກຖອນຄືນໂດຍຜູ້ອອກ, ດັ່ງນັ້ນ MDM ຈະບໍ່ໄວ້ວາງໃຈມັນ
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	ໃບຢັ້ງຢືນຂອງເວັບໄຊບໍ່ໄດ້ຮັບຄວາມໄວ້ວາງໃຈ, ທັງໂດຍ yt-dlp ແລະໂດຍຄອມພິວເຕີນີ້: ຕົວກອງເວັບຂອງແອນຕີໄວຣັສ ຫຼື ໂປຣແກຣມພຣັອກຊີທີ່ອ່ານ HTTPS ອາດຈະຂັດຂວາງ. ປິດການສະແກນ HTTPS ຂອງມັນ, ຫຼືເພີ່ມໃບຢັ້ງຢືນຂອງມັນໃສ່ຄອມພິວເຕີ, ຈາກນັ້ນຄົ້ນຫາໜ້າເວັບອີກຄັ້ງ.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	ໃບຢັ້ງຢືນຄວາມປອດໄພຂອງເວັບໄຊບໍ່ໄດ້ຖືກສ້າງຂຶ້ນສຳລັບເວັບໄຊ, ດັ່ງນັ້ນ MDM ຈຶ່ງບໍ່ສາມາດແນ່ໃຈວ່າມັນແມ່ນເວັບໄຊຕົວຈິງ
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	ເມື່ອໃດ
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	ເມື່ອມັນປິດ, ການດາວໂຫຼດຈະສືບຕໍ່ຢູ່ໃນລາຍການຂອງໜ້າຕ່າງຫຼັກ. ຄລິກສອງຄັ້ງໃສ່ອັນໃດອັນໜຶ່ງຢູ່ບ່ອນນັ້ນເພື່ອເບິ່ງຄວາມຄືບໜ້າຂອງມັນ.
 #. text in the Batch download window
 #, machine
 	Wildcard size	ຂະໜາດຕົວແທນ
@@ -6377,6 +6419,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	ເປີດ
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	ຍົກເລີກ
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	ອັບເດດ Mister Download Manager ເພື່ອໃຊ້ທຸກຢ່າງທີ່ສ່ວນຂະຫຍາຍນີ້ສະເໜີໃຫ້
@@ -6509,10 +6555,10 @@ menu	&About Mister Download Manager	ກ່ຽວ&ກັບ Mister Download Manag
 #, machine
 menu	&Add new download	ເພີ່ມການດາວໂຫຼດໃ&ໝ່
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	ເພີ່ມການດາວໂຫຼດໃ&ໝ່...
+menu	&Automatic	ອັດຕະໂນມັດ(&A)
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6618,11 +6664,6 @@ menu	&Stop All	ຢຸດທັງ&ໝົດ
 #, machine
 menu	&Stop Download	ຢຸດການດາວໂຫຼ&ດ
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&ຂໍ້ຄວາມ
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&ໄອຄອນຖາດ
@@ -6639,6 +6680,11 @@ menu	&Undo	&ຍົກເລີກ
 #, machine
 menu	&Video downloads	ການດາວໂຫຼດວິດີໂ&ອ
 #. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	ລະບົບໜ້າຕ່າງ(&W)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	ເພີ່ມການດາວໂຫຼດເປັນ&ຊຸດ
@@ -6647,6 +6693,11 @@ menu	Add &batch download	ເພີ່ມການດາວໂຫຼດເປັ�
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	ເພີ່ມລິ້ງ &magnet...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	ເພີ່ມການດາວໂຫຼດໃ&ໝ່...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6858,6 +6909,14 @@ menu	Hide drop target	ເຊື່ອງເປົ້າໝາຍການລາ�
 #, machine
 menu	High contrast	ຄອນທຣາສສູງ
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	ກຳລັງໃຊ້: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	ກຳລັງໃຊ້: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	ມັນບໍ່ສາມາດເລີ່ມຕົ້ນໄດ້: ບັນທຶກບອກເຫດຜົນ
@@ -7048,6 +7107,11 @@ menu	Stop Download	ຢຸດດາວໂຫຼດ
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	ສະໜັບສະໜູນ &MDM
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&ຂໍ້ຄວາມ
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

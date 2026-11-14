@@ -1352,6 +1352,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Panely sťahovania
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Dialógové okno priebehu sťahovania
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2742,6 +2746,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Aplikácia Mister Download Manager narazila na internú chybu
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Prebieha sťahovanie v aplikácii Mister Download Manager
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4011,6 +4019,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Zobraziť dialógové okno o dokončení sťahovania
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Zobrazovať dialógové okno priebehu sťahovania pri jeho spustení
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4729,10 +4740,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Kontrola robotov webu (Cloudflare) odmietla yt-dlp. Ak sa stránka otvorí vo vašom prehliadači, vyberte tento prehliadač v Možnostiach → Prihlásenia na weby → Cookies pre videoservery a znova vyhľadajte stránku, alebo použite tlačidlo Stiahnuť video nad videom.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	bezpečnostný certifikát lokality vypršal, takže MDM si nemôže byť istý, že ide o skutočnú lokalitu (váš prehliadač na to tiež upozorňuje)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	bezpečnostný certifikát lokality je pre iný názov lokality, takže MDM si nemôže byť istý, že ide o skutočnú lokalitu (váš prehliadač na to tiež upozorňuje)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	bezpečnostný certifikát lokality nie je dôveryhodný (je samopodpísaný alebo od neznámeho vydavateľa), takže MDM si nemôže byť istý, že ide o skutočnú lokalitu (váš prehliadač na to tiež upozorňuje)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	bezpečnostný certifikát lokality ešte nie je platný: skontrolujte dátum a čas tohto počítača
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	bezpečnostný certifikát lokality bol odmietnutý, takže MDM si nemôže byť istý, že ide o skutočnú lokalitu
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	bezpečnostný certifikát lokality bol zrušený jeho vydavateľom, takže MDM mu nebude dôverovať
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Certifikát lokality nie je dôveryhodný ani pre yt-dlp, ani pre tento počítač: na ceste môže byť webový filter antivírusu alebo proxy, ktorý číta pripojenia HTTPS. Vypnite jeho skenovanie HTTPS, alebo pridajte jeho certifikát do počítača, potom znova vyhľadajte stránku.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	bezpečnostný certifikát stránky nie je určený pre webové stránky, takže MDM si nemôže byť istý, že ide o skutočnú stránku
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5437,6 +5476,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Kedy
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Keď je vypnuté, sťahovanie pokračuje v zozname hlavného okna. Dvojitým kliknutím na položku tam zobrazíte jej priebeh.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Veľkosť zástupného znaku
@@ -6362,6 +6404,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Zapnúť
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Späť
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Aktualizujte aplikáciu Mister Download Manager, aby ste mohli používať všetko, čo toto rozšírenie ponúka
@@ -6494,10 +6540,10 @@ menu	&About Mister Download Manager	O &Mister Download Manager
 #, machine
 menu	&Add new download	&Pridať nové sťahovanie
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Pridať nové sťahovanie...
+menu	&Automatic	&Automaticky
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6603,11 +6649,6 @@ menu	&Stop All	&Zastaviť všetko
 #, machine
 menu	&Stop Download	&Zastaviť sťahovanie
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Text
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&Ikona na paneli úloh
@@ -6624,6 +6665,21 @@ menu	&Undo	&Späť
 #, machine
 menu	&Video downloads	&Sťahovanie videí
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&Systém okien
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	Pridať &dávkové sťahovanie
@@ -6632,6 +6688,11 @@ menu	Add &batch download	Pridať &dávkové sťahovanie
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	Pridať &magnetický odkaz...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Pridať nové sťahovanie...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6847,6 +6908,14 @@ menu	Hide drop target	Skryť cieľ presunutia
 #, machine
 menu	High contrast	Vysoký kontrast
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Používa sa: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Používa sa: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Nepodarilo sa spustiť: denník uvádza dôvod
@@ -7037,6 +7106,11 @@ menu	Stop Download	Zastaviť sťahovanie
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	Podporiť &MDM
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Text
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

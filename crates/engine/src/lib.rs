@@ -33,4 +33,5 @@ pub use download::{
 pub use net::{NetError, Route};
 pub use server::Server;
 pub use sites::Refusal;
+pub use tls::CertProblem;
 pub use unlock::{ServiceFault, Unlocked, Unlocker};

@@ -227,6 +227,7 @@ mod imp {
                 &opts.dns,
                 &opts.extra_roots,
                 route,
+                Some(opts.connect_timeout),
             ))));
         b = match proxy {
             Some(p) => b.proxy(p),

@@ -1082,6 +1082,13 @@ button:focus-visible { outline: none; }
   const looks = new Map();
   // Shown this long over the same video first: previews the pointer only crosses aren't looked up.
   const LOOK_DELAY_MS = 600;
+  // The pointer resting this long on the button itself (#1053): the click is coming, so the
+  // look-up starts now, sooner than LOOK_DELAY_MS when the pointer went straight to the button. A
+  // pass over the button doesn't count.
+  const REST_MS = 200;
+  // A private window's video is looked up only when the user asks: the click, or the menu's arrow
+  // (#1053). Neither the button showing nor the pointer resting on it sends its page to MDM.
+  const PRIVATE = Boolean(ext.extension?.inIncognitoContext);
   // An answer that isn't a look-up's (no MDM, an older one, too many at once) is asked again after
   // this; meanwhile a click goes to MDM's window, as it did before.
   const LOOK_RETRY_MS = 15000;
@@ -1132,11 +1139,13 @@ button:focus-visible { outline: none; }
     Boolean(l) && !l.picked && (l.state === "pending" || l.state === "ready" || Date.now() - l.at < LOOK_RETRY_MS);
 
   // Starts the look-up of what the button sends for `c` (none for a plain file, a protected video
-  // or one nothing names), unless one is kept. `l.done` resolves once it ended.
-  function startLook(c) {
+  // or one nothing names), unless one is kept. `l.done` resolves once it ended. `byUser`: the user's
+  // click or menu, for which one the app was too busy for before the click (other videos' early
+  // look-ups running, #1053) is asked again rather than kept.
+  function startLook(c, byUser = false) {
     if (!c || !c.key || c.d.drm || (c.d.src && !STREAM.test(c.d.src))) return null;
     const kept = looks.get(c.key);
-    if (usable(kept)) return kept;
+    if (usable(kept) && !(byUser && kept.state === "busy")) return kept;
     const og = location.href === landedAt ? document.querySelector('meta[property="og:title"]')?.content : "";
     const asked = { src: c.d.src, title: (og || document.title || "").trim(), url: c.d.url, at: c.d.at };
     const l = { state: "pending", at: Date.now(), href: location.href, asked };
@@ -1180,6 +1189,39 @@ button:focus-visible { outline: none; }
       if (video === v && v.isConnected && pill.classList.contains("shown")) startLook(describeNow(v));
     }, LOOK_DELAY_MS);
   }
+
+  // A wait that calls `go(v)` once the pointer rested `ms` on the button over video `v`: `rest(v)`
+  // starts it (for the same video again, the wait goes on rather than starting over), `leave()`
+  // drops it (the pointer only passed over the button). `set` and `clear`: the page's timers.
+  function restWait(ms, go, set, clear) {
+    let timer = 0;
+    let on = null;
+    return {
+      rest(v) {
+        if (on === v) return;
+        clear(timer);
+        on = v;
+        timer = set(() => {
+          on = null;
+          go(v);
+        }, ms);
+      },
+      leave() {
+        clear(timer);
+        on = null;
+      },
+    };
+  }
+  // Rested on the button, still over the same video: its look-up (startLook keeps one per video,
+  // so the click, the menu and a second rest share it).
+  const resting = restWait(
+    REST_MS,
+    (v) => {
+      if (!PRIVATE && video === v && v.isConnected && root.matches(":hover")) startLook(describeNow(v));
+    },
+    (f, ms) => setTimeout(f, ms),
+    (id) => clearTimeout(id),
+  );
 
   // ---- what it shows ------------------------------------------------------------------------
   // `status`: what happened after a click (sending, sent, the user's step, MDM's problem, off),
@@ -1492,7 +1534,7 @@ button:focus-visible { outline: none; }
     if (!attach()) return hide(true);
     root.style.setProperty("display", "block", "important");
     const c = describeNow(v);
-    if (!usable(looks.get(c.key))) scheduleLook(v);
+    if (!PRIVATE && !usable(looks.get(c.key))) scheduleLook(v);
     if (pill.dataset.key !== String(c.key) || !fullWidth) {
       pill.dataset.key = String(c.key);
       render();
@@ -1508,6 +1550,7 @@ button:focus-visible { outline: none; }
     pinned = null;
     clearTimeout(lookTimer);
     lookingFor = null;
+    resting.leave();
     tipOff();
     if (now) {
       held = null;
@@ -1648,6 +1691,12 @@ button:focus-visible { outline: none; }
   }
   go.addEventListener("pointerenter", tipSoon);
   pill.addEventListener("pointerleave", tipOff);
+  // The pointer on the button (its main part or its menu's arrow): the look-up once it rests
+  // there (resting); one that only passes over it asks nothing.
+  pill.addEventListener("pointerenter", () => {
+    if (video && !PRIVATE) resting.rest(video);
+  });
+  pill.addEventListener("pointerleave", () => resting.leave());
 
   // ---- acting ---------------------------------------------------------------------------------
   // The middle of the video: where the background asks the page's own player what it plays.
@@ -1687,7 +1736,7 @@ button:focus-visible { outline: none; }
       setStatus({ state: "sending", text: t("video_sending") });
       if (toWindow) return await useWindow(j);
       if (l && l.file) return await useWindow(j, { direct: true, words: qualityName(l, t) });
-      if (!usable(l)) l = startLook(c);
+      if (!usable(l) || l.state === "busy") l = startLook(c, true);
       if (!l) return await useWindow(j);
       if (l.state === "pending") await within(l.done, LOOKUP_MS);
       const a = lookupAction(l, t);
@@ -1927,11 +1976,9 @@ button:focus-visible { outline: none; }
   function openMenu() {
     if (pill.classList.contains("bare")) return;
     tipOff();
-    // Its look-up, when none was asked yet (the menu opened at once).
-    if (video) {
-      const c = describeNow(video);
-      if (!usable(looks.get(c.key))) startLook(c);
-    }
+    // Its look-up, when none was asked yet (the menu opened at once), or asked again when the app
+    // was too busy for it before.
+    if (video) startLook(describeNow(video), true);
     menuOpen = true;
     fillMenu();
     menu.classList.add("open");
@@ -2126,6 +2173,7 @@ button:focus-visible { outline: none; }
   function teardown() {
     looks.clear();
     clearTimeout(lookTimer);
+    resting.leave();
     cancelAnimationFrame(raf);
     cancelAnimationFrame(scan);
     removeEventListener("pointermove", onMove, true);

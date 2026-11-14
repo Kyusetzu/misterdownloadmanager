@@ -1352,6 +1352,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Панели за преузимање
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Дијалог напретка преузимања
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2742,6 +2746,10 @@
 #, machine
 	Mister Download Manager hit an internal error	У програму Mister Download Manager дошло је до унутрашње грешке
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager преузима
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4011,6 +4019,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Прикажи дијалог о завршеном преузимању
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Приказуј дијалог напретка преузимања када преузимање почне
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4729,10 +4740,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Провера робота на локацији (Cloudflare) одбила је yt-dlp. Ако се страница отвара у вашем прегледачу, изаберите тај прегледач у „Опције → Пријаве на локације → Колачићи за видео локације“ и поново потражите страницу, или користите дугме „Преузми видео“ изнад видеа.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	безбедносни сертификат сајта је истекао, тако да MDM не може бити сигуран да је то прави сајт (ваш прегледач такође упозорава на то)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	безбедносни сертификат сајта је за друго име сајта, тако да MDM не може бити сигуран да је то прави сајт (ваш прегледач такође упозорава на то)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	безбедносни сертификат сајта није поуздан (самопотписан је или од непознатог издаваоца), тако да MDM не може бити сигуран да је то прави сајт (ваш прегледач такође упозорава на то)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	безбедносни сертификат сајта још није важећи: проверите датум и време овог рачунара
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	безбедносни сертификат сајта је одбијен, тако да MDM не може бити сигуран да је то прави сајт
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	безбедносни сертификат сајта је опозван од стране његовог издаваоца, тако да MDM неће веровати
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Сертификат сајта није поуздан, ни за yt-dlp ни за овај рачунар: веб филтер антивируса или прокси који чита HTTPS могу бити препрека. Искључите HTTPS скенирање или додајте његов сертификат у рачунар, затим поново потражите страницу.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	безбедносни сертификат сајта није направљен за веб-сајтове, тако да MDM не може бити сигуран да је то прави сајт
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5437,6 +5476,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Када
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Када је искључено, преузимања се настављају на листи главног прозора. Двапут кликните на једно да бисте видели његов напредак.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Величина џокера
@@ -6362,6 +6404,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Укључи
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Опозови
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Ажурирајте Mister Download Manager да бисте користили све што ова екстензија нуди
@@ -6494,10 +6540,10 @@ menu	&About Mister Download Manager	О &Mister Download Manager-у
 #, machine
 menu	&Add new download	&Додај ново преузимање
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Додај ново преузимање...
+menu	&Automatic	&Аутоматски
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6603,11 +6649,6 @@ menu	&Stop All	&Заустави све
 #, machine
 menu	&Stop Download	&Заустави преузимање
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Текст
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&Икона у системској палети
@@ -6624,6 +6665,11 @@ menu	&Undo	&Опозови радњу
 #, machine
 menu	&Video downloads	&Видео преузимања
 #. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&Систем прозора
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	Додај &групно преузимање
@@ -6632,6 +6678,11 @@ menu	Add &batch download	Додај &групно преузимање
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	Додај &магнетну везу...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Додај ново преузимање...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6847,6 +6898,14 @@ menu	Hide drop target	Сакриј циљ превлачења
 #, machine
 menu	High contrast	Висок контраст
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	У употреби: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	У употреби: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Није могло да се покрене: у дневнику је наведен разлог
@@ -7037,6 +7096,11 @@ menu	Stop Download	Заустави преузимање
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	Подржите &MDM
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Текст
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

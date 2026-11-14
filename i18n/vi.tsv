@@ -1352,6 +1352,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Bảng điều khiển tải xuống
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Hộp thoại tiến trình tải xuống
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2747,6 +2751,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager gặp lỗi nội bộ
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager đang tải xuống
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4016,6 +4024,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Hiển thị hộp thoại hoàn tất tải xuống
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Hiển thị hộp thoại tiến trình tải xuống khi một lượt tải xuống bắt đầu
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4734,10 +4745,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Kiểm tra bot của trang web (Cloudflare) đã từ chối yt-dlp. Nếu trang mở trong trình duyệt của bạn, hãy chọn trình duyệt đó trong Tùy chọn → Đăng nhập trang web → Cookie cho các trang video và tìm lại trang, hoặc sử dụng nút Tải xuống video trên video.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	chứng chỉ bảo mật của trang web đã hết hạn, vì vậy MDM không thể chắc chắn đó là trang web thật (trình duyệt của bạn cũng cảnh báo về điều đó)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	chứng chỉ bảo mật của trang web dành cho tên trang web khác, vì vậy MDM không thể chắc chắn đó là trang web thật (trình duyệt của bạn cũng cảnh báo về điều đó)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	chứng chỉ bảo mật của trang web không đáng tin cậy (nó tự ký hoặc từ một nhà phát hành không xác định), vì vậy MDM không thể chắc chắn đó là trang web thật (trình duyệt của bạn cũng cảnh báo về điều đó)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	chứng chỉ bảo mật của trang web chưa hợp lệ: kiểm tra ngày và giờ của máy tính này
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	chứng chỉ bảo mật của trang web đã bị từ chối, vì vậy MDM không thể chắc chắn đó là trang web thật
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	chứng chỉ bảo mật của trang web đã bị nhà phát hành thu hồi, vì vậy MDM sẽ không tin tưởng nó
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Chứng chỉ của trang web không được tin cậy, cả bởi yt-dlp lẫn máy tính này: bộ lọc web của phần mềm diệt vi-rút hoặc proxy đọc HTTPS có thể đang chặn. Hãy tắt tính năng quét HTTPS của nó, hoặc thêm chứng chỉ của nó vào máy tính, sau đó tra cứu lại trang.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	chứng chỉ bảo mật của trang web không được tạo cho các trang web, vì vậy MDM không thể chắc chắn đó là trang web thật
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5451,6 +5490,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Khi nào
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Khi tắt, các lượt tải xuống tiếp tục trong danh sách cửa sổ chính. Nhấp đúp vào một lượt tải xuống để xem tiến trình.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Kích thước ký tự đại diện
@@ -6376,6 +6418,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Bật
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Hoàn tác
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Cập nhật Mister Download Manager để sử dụng mọi tính năng mà tiện ích mở rộng này cung cấp
@@ -6508,10 +6554,10 @@ menu	&About Mister Download Manager	&Giới thiệu Mister Download Manager
 #, machine
 menu	&Add new download	&Thêm bản tải xuống mới
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Thêm tải xuống mới...
+menu	&Automatic	Tự &động
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6617,11 +6663,6 @@ menu	&Stop All	&Dừng tất cả
 #, machine
 menu	&Stop Download	&Dừng tải xuống
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Văn bản
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&Biểu tượng khay
@@ -6638,6 +6679,21 @@ menu	&Undo	&Hoàn tác
 #, machine
 menu	&Video downloads	Tải xuống &video
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	Hệ thống &cửa sổ
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	Thêm tải xuống &hàng loạt
@@ -6646,6 +6702,11 @@ menu	Add &batch download	Thêm tải xuống &hàng loạt
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	Thêm liên kết &magnet...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Thêm tải xuống mới...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6861,6 +6922,14 @@ menu	Hide drop target	Ẩn mục tiêu thả
 #, machine
 menu	High contrast	Độ tương phản cao
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Đang dùng: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Đang dùng: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Không thể khởi động: nhật ký cho biết lý do
@@ -7051,6 +7120,11 @@ menu	Stop Download	Dừng tải xuống
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	Hỗ trợ &MDM
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Văn bản
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

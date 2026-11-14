@@ -113,6 +113,9 @@ x11rb = { version = "0.13.2", default-features = false }
 # The GLX vendor that will draw on the X display, before the first window (unix.rs glx_vendor,
 # renderer.rs unpaced_swaps); already in the tree through winit and glutin, loaded at run time.
 x11-dl = "2.21.0"
+# Whether a Wayland screen is scaled, for the windows' system MDM chooses (unix.rs x11_fit,
+# #624); already in the tree through winit.
+wayland-client = "0.31.15"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Finder's file icons (unix.rs file_icon); already in the tree through winit and rfd.

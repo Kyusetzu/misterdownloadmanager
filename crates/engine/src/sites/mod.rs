@@ -5,6 +5,7 @@
 
 pub mod gdrive;
 mod gofile;
+mod mediafire;
 
 use url::Url;
 
@@ -82,10 +83,20 @@ pub(crate) fn rewrite(url: &Url) -> Option<Url> {
 
 /// What the web page `page` (its first `PAGE_PEEK` bytes), answered 200 at `at`, says.
 pub(crate) fn read_page(at: &Url, page: &[u8]) -> PageSays {
-    if !gdrive::is_drive_host(at) {
-        return PageSays::Nothing;
+    if gdrive::is_drive_host(at) {
+        gdrive::read_page(at, &String::from_utf8_lossy(page))
+    } else if mediafire::is_site(at) {
+        mediafire::read_page(at, &String::from_utf8_lossy(page))
+    } else {
+        PageSays::Nothing
     }
-    gdrive::read_page(at, &String::from_utf8_lossy(page))
+}
+
+/// The page that gives `url` again when it stops working, for a site whose file addresses
+/// expire (MediaFire's, a few hours after its page gave one, #952): the download's origin
+/// (`download::Ctx::refresh_target`). None: `url` itself is all there is.
+pub(crate) fn origin(url: &Url) -> Option<Url> {
+    mediafire::origin(url)
 }
 
 /// An answer that is a site's refusal by where it ended (`at`, asked as `asked`) and its status.
@@ -114,7 +125,7 @@ pub(crate) fn second_look(at: &Url) -> Option<Url> {
 /// `at` is a site's address for a file: a web page from it without a file name is the site
 /// talking, never the file (it is an error, not saved).
 pub(crate) fn expects_file(at: &Url) -> bool {
-    gdrive::expects_file(at)
+    gdrive::expects_file(at) || mediafire::expects_file(at)
 }
 
 #[cfg(test)]

@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	ಡೌನ್‌ಲೋಡ್ ಪ್ಯಾನೆಲ್‌ಗಳು
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	ಡೌನ್‌ಲೋಡ್ ಪ್ರಗತಿ ಸಂವಾದ
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager ಆಂತರಿಕ ದೋಷವನ್ನು ಎದುರಿಸಿದೆ
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	ಡೌನ್‌ಲೋಡ್ ಪೂರ್ಣಗೊಂಡಾಗ ತೋರಿಸಬೇಕಾದ ಸಂಭಾಷಣೆ
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	ಡೌನ್‌ಲೋಡ್ ಪ್ರಾರಂಭವಾದಾಗ ಡೌನ್‌ಲೋಡ್ ಪ್ರಗತಿ ಸಂವಾದವನ್ನು ತೋರಿಸಿ
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	ಸೈಟ್‌ನ ಬಾಟ್ ಪರಿಶೀಲನೆ (Cloudflare) yt-dlp ಅನ್ನು ನಿರಾಕರಿಸಿದೆ. ಪುಟವು ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ತೆರೆದರೆ, ಆಯ್ಕೆಗಳು → ಸೈಟ್‌ಗಳ ಲಾಗಿನ್‌ಗಳು → ವೀಡಿಯೊ ಸೈಟ್‌ಗಳಿಗಾಗಿ ಕುಕೀಗಳಲ್ಲಿ ಆ ಬ್ರೌಸರ್ ಅನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ಪುಟವನ್ನು ಮತ್ತೆ ನೋಡಿ, ಅಥವಾ ವೀಡಿಯೊದ ಮೇಲಿರುವ ಡೌನ್‌ಲೋಡ್ ವೀಡಿಯೊ ಬಟನ್ ಬಳಸಿ.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರದ ಅವಧಿ ಮುಗಿದಿದೆ, ಆದ್ದರಿಂದ MDM ಅದು ನಿಜವಾದ ಸೈಟ್ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಿಲ್ಲ (ನಿಮ್ಮ ಬ್ರೌಸರ್ ಕೂಡ ಅದರ ಬಗ್ಗೆ ಎಚ್ಚರಿಸುತ್ತದೆ)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರವು ವಿಳಾಸದಲ್ಲಿರುವ ಸೈಟ್ ಹೆಸರಿಗಿಂತ ಬೇರೆ ಸೈಟ್ ಹೆಸರುಗಳಿಗಾಗಿ ಆಗಿದೆ, ಆದ್ದರಿಂದ MDM ಅದು ನಿಜವಾದ ಸೈಟ್ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಿಲ್ಲ (ನಿಮ್ಮ ಬ್ರೌಸರ್ ಕೂಡ ಅದರ ಬಗ್ಗೆ ಎಚ್ಚರಿಸುತ್ತದೆ)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರವು ವಿಶ್ವಾಸಾರ್ಹವಲ್ಲ (ಅದು ಸ್ವಯಂ-ಸಹಿ ಮಾಡಲ್ಪಟ್ಟಿದೆ ಅಥವಾ ಅಜ್ಞಾತ ವಿತರಕರಿಂದ ಬಂದಿದೆ), ಆದ್ದರಿಂದ MDM ಅದು ನಿಜವಾದ ಸೈಟ್ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಿಲ್ಲ (ನಿಮ್ಮ ಬ್ರೌಸರ್ ಕೂಡ ಅದರ ಬಗ್ಗೆ ಎಚ್ಚರಿಸುತ್ತದೆ)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರವು ಇನ್ನೂ ಮಾನ್ಯವಾಗಿಲ್ಲ: ಈ ಕಂಪ್ಯೂಟರ್‌ನ ದಿನಾಂಕ ಮತ್ತು ಸಮಯವನ್ನು ಪರಿಶೀಲಿಸಿ
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರವನ್ನು ನಿರಾಕರಿಸಲಾಗಿದೆ, ಆದ್ದರಿಂದ MDM ಅದು ನಿಜವಾದ ಸೈಟ್ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಿಲ್ಲ
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಅದರ ವಿತರಕರು ರದ್ದುಗೊಳಿಸಿದ್ದಾರೆ, ಆದ್ದರಿಂದ MDM ಅದನ್ನು ನಂಬುವುದಿಲ್ಲ
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	ಸೈಟ್‌ನ ಪ್ರಮಾಣಪತ್ರವನ್ನು yt-dlp ಅಥವಾ ಈ ಕಂಪ್ಯೂಟರ್‌ನಿಂದ ನಂಬಲಾಗಿಲ್ಲ: ಆಂಟಿವೈರಸ್‌ನ ವೆಬ್ ಫಿಲ್ಟರ್ ಅಥವಾ HTTPS ಅನ್ನು ಓದುವ ಪ್ರಾಕ್ಸಿ ಅಡ್ಡಿಯಾಗಬಹುದು. ಅದರ HTTPS ಸ್ಕ್ಯಾನಿಂಗ್ ಅನ್ನು ಆಫ್ ಮಾಡಿ, ಅಥವಾ ಅದರ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಕಂಪ್ಯೂಟರ್‌ಗೆ ಸೇರಿಸಿ, ನಂತರ ಪುಟವನ್ನು ಮತ್ತೆ ಹುಡುಕಿ.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರವನ್ನು ವೆಬ್‌ಸೈಟ್‌ಗಳಿಗಾಗಿ ಮಾಡಲಾಗಿಲ್ಲ, ಆದ್ದರಿಂದ MDM ಅದು ನಿಜವಾದ ಸೈಟ್ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಿಲ್ಲ
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	ಯಾವಾಗ
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	ಅದು ಆಫ್ ಆಗಿರುವಾಗ, ಡೌನ್‌ಲೋಡ್‌ಗಳು ಮುಖ್ಯ ವಿಂಡೋದ ಪಟ್ಟಿಯಲ್ಲಿ ಮುಂದುವರಿಯುತ್ತವೆ. ಅದರ ಪ್ರಗತಿಯನ್ನು ನೋಡಲು ಪಟ್ಟಿಯಲ್ಲಿರುವ ಡೌನ್‌ಲೋಡ್‌ವೊಂದನ್ನು ಡಬಲ್-ಕ್ಲಿಕ್ ಮಾಡಿ.
 #. text in the Batch download window
 #, machine
 	Wildcard size	ವೈಲ್ಡ್‌ಕಾರ್ಡ್ ಗಾತ್ರ
@@ -6381,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	ಆನ್ ಮಾಡಿ
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	ಮತ್ತೆ ಸೇರಿಸಿ
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	ಈ ವಿಸ್ತರಣೆಯು ನೀಡುವ ಎಲ್ಲವನ್ನೂ ಬಳಸಲು Mister Download Manager ಅನ್ನು ನವೀಕರಿಸಿ
@@ -6513,10 +6559,10 @@ menu	&About Mister Download Manager	Mister Download Manager ಬಗ್ಗೆ(&A)
 #, machine
 menu	&Add new download	ಹೊಸ ಡೌನ್‌ಲೋಡ್ ಸೇರಿಸಿ(&A)
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	ಹೊಸ ಡೌನ್‌ಲೋಡ್ ಸೇರಿಸಿ(&N)...
+menu	&Automatic	ಸ್ವಯಂಚಾಲಿತ(&A)
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6622,11 +6668,6 @@ menu	&Stop All	ಎಲ್ಲವನ್ನೂ ನಿಲ್ಲಿಸಿ(&S)
 #, machine
 menu	&Stop Download	ಡೌನ್‌ಲೋಡ್ ನಿಲ್ಲಿಸಿ(&S)
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	ಪಠ್ಯ(&X)
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	ಟ್ರೇ ಐಕಾನ್(&T)
@@ -6643,6 +6684,16 @@ menu	&Undo	ರದ್ದುಗೊಳಿಸಿ(&U)
 #, machine
 menu	&Video downloads	ವೀಡಿಯೊ ಡೌನ್‌ಲೋಡ್‌ಗಳು(&V)
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	ವೇಲ್ಯಾಂಡ್(&W)
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	ವಿಂಡೋ ವ್ಯವಸ್ಥೆ(&W)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	ಬ್ಯಾಚ್ ಡೌನ್‌ಲೋಡ್ ಸೇರಿಸಿ(&b)
@@ -6651,6 +6702,11 @@ menu	Add &batch download	ಬ್ಯಾಚ್ ಡೌನ್‌ಲೋಡ್ ಸೇ�
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	ಮ್ಯಾಗ್ನೆಟ್ ಲಿಂಕ್ ಸೇರಿಸಿ...(&m)
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	ಹೊಸ ಡೌನ್‌ಲೋಡ್ ಸೇರಿಸಿ(&N)...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6866,6 +6922,14 @@ menu	Hide drop target	ಡ್ರಾಪ್ ಟಾರ್ಗೆಟ್ ಮರೆಮ�
 #, machine
 menu	High contrast	ಹೆಚ್ಚಿನ ಕಾಂಟ್ರಾಸ್ಟ್
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	ಬಳಕೆಯಲ್ಲಿ: ವೇಲ್ಯಾಂಡ್
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	ಬಳಕೆಯಲ್ಲಿ: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	ಅದು ಪ್ರಾರಂಭವಾಗಲಿಲ್ಲ: ಲಾಗ್‌ನಲ್ಲಿ ಕಾರಣವಿದೆ
@@ -7056,6 +7120,11 @@ menu	Stop Download	ಡೌನ್‌ಲೋಡ್ ನಿಲ್ಲಿಸಿ
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	MDM ಅನ್ನು ಬೆಂಬಲಿಸಿ(&M)
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	ಪಠ್ಯ(&X)
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

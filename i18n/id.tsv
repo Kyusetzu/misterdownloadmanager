@@ -1056,6 +1056,10 @@
 #. window title in the Options window
 #. window title: the download button the extension shows over videos
 	Download panels	Panel unduhan
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Dialog kemajuan unduhan
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 	Download rules	Aturan unduhan
@@ -2088,6 +2092,10 @@
 #. crash report window heading: an internal error, MDM still running
 	Mister Download Manager hit an internal error	Mister Download Manager mengalami kesalahan internal
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager sedang mengunduh
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 	Mister Download Manager is running the queue "{queue}"	Mister Download Manager sedang menjalankan antrean "{queue}"
@@ -3042,6 +3050,9 @@
 	Show details >>	Tampilkan detail >>
 #. checkbox in the Options window; checkbox in a download's progress window
 	Show download complete dialog	Tampilkan dialog setelah unduhan selesai
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Tampilkan dialog kemajuan unduhan saat unduhan dimulai
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 	Show in list	Tampilkan dalam daftar
@@ -3581,10 +3592,38 @@
 #. text in the Download video window
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Pemeriksaan bot situs (Cloudflare) menolak yt-dlp. Jika halaman terbuka di browser Anda, pilih browser tersebut di Opsi → Login Situs → Cookie untuk situs video dan cari halaman itu lagi, atau gunakan tombol Unduh video di atas video.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	sertifikat keamanan situs telah kedaluwarsa, jadi MDM tidak dapat memastikan bahwa situs tersebut asli (browser Anda juga memperingatkan hal ini)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	sertifikat keamanan situs ditujukan untuk nama situs lain, jadi MDM tidak dapat memastikan bahwa situs tersebut asli (browser Anda juga memperingatkan hal ini)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	sertifikat keamanan situs tidak dipercaya (ditandatangani sendiri atau oleh penerbit yang tidak dikenal), jadi MDM tidak dapat memastikan bahwa situs tersebut asli (browser Anda juga memperingatkan hal ini)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	sertifikat keamanan situs belum berlaku: periksa tanggal dan waktu komputer ini
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	sertifikat keamanan situs ditolak, jadi MDM tidak dapat memastikan bahwa situs tersebut asli
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	sertifikat keamanan situs dicabut oleh penerbitnya, jadi MDM tidak akan mempercayainya
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Sertifikat situs tidak dipercaya, baik oleh yt-dlp maupun oleh komputer ini: filter web antivirus atau proksi yang membaca HTTPS mungkin menghalangi. Matikan pemindaian HTTPS-nya, atau tambahkan sertifikatnya ke komputer, lalu cari halaman lagi.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	sertifikat keamanan situs tidak dibuat untuk situs web, jadi MDM tidak dapat memastikan itu adalah situs yang asli
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 	The symbols couldn't be fetched: some lines of the report show addresses instead of names (the developers can still read them).	Simbol tidak dapat diambil: beberapa baris laporan menunjukkan alamat alih-alih nama (pengembang masih dapat membacanya).
@@ -4121,6 +4160,9 @@
 #. text in remote.rs
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 	When	Kapan
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Saat mati, unduhan berlanjut di daftar jendela utama. Klik dua kali salah satu di sana untuk melihat kemajuannya.
 #. text in the Batch download window
 	Wildcard size	Ukuran wildcard
 #. text in the Scheduler window
@@ -4824,6 +4866,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #. button on the download button over a video when it is off on this web site: turns it on again here; verb; very short
 extension	Turn on	Aktifkan
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Urungkan
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 extension	Update Mister Download Manager to use everything this extension offers	Perbarui Mister Download Manager untuk menggunakan semua yang ditawarkan ekstensi ini
 #. text in the browser extension
@@ -4923,6 +4969,11 @@ menu	&About Mister Download Manager	T&entang Mister Download Manager
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Add new download	T&ambah unduhan baru
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Automatic	&Otomatis
+#. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Classic	&Klasik
@@ -5015,6 +5066,21 @@ menu	&Undo	&Urungkan
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	&Video downloads	Unduhan &video
+#. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	Sistem &jendela
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 menu	Add &batch download	Tambah unduhan &batch
@@ -5186,6 +5252,14 @@ menu	Hide drop target	Sembunyikan target lepas
 #. menu command in the main window
 #. View → Theme: black and white with strong edges, for low vision
 menu	High contrast	Kontras tinggi
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Digunakan: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Digunakan: X11 (XWayland)
 #. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 menu	It couldn't start: the log says why	Tidak dapat dijalankan: log menjelaskan alasannya

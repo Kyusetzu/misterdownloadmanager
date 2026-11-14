@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Deskargatzeko panelak
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Deskargaren aurrerapen-elkarrizketa-koadroa
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager-ek barne-errore bat izan du
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager deskargatzen ari da
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Erakutsi deskarga osatuaren elkarrizketa-koadroa
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Erakutsi deskargaren aurrerapen-leihoa deskarga bat hasten denean
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Gunearen bot-egiaztapenak (Cloudflare) yt-dlp ukatu du. Orrialdea zure arakatzailean irekitzen bada, hautatu arakatzaile hori Aukerak → Guneen saioak → Bideo-guneetarako cookieak atalean eta bilatu orrialdea berriro, edo erabili Bideoa deskargatu botoia bideoaren gainean.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	gunearen segurtasun-ziurtagiria iraungita dago, beraz, MDM-k ezin du ziurtatu benetako gunea den (zure nabigatzaileak ere ohartarazten du)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	gunearen segurtasun-ziurtagiria beste gune-izen batzuetarako da, beraz, MDM-k ezin du ziurtatu benetako gunea den (zure nabigatzaileak ere ohartarazten du)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	gunearen segurtasun-ziurtagiria ez da fidagarria (auto-sinatua da edo igorle ezezagun batena), beraz, MDM-k ezin du ziurtatu benetako gunea den (zure nabigatzaileak ere ohartarazten du)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	gunearen segurtasun-ziurtagiria oraindik ez da baliozkoa: egiaztatu ordenagailu honen data eta ordua
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	gunearen segurtasun-ziurtagiria ukatu egin da, beraz, MDM-k ezin du ziurtatu benetako gunea den
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	gunearen segurtasun-ziurtagiria bere igorleak ezeztatu du, beraz, MDM-k ez du fidatuko
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Gunearen ziurtagiria ez da fidagarria, ez yt-dlp-rentzat ez ordenagailu honentzat: baliteke antibirus baten web-iragazkia edo HTTPS irakurtzen duen proxy bat tartean egotea. Desaktibatu HTTPS eskaneatzea, edo gehitu ziurtagiria ordenagailukoetara, eta gero bilatu orria berriro.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	Gunearen segurtasun-ziurtagiria ez dago webguneetarako egina; beraz, MDMk ezin du ziurtatu gune erreala denik
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Noiz
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Desaktibatuta dagoenean, deskargak leiho nagusiko zerrendan jarraitzen dute. Egin klik bikoitza bertan aurrerapena ikusteko.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Komodinen tamaina
@@ -6381,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Aktibatu
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Desegin
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Eguneratu Mister Download Manager luzapen honek eskaintzen duen guztia erabiltzeko
@@ -6513,10 +6559,10 @@ menu	&About Mister Download Manager	Mister Download Manager-i b&uruz
 #, machine
 menu	&Add new download	Deskarga &berria gehitu
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	Deskarga berria &gehitu...
+menu	&Automatic	A&utomatikoa
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6622,11 +6668,6 @@ menu	&Stop All	Guztiak &gelditu
 #, machine
 menu	&Stop Download	Deskarga &gelditu
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Testua
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	Sistemako &erretiluko ikonoa
@@ -6643,6 +6684,21 @@ menu	&Undo	&Desegin
 #, machine
 menu	&Video downloads	&Bideo-deskargak
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&Leiho-sistema
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	&Lote-deskarga gehitu
@@ -6651,6 +6707,11 @@ menu	Add &batch download	&Lote-deskarga gehitu
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	&Magnet esteka gehitu...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	Deskarga berria &gehitu...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6866,6 +6927,14 @@ menu	Hide drop target	Ezkutatu jaregin-helburua
 #, machine
 menu	High contrast	Kontraste handia
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Erabiltzen: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Erabiltzen: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Ezin izan da abiarazi: erregistroak azaltzen du zergatik
@@ -7056,6 +7125,11 @@ menu	Stop Download	Gelditu deskarga
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	Lagundu &MDMri
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Testua
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

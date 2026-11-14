@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Letöltési panelek
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Letöltési folyamat párbeszédpanel
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager belső hibába ütközött
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager letöltés alatt
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Letöltés befejezve párbeszédpanel megjelenítése
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Letöltési folyamat párbeszédpanel megjelenítése letöltés indításakor
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	A webhely botellenőrzése (Cloudflare) elutasította az yt-dlp-t. Ha az oldal megnyílik a böngészőjében, válassza ki azt a böngészőt a Beállítások → Webhelyek bejelentkezései → Sütik videóoldalakhoz menüpontban, és keresse meg újra az oldalt, vagy használja a Letöltés videó gombot a videó felett.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	a webhely biztonsági tanúsítványa lejárt, így az MDM nem lehet biztos abban, hogy ez a valódi webhely (a böngészője is figyelmeztet erre)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	a webhely biztonsági tanúsítványa más webhelynevekre szól, mint a címben szereplő név, így az MDM nem lehet biztos abban, hogy ez a valódi webhely (a böngészője is figyelmeztet erre)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	a webhely biztonsági tanúsítványa nem megbízható (önaláírt vagy ismeretlen kibocsátótól származik), így az MDM nem lehet biztos abban, hogy ez a valódi webhely (a böngészője is figyelmeztet erre)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	a webhely biztonsági tanúsítványa még nem érvényes: ellenőrizze a számítógép dátumát és idejét
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	a webhely biztonsági tanúsítványát elutasították, így az MDM nem lehet biztos abban, hogy ez a valódi webhely
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	a webhely biztonsági tanúsítványát a kibocsátója visszavonta, így az MDM nem fog megbízni benne
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	A webhely tanúsítványa nem megbízható, sem a yt-dlp, sem ez a számítógép számára: egy vírusirtó webes szűrője vagy egy HTTPS-t olvasó proxy akadályozhatja. Kapcsolja ki a HTTPS-vizsgálatot, vagy adja hozzá a tanúsítványát a számítógéphez, majd keresse meg újra az oldalt.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	a webhely biztonsági tanúsítványa nem webhelyekhez készült, ezért az MDM nem lehet biztos benne, hogy valóban a webhelyről van szó
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Mikor
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Ha ki van kapcsolva, a letöltések a főablak listájában folytatódnak. Kattintson duplán egyre ott a folyamat megtekintéséhez.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Helyettesítő karakter mérete
@@ -6381,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Bekapcsolás
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Visszavonás
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Frissítse a(z) Mister Download Manager alkalmazást, hogy használhassa a bővítmény összes funkcióját
@@ -6513,10 +6559,10 @@ menu	&About Mister Download Manager	A &Mister Download Manager névjegye
 #, machine
 menu	&Add new download	&Új letöltés hozzáadása
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Új letöltés hozzáadása...
+menu	&Automatic	A&utomatikus
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6622,11 +6668,6 @@ menu	&Stop All	Az összes &leállítása
 #, machine
 menu	&Stop Download	Letöltés &leállítása
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Szöveg
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&Tálcaikon
@@ -6643,6 +6684,21 @@ menu	&Undo	&Visszavonás
 #, machine
 menu	&Video downloads	&Videóletöltések
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&Ablakrendszer
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	&Kötegelt letöltés hozzáadása
@@ -6651,6 +6707,11 @@ menu	Add &batch download	&Kötegelt letöltés hozzáadása
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	&Magnet link hozzáadása...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Új letöltés hozzáadása...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6866,6 +6927,14 @@ menu	Hide drop target	Célterület elrejtése
 #, machine
 menu	High contrast	Nagy kontraszt
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Használatban: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Használatban: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Nem indult el: a naplóban van az ok
@@ -7056,6 +7125,11 @@ menu	Stop Download	Letöltés leállítása
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	&MDM támogatása
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Szöveg
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

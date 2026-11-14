@@ -398,6 +398,13 @@
           },
           "type": "array"
         },
+        "include_site": {
+          "description": "That button's Undo (#404): the host name `exclude_site` listed is taken off the excluded\nsites again (a pattern of the user's own that covers it stays).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "later": {
           "default": false,
           "description": "`/a`: add to the main queue, don't start.",

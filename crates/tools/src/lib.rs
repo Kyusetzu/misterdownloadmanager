@@ -6,8 +6,8 @@
 
 pub mod chosen;
 pub mod ffmpeg;
+mod folder;
 pub mod gallery;
-mod macos;
 pub mod manifest;
 mod openpgp;
 pub mod pages;
@@ -124,11 +124,11 @@ pub fn tools_dir() -> Option<PathBuf> {
     mdm_ipc::data_dir().map(|d| d.join("tools"))
 }
 
-/// yt-dlp's file name for this platform in its releases. On macOS, its folder build: why, in
-/// `macos`.
+/// yt-dlp's file name for this platform in its releases. On Windows and macOS, its folder build:
+/// why, in `folder`.
 pub fn ytdlp_asset() -> &'static str {
     if cfg!(windows) {
-        "yt-dlp.exe"
+        "yt-dlp_win.zip"
     } else if cfg!(target_os = "macos") {
         "yt-dlp_macos.zip"
     } else {
@@ -291,8 +291,9 @@ pub fn installed(dir: &Path) -> Option<Installed> {
 fn own_ytdlp(dir: &Path) -> Option<Installed> {
     let text = std::fs::read(dir.join("yt-dlp").join("current.json")).ok()?;
     let i: Installed = serde_json::from_slice(&text).ok()?;
-    // macOS: the one-file build earlier versions installed can't run from a downloaded app (`macos`).
-    if cfg!(target_os = "macos") && macos::one_file_build(&i.exe) {
+    // macOS: the one-file build earlier versions installed can't run from a downloaded app
+    // (`folder`). On Windows it runs, only slower: used until the folder build replaces it.
+    if cfg!(target_os = "macos") && folder::one_file_build(&i.exe) {
         return None;
     }
     i.exe.is_file().then_some(i)
@@ -347,6 +348,9 @@ pub async fn install_latest(
         serde_json::from_slice(&body).map_err(|e| Error::BadRelease(e.to_string()))?;
     if let Some(current) = own_ytdlp(dir)
         && !newer(&release.tag_name, &current.version)
+        // The same release again only as the folder build, in place of the one-file one that
+        // earlier versions of MDM installed on Windows (#1053).
+        && !(folder::BUILD && folder::one_file_build(&current.exe))
     {
         return Ok(current); // never the same again, never older
     }
@@ -379,9 +383,9 @@ pub async fn install_latest(
     if Sha256::digest(&program).as_slice() != expected {
         return Err(Error::BadChecksum);
     }
-    #[cfg(target_os = "macos")]
-    return macos::put_folder(dir, &release.tag_name, &program);
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(any(windows, target_os = "macos"))]
+    return folder::put_folder(dir, &release.tag_name, &program, &exe_url);
+    #[cfg(not(any(windows, target_os = "macos")))]
     put(dir, "yt-dlp", &release.tag_name, asset, &program, &exe_url)
 }
 
@@ -418,18 +422,29 @@ pub(crate) fn put(
     )
 }
 
-/// Make `now` (installed in `root/<version>/`) the current version of a tool: `current.json`
-/// switched atomically, the previous version kept for rollback, older ones removed.
+/// Make `now` (installed in a folder of `root`, `root/<version>/` mostly) the current version of a
+/// tool: `current.json` switched atomically, the previous version kept for rollback, older ones
+/// removed.
 pub(crate) fn make_current(root: &Path, now: Installed) -> Result<Installed, Error> {
     let previous = std::fs::read(root.join("current.json"))
         .ok()
         .and_then(|t| serde_json::from_slice::<Installed>(&t).ok());
     let json = serde_json::to_vec_pretty(&now).map_err(std::io::Error::other)?;
     craft_atomic::atomic_write(&root.join("current.json"), &json)?;
-    // Keep the new and the previous version; older ones go.
-    let keep: Vec<String> = [Some(now.version.clone()), previous.map(|p| p.version)]
+    // Keep the new and the previous version's folders; older ones go. A version's folder is the
+    // one its program is in, under `root` (its version's name, unless that was taken: `folder`).
+    let folder_of = |i: &Installed| {
+        i.exe
+            .strip_prefix(root)
+            .ok()
+            .and_then(|p| p.components().next())
+            .map(|c| c.as_os_str().to_string_lossy().into_owned())
+            .unwrap_or_else(|| i.version.clone())
+    };
+    let keep: Vec<String> = [Some(&now), previous.as_ref()]
         .into_iter()
         .flatten()
+        .map(folder_of)
         .collect();
     if let Ok(entries) = std::fs::read_dir(root) {
         for e in entries.flatten() {
@@ -540,7 +555,7 @@ mod tests {
             "https://x/",
         )
         .unwrap();
-        // macOS installs the folder build (`macos`), with a folder beside the program.
+        // macOS installs the folder build (`folder`), with a folder beside the program.
         #[cfg(target_os = "macos")]
         std::fs::create_dir_all(now.exe.with_file_name("_internal")).unwrap();
         assert_eq!(installed(dir.path()).unwrap(), now);

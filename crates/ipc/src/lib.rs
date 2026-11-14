@@ -139,6 +139,10 @@ pub struct Command {
     /// From the browser's toolbar button: leave this site's downloads (a host name) to the
     /// browser from now on (Options → File types → excluded sites).
     pub exclude_site: Option<String>,
+    /// That button's Undo (#404): the host name `exclude_site` listed is taken off the excluded
+    /// sites again (a pattern of the user's own that covers it stays).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_site: Option<String>,
 }
 
 /// One cookie as the browser keeps it (`cookies.getAll`'s fields, under the extension's names

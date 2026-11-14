@@ -145,7 +145,8 @@ function fakeApi({
         // for an address it can't download (`noticeReply`).
         if (m.declined) return noticeReply || { ok: true };
         if (lookup && (m.videoLookup || m.videoPoll || m.videoPick)) return lookup(m);
-        return reply;
+        // A function: the app's answer to this message (it may change its rules, as the app would).
+        return typeof reply === "function" ? reply(m) : reply;
       },
       getManifest: () => ({
         version: "0.2.5",
@@ -593,6 +594,47 @@ const ok = (what) => {
   ok("the popup: state, pause, never this site");
 }
 
+// #404: "Never take downloads from <site>" says it worked, and its Undo takes the site off the
+// excluded sites again; the popup opened later on that site knows it is excluded. A site excluded
+// by a pattern of Options' own is said excluded, without Undo (the app would keep the pattern).
+{
+  const rules = { excludedSites: "*.update.microsoft.com" };
+  // As the app: the host name added (once), or taken off by its own name only.
+  const reply = (m) => {
+    const sites = rules.excludedSites.split(/\s+/).filter(Boolean);
+    if (m.excludeSite && !sites.includes(m.excludeSite)) rules.excludedSites = [...sites, m.excludeSite].join(" ");
+    if (m.includeSite) rules.excludedSites = sites.filter((p) => p.toLowerCase() !== m.includeSite.toLowerCase()).join(" ");
+    return { ok: true };
+  };
+  const { api, calls, listeners } = fakeApi({ firefox: false, rules, reply });
+  load(api, false);
+  const send = (m) => new Promise((r) => listeners.message(m, { id: "ours" }, (v) => r(JSON.parse(JSON.stringify(v)))));
+  await settle();
+  assert.deepEqual(await send({ type: "site-excluded", host: "files.test" }), { excluded: false, undo: false });
+  assert.deepEqual(await send({ type: "exclude-site", host: "files.test" }), { ok: true });
+  assert.deepEqual(await send({ type: "site-excluded", host: "files.test" }), { excluded: true, undo: true });
+  // Its downloads stay with the browser now.
+  let suggested = false;
+  listeners.determining({ id: 61, url: "https://files.test/a.zip", filename: "a.zip" }, () => (suggested = true));
+  await settle();
+  assert.ok(suggested && !natives(calls).some((m) => m.url === "https://files.test/a.zip"), "excluded: left to the browser");
+  // Undo: the host goes to the app, the site's downloads come back.
+  assert.deepEqual(await send({ type: "include-site", host: "files.test" }), { ok: true });
+  assert.ok(natives(calls).some((m) => m.includeSite === "files.test"));
+  assert.deepEqual(await send({ type: "site-excluded", host: "files.test" }), { excluded: false, undo: false });
+  listeners.determining({ id: 62, url: "https://files.test/b.zip", filename: "b.zip" }, () => {});
+  await settle();
+  assert.ok(natives(calls).some((m) => m.url === "https://files.test/b.zip"), "taken again after Undo");
+  // Excluded by Options' own pattern: said so, no Undo.
+  assert.deepEqual(await send({ type: "site-excluded", host: "dl.update.microsoft.com" }), { excluded: true, undo: false });
+  // An app that can't take it back (an older one): Undo says it didn't work.
+  const old = fakeApi({ firefox: false, reply: (m) => (m.includeSite ? { ok: false, why: "refused" } : { ok: true }) });
+  load(old.api, false);
+  const ask = (m) => new Promise((r) => old.listeners.message(m, { id: "ours" }, (v) => r(JSON.parse(JSON.stringify(v)))));
+  assert.deepEqual(await ask({ type: "include-site", host: "files.test" }), { ok: false });
+  ok("#404 the popup: never this site, said, and its Undo");
+}
+
 // An app older than the extension: still connected, with a nudge to update it.
 {
   const { api, store, listeners } = fakeApi({ firefox: false, rules: { version: "0.1.0" } });
@@ -638,6 +680,48 @@ const ok = (what) => {
   await settle();
   assert.deepEqual(off.calls.filter((c) => c[0] === "dnr").pop()[1].addRules, []);
   ok("opened types: the session rule follows the app's list");
+}
+
+// #948: the rule leaves an attachment alone (its server's name stays the browser's). A file it
+// made a download, which Chromium then names after its address (`main.mkv`, an inline answer's own
+// name dropped with the header), goes to MDM as only a guess: MDM names it from the server's answer.
+// A name of the browser's own, or a type the rule doesn't take, stays a name.
+{
+  const { api, calls, listeners } = fakeApi({ firefox: false, types: "MKV MP4 ZIP" });
+  load(api, false);
+  await settle();
+  const rule = calls.filter((c) => c[0] === "dnr").pop()[1].addRules[0];
+  assert.deepEqual(rule.condition.excludedResponseHeaders, [{ header: "content-disposition", values: ["attachment*"] }]);
+  let id = 300;
+  const offered = async (item) => {
+    const before = natives(calls).length;
+    listeners.determining({ id: id++, referrer: "https://site.test/watch", totalBytes: 1 << 20, ...item }, () => {});
+    await settle();
+    const sent = natives(calls).slice(before);
+    assert.equal(sent.length, 1, `offered: ${JSON.stringify(item)}`);
+    return sent[0];
+  };
+  for (const [url, filename, mime] of [
+    ["https://cdn.test/v/9f3/main.mkv?token=a1", "C:\\dl\\main.mkv", "video/x-matroska"],
+    ["https://cdn.test/v/9f3/MAIN.mp4", "main.mp4", "video/mp4"],
+    // No extension in the address: the browser adds the type's.
+    ["https://cdn.test/v/stream", "stream.mp4", "video/mp4"],
+  ]) {
+    const m = await offered({ url, finalUrl: url, filename, mime });
+    assert.equal(m.nameGuessed, true, url);
+    assert.equal(m.filename, filename.split("\\").pop(), "still sent, for Options' file types");
+  }
+  for (const [url, filename, mime] of [
+    // An attachment's own name, or a link's `download` name.
+    ["https://cdn.test/v/9f3/main.mkv", "Real Movie (2024).mkv", "video/x-matroska"],
+    // Not a type the rule makes a download.
+    ["https://cdn.test/f/main.zip", "main.zip", "application/zip"],
+  ]) {
+    const m = await offered({ url, finalUrl: url, filename, mime });
+    assert.equal(m.nameGuessed, undefined, url);
+    assert.equal(m.filename, filename);
+  }
+  ok("#948 Chromium: a name only the address gave is sent as a guess; the rule keeps attachments");
 }
 
 // Right-click → Download with Mister Download Manager: handed over as an explicit request, so
@@ -2110,8 +2194,113 @@ function samplePage(html) {
   // pointer only crosses aren't), one per video for the page's life; a plain file never.
   assert.ok(fn("startLook").includes('"video-lookup"'), "sent by startLook alone");
   assert.ok(/if \(lookingFor === v\) return;[^]*setTimeout\(\(\) => \{[^]*if \(video === v && v\.isConnected && pill\.classList\.contains\("shown"\)\) startLook\(describeNow\(v\)\);\s*\}, LOOK_DELAY_MS\)/.test(fn("scheduleLook")), "scheduleLook: after LOOK_DELAY_MS, the same video still shown, not put off by each move");
-  assert.ok(fn("startLook").includes("if (usable(kept)) return kept;"), "one look-up per video, kept");
+  assert.ok(fn("startLook").includes("if (usable(kept) && !(byUser && kept.state === \"busy\")) return kept;"), "one look-up per video, kept");
   assert.ok(fn("startLook").includes("!STREAM.test(c.d.src)"), "none for a plain file");
+  // #1053: the pointer resting on the button starts the look-up (REST_MS), a pass over it doesn't;
+  // it is sent once, and the click (or its menu) shares it rather than asking again. Run here on a
+  // clock of the test's own, with startLook, lookOf and usable as video.js has them.
+  {
+    const constant = (name) => {
+      const m = new RegExp(`const ${name} = [^]*?;\\n`).exec(source);
+      assert.ok(m, `video.js has ${name}`);
+      return m[0];
+    };
+    assert.ok(/const REST_MS = (\d+);/.test(source) && +/const REST_MS = (\d+);/.exec(source)[1] >= 150 && +/const REST_MS = (\d+);/.exec(source)[1] <= 250, "REST_MS: 150 to 250 ms");
+    const page = new Function(
+      "send",
+      `const LOOKUP_MS = 60000;
+      ${constant("LOOK_RETRY_MS")}${constant("STREAM")}${constant("REST_MS")}${constant("usable")}
+      const looks = new Map();
+      const location = { href: "https://videos.test/watch?v=1" };
+      const landedAt = location.href;
+      const document = { title: "A talk", querySelector: () => null };
+      const current = null;
+      const menuOpen = false;
+      const render = () => {};
+      const fillMenu = () => {};
+      const within = (p) => p;
+      ${["pollDelay", "followLookup", "replyState", "lookOf", "startLook", "restWait"].map(fn).join("\n")}
+      return { REST_MS, looks, usable, lookOf, startLook, restWait };`,
+    );
+    const asked = [];
+    let answer = { lookup: { state: "pending", token: "t1" } };
+    const w = page((m) => {
+      asked.push(m);
+      return Promise.resolve(answer);
+    });
+    // The page's timers, on the test's clock.
+    let now = 0;
+    let timers = [];
+    let next = 1;
+    const set = (f, ms) => {
+      timers.push({ id: next, at: now + ms, f });
+      return next++;
+    };
+    const clear = (id) => (timers = timers.filter((x) => x.id !== id));
+    const to = (t) => {
+      for (;;) {
+        const due = timers.filter((x) => x.at <= t).sort((a, b) => a.at - b.at)[0];
+        if (!due) break;
+        clear(due.id);
+        now = due.at;
+        due.f();
+      }
+      now = t;
+    };
+    const v = { id: "video" };
+    const c = { v, d: { url: "https://videos.test/watch?v=1", src: "", at: null, drm: false }, key: "https://videos.test/watch?v=1 " };
+    const resting = w.restWait(w.REST_MS, (x) => x === v && w.startLook(c), set, clear);
+    // A pass: over the button and off it again before REST_MS.
+    resting.rest(v);
+    to(w.REST_MS - 50);
+    resting.leave();
+    to(5000);
+    assert.equal(asked.length, 0, "a pass over the button asks nothing");
+    // Resting: nothing before REST_MS (the pointer's moves on it don't start the wait over), then
+    // one look-up.
+    resting.rest(v);
+    to(5000 + w.REST_MS - 100);
+    resting.rest(v);
+    to(5000 + w.REST_MS - 1);
+    assert.equal(asked.length, 0, "not before REST_MS");
+    to(5000 + w.REST_MS);
+    assert.equal(asked.length, 1, "after REST_MS: the look-up");
+    assert.equal(asked[0].type, "video-lookup");
+    to(60000);
+    assert.equal(asked.length, 1, "once");
+    // The click, as download() takes it: the rest's look-up, still running, and no second one.
+    let l = w.lookOf(c);
+    assert.ok(w.usable(l) && l.state === "pending", "the click finds it running");
+    if (!w.usable(l) || l.state === "busy") l = w.startLook(c, true);
+    assert.equal(l, w.looks.get(c.key));
+    assert.equal(w.startLook(c, true), l, "the menu's arrow too");
+    // Off the button and back: rested again, the same look-up.
+    resting.leave();
+    resting.rest(v);
+    to(60000 + w.REST_MS);
+    assert.equal(asked.length, 1, "one look-up per video");
+    assert.ok(/if \(!usable\(l\) \|\| l\.state === "busy"\) l = startLook\(c, true\);/.test(fn("download")), "download: shares the kept look-up");
+    assert.ok(fn("openMenu").includes("if (video) startLook(describeNow(video), true);"), "openMenu: shares it too");
+    // An early look-up the app was too busy for (other videos' running): kept for the rests, which
+    // don't ask again, but the click asks again.
+    const c2 = { v, d: { url: "https://videos.test/watch?v=2", src: "", at: null, drm: false }, key: "https://videos.test/watch?v=2 " };
+    answer = { lookup: { state: "busy" } };
+    const early = w.startLook(c2);
+    await early.done;
+    assert.equal(early.state, "busy");
+    assert.equal(w.startLook(c2), early, "a rest keeps it");
+    answer = { lookup: { state: "pending", token: "t2" } };
+    const clicked = w.startLook(c2, true);
+    assert.notEqual(clicked, early, "the click asks again");
+    assert.equal(asked.length, 3);
+    // A private window: neither the button showing nor resting on it asks; the click and the menu do.
+    assert.ok(source.includes("const PRIVATE = Boolean(ext.extension?.inIncognitoContext);"), "PRIVATE: the browser's word");
+    assert.ok(fn("show").includes("if (!PRIVATE && !usable(looks.get(c.key))) scheduleLook(v);"), "show: not in a private window");
+    assert.ok(/restWait\(\s*REST_MS,\s*\(v\) => \{\s*if \(!PRIVATE && video === v && v\.isConnected && root\.matches\(":hover"\)\) startLook\(describeNow\(v\)\);/.test(source), "resting: not in a private window, the same video, still on the button");
+    assert.ok(/pill\.addEventListener\("pointerenter", \(\) => \{\s*if \(video && !PRIVATE\) resting\.rest\(video\);\s*\}\);\s*pill\.addEventListener\("pointerleave", \(\) => resting\.leave\(\)\);/.test(source), "the pointer on the button rests, off it leaves");
+    assert.ok(fn("hide").includes("resting.leave();") && fn("teardown").includes("resting.leave();"), "hidden or torn down: no rest's look-up after");
+    assert.ok(!/PRIVATE/.test(fn("openMenu")) && !/PRIVATE/.test(fn("download")), "the click and the menu look up in a private window too");
+  }
   // #741: only the pointer really moving shows it (a repeated move, as a browser sends when the
   // page changes under a still pointer on pause or play, doesn't), nor the focus a click gives.
   assert.ok(fn("onMove").startsWith("function onMove(e) {\n    if (e.clientX === pointer.x && e.clientY === pointer.y) return;"), "onMove: a move in place is no move");

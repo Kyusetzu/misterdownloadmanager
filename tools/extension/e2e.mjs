@@ -18,7 +18,8 @@
 // do with each new type, as Waterfox is: caught before its dialog, #208), cookie (cookies and referrer
 // forwarded), names (Content-Disposition), redirect, leadon (a page going to the file by script, #374), form (POST, 303), alt (Alt+click leaves it
 // to the browser: a link, a redirect, a page's script; Firefox's own default too, #332), sites (a listed
-// site's page linking to a file on another host leaves it to the browser, #1049), opened (a PDF or MP3 the browser would show or play), spot (the video button
+// site's page linking to a file on another host leaves it to the browser, #1049), opened (a PDF or MP3 the browser would show or play), openedNames
+// (such a video under its server's name, inline or an attachment, #948), spot (the video button
 // clear of the page's controls, #421), feeds (a video in a feed sends its post, its own file, or
 // nothing and says so, never the feed: sample pages served at LinkedIn's, Facebook's, X's,
 // Instagram's, Reddit's, TikTok's, Vimeo's, Dailymotion's addresses, #689), preview (the video button kept over a hover-to-play
@@ -45,6 +46,7 @@
 // updated while it showed, #336), reconnect (a tab opened while
 // the host couldn't start gets the button once it can, no reload; then MDM started by a click, and
 // reached after it quits and starts again, #474), start (MDM not running: the host starts it),
+// exclude (the toolbar button's "Never take downloads from <site>" says it worked, with Undo, #404),
 // remote (Send downloads to → Another MDM, #157: paired from the popup, a link downloaded by a
 // headless MDM; E2E_REMOTE_URL for one running elsewhere, such as the Docker image: remoteServer).
 //
@@ -271,6 +273,18 @@ const MORE_AT = `function () {
   const r = m && m.getBoundingClientRect();
   return JSON.stringify(r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null);
 }`;
+// The look-ups the browser's button asked of the test instance so far (the host logs each), with
+// when: [ms since the epoch].
+function lookupsLogged() {
+  let text = "";
+  try {
+    text = fs.readFileSync(path.join(data, "logs", "mdm.log"), "utf8");
+  } catch {
+    return [];
+  }
+  return [...text.matchAll(/^(\S+)\s+INFO nmhost .*looked up the qualities of a video/gm)].map((m) => Date.parse(m[1].replace(/(\.\d{3})\d*Z$/, "$1Z")));
+}
+
 // A click on the button's arrow, as a person makes it: the pointer onto it first, a moment (the tab
 // shows its grip as the pointer comes, and keeps its end where it was), then the click where the
 // arrow is now.
@@ -2226,6 +2240,28 @@ const CASES = {
     return `taken, the tab stayed: ${[...done, ...left].join(", ")}`;
   },
 
+  // #948: such a file under the server's own name, not its address's (`main.mp4`, `main.mkv`): one
+  // played inline with "inline; filename=...", which the extension's rule makes a download (the
+  // name goes with the header: MDM reads it from its own answer), and one sent as an attachment
+  // (the rule leaves it, and its name, as they are).
+  async openedNames(t) {
+    if (t.kind === "chromium" && t.session.major < 128) throw new Skip(`${t.name} ${t.session.major}: needs 128 (header conditions)`);
+    const done = [];
+    for (const [at, query, file] of [
+      ["/gen/1M/main.mp4", "inline=1", `e2e-movie-${t.name}.mp4`],
+      ["/gen/1M/main.mkv", "type=video%2Fx-matroska", `e2e-film-${t.name}.mkv`],
+    ]) {
+      await t.session.navigate(`${LAB}/page?link=none`);
+      await t.session.navigate(`${LAB}${at}?${query}&cd=${encodeURIComponent(file)}`, { download: true });
+      await arrived(file, 1 << 20, "Video", 20000);
+      await keptNothing(t.dl);
+      done.push(`${at.split("/").pop()} (${query.split("=")[0]}) as ${file}`);
+    }
+    const wrong = fs.readdirSync(path.join(downloads, "Video")).filter((f) => /^main( \(\d+\))?\.(mp4|mkv)$/.test(f));
+    if (wrong.length) throw new Error(`saved under the address's name too: ${wrong.join(", ")}`);
+    return done.join(", ");
+  },
+
   // The video button on a page whose Content-Security-Policy allows no inline style.
   async csp(t) {
     await t.session.navigate(`${LAB}/page?csp=strict`);
@@ -2681,6 +2717,72 @@ const CASES = {
     }
   },
 
+  // #404: the toolbar button's "Never take downloads from localhost" says it worked, with Undo,
+  // in a real popup: MDM lists the site (its saved Options), the popup opened again says the same,
+  // and Undo takes it off. E2E_SHOTS: <lang>-exclude-offer.png, <lang>-exclude-done.png
+  // (E2E_COLOR_SCHEME: light or dark). E2E_EXCLUDE_BEFORE=1: only the pictures, for an older
+  // popup put in the packed extension (nothing it doesn't have is asked of it).
+  async exclude(t) {
+    if (!t.session.tab || !t.session.base) throw new Skip("the popup in a tab of its own: Chromium's");
+    const shots = process.env.E2E_SHOTS ? path.resolve(process.env.E2E_SHOTS) : "";
+    const lang = process.env.E2E_LANG || "en";
+    const before = process.env.E2E_EXCLUDE_BEFORE === "1";
+    const site = "localhost";
+    const page = `http://${site}:${PORT}/page?title=${encodeURIComponent("Lab downloads")}`;
+    const listed = () => {
+      try {
+        const s = JSON.parse(fs.readFileSync(path.join(data, "downloads.json"), "utf8").replace(/^\uFEFF/, "")).settings;
+        return (s.excluded_sites || "").split(/\s+/).includes(site);
+      } catch {
+        return false;
+      }
+    };
+    if (listed()) throw new Error(`${site} is excluded already`);
+    await t.session.navigate(page);
+    const open = () => t.session.tab(`${t.session.base}popup.html?page=${encodeURIComponent(page)}`);
+    const seen = (popup) =>
+      popup.evaluate(`(() => { const v = (id) => { const e = document.getElementById(id); return e && !e.hidden && e.offsetParent !== null; };
+        return { offer: v("exclude"), offerText: document.getElementById("exclude").textContent, done: v("excluded"),
+          doneText: document.getElementById("excluded-text") ? document.getElementById("excluded-text").textContent : document.getElementById("excluded").textContent,
+          undo: v("undo") }; })()`);
+    const snap = async (popup, name) => {
+      if (shots && popup.shot) await popup.shot(path.join(shots, `${lang}-${name}.png`));
+    };
+    let popup = await open();
+    try {
+      await until("the popup's offer", 10000, async () => (await seen(popup).catch(() => ({}))).offer);
+      await sleep(300);
+      await snap(popup, "exclude-offer");
+      await popup.evaluate(`document.getElementById("exclude").click(), true`);
+      await until(`${site} in MDM's excluded sites`, 10000, listed);
+      await sleep(500);
+      await snap(popup, "exclude-done");
+      if (before) return "pictures only (E2E_EXCLUDE_BEFORE)";
+      const done = await seen(popup);
+      if (done.offer || !done.done || !done.undo) throw new Error(`after the click: ${JSON.stringify(done)}`);
+      if (!done.doneText.includes(site)) throw new Error(`it says "${done.doneText}"`);
+      await popup.close();
+      // Opened again on the site: the same, not the offer.
+      popup = await open();
+      const again = await until("the popup opened again", 10000, async () => {
+        const s = await seen(popup).catch(() => ({}));
+        return (s.done || s.offer) && s;
+      });
+      if (again.offer || !again.undo) throw new Error(`opened again: ${JSON.stringify(again)}`);
+      await popup.evaluate(`document.getElementById("undo").click(), true`);
+      await until(`${site} off MDM's excluded sites`, 10000, () => !listed());
+      const undone = await until("the offer back", 5000, async () => {
+        const s = await seen(popup);
+        return s.offer && !s.done && s;
+      });
+      return `"${done.doneText}" with Undo, also when opened again; Undo took ${site} off (the offer back: "${undone.offerText}")`;
+    } finally {
+      await popup.close();
+      // Never left listed for the next case.
+      if (listed()) await ipc({ include_site: site }).catch(() => {});
+    }
+  },
+
   // #695, #800: a video a server's program sends (/remote_control.php, /stream.php as video/mp4,
   // no Content-Disposition), on a page titled "Lab lecture: week N". The toolbar button's list
   // names it after the page with its type ("Lab lecture week 1.mp4 · MP4", never
@@ -2795,8 +2897,24 @@ const CASES = {
       const state = await until("the stream player", 15000, () => t.session.evaluate("document.body.dataset.stream || ''"));
       if (state !== "done") throw new Error(`the page's player: ${state}`);
       const v = await rect(t.session, "#player");
+      // #1053: the pointer passing over the button (onto it and off the video within a moment)
+      // asks nothing; resting on it asks at once, without the button's own wait over the video
+      // (600 ms), and the arrow's click later shares that look-up.
+      const asked = lookupsLogged().length;
+      if (!(await hover(t.session, v))) throw new Error("no button over the stream's player");
+      const passAt = await t.session.pill(MORE_AT);
+      if (!passAt) throw new Error("no arrow on the button");
+      await t.session.mouse(passAt.x, passAt.y);
+      await t.session.mouse(v.r + 40, v.b + 40);
+      await sleep(1500);
+      if (lookupsLogged().length !== asked) throw new Error("a pass over the button looked the video up");
       const b = await hover(t.session, v);
       if (!b) throw new Error("no button over the stream's player");
+      const restAt = await t.session.pill(MORE_AT);
+      await t.session.mouse(restAt.x, restAt.y);
+      const rested = Date.now();
+      const early = await until("the look-up of the pointer resting on the button", 5000, () => lookupsLogged().slice(asked)[0]);
+      const restMs = early - rested;
       // An earlier browser's downloads of this stream off the list (with their files): the same
       // quality again would be a duplicate, which Options' default asks about.
       const earlier = (await mdmList()).filter((d) => d.url.startsWith(`${LAB}/hls/`)).map((d) => d.id);
@@ -2834,6 +2952,8 @@ const CASES = {
         return p && p.rows.length ? p : null;
       });
       const rowsMs = Date.now() - clicked;
+      if (lookupsLogged().length !== asked + 1) throw new Error(`${lookupsLogged().length - asked} look-ups, not the rest's one shared by the arrow's click`);
+      if (restMs > 500) throw new Error(`the look-up came ${restMs} ms after the pointer rested on the button, not about 200 ms`);
       if (!m.rows.some((r) => r.size)) throw new Error(`no row has a size: ${JSON.stringify(m.rows.map((r) => [r.name, r.size]))}`);
       if (!m.open.text) throw new Error("no \"All qualities and subtitles…\" under the qualities");
       // The arrows move through the menu, and the page's shortcuts don't hear them.
@@ -2886,7 +3006,7 @@ const CASES = {
       if (!green.acts.some((a) => a.act === "show")) throw new Error(`no "Show": ${JSON.stringify(green)}`);
       if (appWindows(pid).includes(VIDEO_WINDOW)) throw new Error("the click opened the Download video window");
       const list = (rs) => rs.map((r) => `${r.name}${r.size ? ` ${r.size}` : ""}`).join(", ");
-      return `chip "${chipped.chip}"; the click: ${best.file} (${green.text} · Show); ${looked ? "looking, then " : ""}VIDEO ${pictures.rows.length} (${list(pictures.rows)}), AUDIO ${sounds.rows.length} (${list(sounds.rows)}); "${row.name}" picked: ${item.file} (${item.status}) with its progress window "${opened}" only, the main window hidden; click to rows ${rowsMs} ms, pick to first progress ${startMs} ms`;
+      return `chip "${chipped.chip}"; the click: ${best.file} (${green.text} · Show); ${looked ? "looking, then " : ""}VIDEO ${pictures.rows.length} (${list(pictures.rows)}), AUDIO ${sounds.rows.length} (${list(sounds.rows)}); "${row.name}" picked: ${item.file} (${item.status}) with its progress window "${opened}" only, the main window hidden; click to rows ${rowsMs} ms, pick to first progress ${startMs} ms; a pass over the button asked nothing, resting on it asked ${restMs} ms later, once`;
     } finally {
       // The next case starts MDM as usual.
       await stopApp();
@@ -2970,7 +3090,9 @@ const CASES = {
   // menu shows, then, with E2E_VIDEO_PICK=<a pattern of a line's words>, that line picked and
   // downloaded to its end, its file's size beside the line's (#801: the size shown is the size
   // that comes). E2E_SHOTS as in `qualities`: <lang>-page-list.png (the menu), page-pick.png
-  // (the line about to be picked, scrolled to).
+  // (the line about to be picked, scrolled to). E2E_PAGE_REST=<ms> times the click instead (#1053):
+  // the pointer goes over the video and straight onto the button's arrow, rests there that long
+  // and clicks; how long from the click to the qualities is the case's answer.
   async page(t) {
     const address = process.env.E2E_VIDEO_PAGE;
     if (!address) throw new Skip("no E2E_VIDEO_PAGE");
@@ -2983,9 +3105,35 @@ const CASES = {
     try {
       await until("the test instance, in the notification area", 20000, () => mdmList().then(() => true, () => false));
       await t.session.navigate(address);
+      // Timing the click: the video playing, as a person watching it would have it (a player
+      // that waits for its play button shows no picture before).
+      if (process.env.E2E_PAGE_REST) {
+        await until("the page's video", 30000, () => rect(t.session, "video"));
+        await t.session.evaluate("(() => { const v = document.querySelector('video'); v.muted = true; v.play().catch(() => {}); return 0; })()");
+        await sleep(2000);
+      }
       const v = await until("the page's video", 30000, () => rect(t.session, "video"));
-      const b = await hover(t.session, v);
+      // A heavy page (YouTube) may still be busy at the first try.
+      const b = (await hover(t.session, v)) || (await hover(t.session, v));
       if (!b) throw new Error("no button over the page's video");
+      const rest = process.env.E2E_PAGE_REST;
+      if (rest) {
+        const at = await t.session.pill(MORE_AT);
+        if (!at) throw new Error("no arrow on the button");
+        await t.session.mouse(at.x, at.y);
+        await sleep(Number(rest));
+        await t.session.mouse(at.x, at.y, "click");
+        const clicked = Date.now();
+        // Asked every 50 ms (`until`'s quarter second would blur the time).
+        for (;;) {
+          const p = await t.session.picks("row");
+          if (p && !p.busy && !p.rows.length) throw new Error(`the menu shows no qualities: "${p.note}"`);
+          // Done looking (the lines under "Download best" are there).
+          if (p && !p.busy && p.rows.length) return `on the button ${rest} ms, click to ${p.rows.length - 1} qualities ${Date.now() - clicked} ms`;
+          if (Date.now() - clicked > 120000) throw new Error("timed out: the qualities in the menu");
+          await sleep(50);
+        }
+      }
       await until("the best quality on the button's chip", 120000, async () => {
         const p = await t.session.pill(PILL_STATE);
         return p && p.state === "ready" && p.chip ? p : null;

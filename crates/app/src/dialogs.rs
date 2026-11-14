@@ -1559,7 +1559,8 @@ impl FileInfo {
                 }
 
                 // Where the server is (#140), as the look saw it: "..." while it looks; blank when
-                // nothing was asked (the browser had the answer) or the look failed.
+                // nothing was asked (the browser had the answer). When the look failed, why, in
+                // words (#762: a refused certificate said so), where the size says "Error".
                 // i18n: label before where a download's server is (its country and round trip)
                 winui::text_right(
                     &p,
@@ -1590,7 +1591,17 @@ impl FileInfo {
                             );
                         }
                     }
-                    Some(Err(_)) => {}
+                    Some(Err(reason)) => {
+                        let (rect, cut) = winui::text_fit(
+                            &p,
+                            o.x + 96.0,
+                            o.y + 193.0 + dy,
+                            reason,
+                            winui::ERROR(),
+                            o.x + 462.0,
+                        );
+                        winui::copyable(ui, rect, "file-info-failed", reason, cut);
+                    }
                 }
 
                 // Held back while the address or the file's name can't be downloaded to (an

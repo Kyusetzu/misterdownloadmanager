@@ -564,6 +564,28 @@ Bug fixes from the first days of 0.5.0, a Safari extension, and more file types.
 
 These ship in the next version.
 
+- ✅ MediaFire: a download resumed after its address expired asks the file's MediaFire page for a
+  fresh one and goes on; a MediaFire file page's link downloads the file
+  ([#952](https://github.com/anefzaoui/misterdownloadmanager/issues/952))
+- ✅ Chromium browsers: a video (or a PDF, an MP3) the browser would play, taken by MDM, keeps
+  the name its server gives it instead of its address's (`main.mkv`)
+  ([#948](https://github.com/anefzaoui/misterdownloadmanager/issues/948))
+- ✅ A download refused for its site's security certificate says why (expired, not trusted, for
+  another name) instead of a bare **Error** (follows [#762](https://github.com/anefzaoui/misterdownloadmanager/issues/762))
+- ✅ **Options → Downloads → Customize "Download progress" dialog → Edit...** works: it can turn
+  off the progress window that opens when a download starts; the button was greyed and did
+  nothing ([#1041](https://github.com/anefzaoui/misterdownloadmanager/issues/1041))
+- ✅ The browser popup's **Never take downloads from <site>** says it worked, with **Undo**
+  ([#404](https://github.com/anefzaoui/misterdownloadmanager/issues/404))
+- ✅ A download to a disk slower than the network no longer stands still for a second or more
+  just after it starts (a second save of its progress came too soon after the first); a server
+  whose name the DNS doesn't answer in time says it couldn't be found, not that it didn't answer.
+  Two tests that failed now and then on macOS check both without the network or the runner's speed
+  ([#782](https://github.com/anefzaoui/misterdownloadmanager/issues/782))
+- ✅ Linux, Wayland: MDM chooses its windows' system the same way however it starts (its menu
+  entry, the browser's helper, autostart): Wayland's own windows on a scaled screen where nothing
+  tells X11 programs the scale (Hyprland, labwc, sway), XWayland elsewhere; **View → Window
+  system** to choose ([#624](https://github.com/anefzaoui/misterdownloadmanager/issues/624))
 - ✅ The sites in **Don't start downloading automatically from the following sites** take their
   subdomains and the files their pages link to on another server (a CDN), as the Download panels'
   list does
@@ -574,6 +596,10 @@ These ship in the next version.
 - ✅ Windows with Direct3D 12: the progress window no longer flashes a stretched picture when
   Show details or Hide details changes its size
   ([#471](https://github.com/anefzaoui/misterdownloadmanager/issues/471))
+- ✅ Videos looked up about a second sooner on Windows (yt-dlp's folder build, which doesn't unpack
+  itself at every start), and the video button's look-up starts once the pointer rests on it;
+  in a private window only on the click (for
+  [#1053](https://github.com/anefzaoui/misterdownloadmanager/issues/1053))
 - ✅ Extracting archives: the size limit covers every entry, also the ones left out, and
   cancelling stops there too
   (part of [#37](https://github.com/anefzaoui/misterdownloadmanager/issues/37))
@@ -1031,6 +1057,12 @@ These ship in the next version.
 - ✅ Linux on Wayland (XWayland) with NVIDIA's driver: typing and clicking no longer lag by 1 to 2
   seconds; MDM spaces its frames itself instead of waiting for the screen's refresh (other drivers
   keep the refresh)
+- ✅ The computer stays awake while anything downloads, not only during a queue that woke it, and
+  sleeps as its settings say once the downloads are done
+  ([#939](https://github.com/anefzaoui/misterdownloadmanager/issues/939))
+- ✅ macOS: a menu whose item opens a file dialog (View → Theme → Add a theme file, Tasks → Open
+  torrent file) closes first, instead of floating on top of every window until MDM quits
+  ([#615](https://github.com/anefzaoui/misterdownloadmanager/issues/615))
 - ✅ Download video works behind an antivirus or a proxy that reads HTTPS: yt-dlp is asked again
   with the system's certificates when it refuses a site's
   ([#955](https://github.com/anefzaoui/misterdownloadmanager/issues/955))
@@ -1047,12 +1079,15 @@ These ship in a later version, when they're ready.
 - 🔄 Linux, what's left ([#164](https://github.com/anefzaoui/misterdownloadmanager/issues/164)):
   screen readers (Orca) reading MDM's windows; browsers installed as a Flatpak (Firefox from
   Flathub may reach MDM through the desktop, as the Snap does: to check); native Wayland windows
-  (`MDM_WAYLAND=1`) placing their menus, which needs popup windows the window library doesn't
-  have yet, so XWayland stays the default; Vulkan as the default renderer (below)
+  placing their menus, which needs popup windows the window library doesn't have yet, so
+  XWayland stays the default unless X11's windows would be scaled up (#624); Vulkan as the
+  default renderer (below)
 - 🔄 The Safari extension (in 0.5.2): still to check in Safari itself, signed with a Developer ID
 
 ### Bugs being looked into
 
+- 🔍 A look-up that waits 20 s on a video server the network doesn't answer
+  ([#1053](https://github.com/anefzaoui/misterdownloadmanager/issues/1053))
 - 🔍 The main window's own looks at the disk on a drive slow to answer: starting or resuming a
   download that was already under way, a rename or move when one finishes, and links added
   without Download File Info still wait for it (follows

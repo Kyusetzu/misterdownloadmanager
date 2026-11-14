@@ -4,7 +4,7 @@
 
 ## The progress window
 
-Each running download has its own progress window. It opens when the download starts; to open it again, double-click the download in the list.
+Each running download has its own progress window. It opens when the download starts (unless you turned that off in **Options → Downloads → Customize "Download progress" dialog → Edit...**); to open it again, double-click the download in the list.
 
 ![The progress window](images/progress.webp)
 

@@ -4940,9 +4940,80 @@ pub fn file_dialog(title: &str) -> rfd::FileDialog {
 /// A system file or folder dialog's answer, from its thread.
 type PickSlot = std::sync::Arc<std::sync::Mutex<Option<Option<std::path::PathBuf>>>>;
 
+/// System dialogs asked for and not shown yet ([`start_pick`]), each its thread's work.
+type PendingPicks = std::sync::Arc<std::sync::Mutex<Vec<Box<dyn FnOnce() + Send>>>>;
+
+fn pending_picks_key() -> egui::Id {
+    egui::Id::unique("pending-system-dialogs")
+}
+
+fn menu_frame_key() -> egui::Id {
+    egui::Id::unique("menu-drawn-in-frame")
+}
+
+/// The main window's frame being drawn: every window of ours is drawn in it (they are all
+/// immediate viewports), so it is the app's one clock.
+fn root_frame(ctx: &egui::Context) -> u64 {
+    ctx.cumulative_frame_nr_for(egui::ViewportId::ROOT)
+}
+
+/// A menu's window is drawn in this frame (`chrome::popup_level`): no system dialog starts
+/// before it is gone ([`start_pick`]).
+pub fn menu_drawn(ctx: &egui::Context) {
+    let frame = root_frame(ctx);
+    ctx.data_mut(|d| d.insert_temp(menu_frame_key(), frame));
+}
+
+/// Whether a system dialog may start as the main window's frame `frame` begins, a menu last
+/// drawn in `menu_frame`: none was drawn in the frame before, so the end of that frame closed
+/// every menu's window (eframe closes a viewport's window at the end of the first frame that
+/// doesn't draw it).
+fn menus_gone(menu_frame: Option<u64>, frame: u64) -> bool {
+    menu_frame.is_none_or(|m| m + 1 < frame)
+}
+
+/// Starts the system dialogs [`start_pick`] asked for, as a frame of the main window begins,
+/// once no menu's window is left.
+struct PickStarter;
+
+impl egui::Plugin for PickStarter {
+    fn debug_name(&self) -> &'static str {
+        "mdm-system-dialogs"
+    }
+
+    fn on_begin_pass(&mut self, ui: &mut Ui) {
+        let ctx = ui.ctx();
+        if ctx.viewport_id() != egui::ViewportId::ROOT {
+            return;
+        }
+        let Some(pending) = ctx.data(|d| d.get_temp::<PendingPicks>(pending_picks_key())) else {
+            return;
+        };
+        let mut jobs = pending.lock().unwrap();
+        if jobs.is_empty() {
+            return;
+        }
+        let menu = ctx.data(|d| d.get_temp::<u64>(menu_frame_key()));
+        if !menus_gone(menu, root_frame(ctx)) {
+            // The frame that closes the menu, then this one again.
+            ctx.request_repaint();
+            return;
+        }
+        for job in jobs.drain(..) {
+            std::thread::spawn(job);
+        }
+    }
+}
+
 /// Show a system Open / Save / folder dialog (`ask` builds and runs it) on a thread of its
 /// own: it blocked the app's windows while open (progress windows stood still). One per
 /// `key` at a time; [`picked`] gives its answer on a later frame.
+///
+/// It starts once every menu is closed (#615): a menu item is chosen in a frame that still
+/// draws its menu, whose window closes only at the end of the next frame. On macOS the dialog
+/// runs in a modal loop on the app's main thread (rfd hands it there), which began before that
+/// frame: the menu's window stayed on top of every window until MDM quit. Every system dialog
+/// starts here, so every menu item that opens one closes its menus first, on every system.
 pub fn start_pick(
     ctx: &egui::Context,
     key: &str,
@@ -4955,11 +5026,20 @@ pub fn start_pick(
     let slot: PickSlot = Default::default();
     ctx.data_mut(|d| d.insert_temp(id, slot.clone()));
     let wake = ctx.clone();
-    std::thread::spawn(move || {
+    let job = move || {
         let answer = ask();
         *slot.lock().unwrap() = Some(answer);
         wake.request_repaint();
+    };
+    let pending = ctx.data_mut(|d| {
+        d.get_temp_mut_or_default::<PendingPicks>(pending_picks_key())
+            .clone()
     });
+    pending.lock().unwrap().push(Box::new(job));
+    // Added once: a second plugin of a type is ignored.
+    ctx.add_plugin(PickStarter);
+    // Started as the main window's next frame begins (PickStarter).
+    ctx.request_repaint_of(egui::ViewportId::ROOT);
 }
 
 /// The path chosen in [`start_pick`]'s dialog `key`, once (None while it is open, or when it

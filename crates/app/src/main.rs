@@ -391,8 +391,9 @@ fn app() -> eframe::Result {
     };
     #[cfg(windows)]
     win32::mark_running();
-    // Started with the session (#226): in the notification area, not in front.
-    let start = start_mode(cmd.as_ref().is_some_and(|c| c.startup), can_hide());
+    // Started with the session (#226): read before the command goes to the channel; the start's
+    // mode once the window system is known (below).
+    let at_login = cmd.as_ref().is_some_and(|c| c.startup);
     // This launch is MDM: its fonts are looked up while the rest starts (only the instance pays
     // for them, not a launch that hands its command over).
     theme::prepare_fonts();
@@ -458,6 +459,8 @@ fn app() -> eframe::Result {
     #[cfg(target_os = "linux")]
     {
         i18n::set_lang(loaded.settings.language.as_deref());
+        // View → Window system's choice (#624): the same however MDM was started.
+        unix::set_window_system_pick(loaded.settings.window_system);
         let ws = unix::window_system();
         if !ws.missing.is_empty() {
             crash::clean_exit();
@@ -470,6 +473,9 @@ fn app() -> eframe::Result {
             tracing::warn!("{text}");
         }
     }
+    // Started with the session (#226): in the notification area, not in front, where a window
+    // can be hidden (Linux: known once the window system is chosen above, with the saved choice).
+    let start = start_mode(at_login, can_hide());
     // Secrets from before (sealed, or kept as they were) go to the system's keychain now; the
     // list is saved with their references once it holds them (secrets.rs, #44).
     let _ = loaded.settings.for_disk();

@@ -1357,6 +1357,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Pannelli tat-tniżżil
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Kaxxa tad-djalogu tal-progress tat-tniżżil
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2752,6 +2756,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager sab żball intern
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager qed iniżżel
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4021,6 +4029,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Uri djalogu ta' tniżżil komplut
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Uri l-kaxxa tad-djalogu tal-progress tat-tniżżil meta jibda tniżżil
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4739,10 +4750,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Il-kontroll tal-bot tas-sit (Cloudflare) irrifjuta lil yt-dlp. Jekk il-paġna tiftaħ fil-browser tiegħek, agħżel dak il-browser f'Għażliet → Logins tas-siti → Cookies għas-siti tal-vidjow u erġa' fittex il-paġna, jew uża l-buttuna Niżżel il-vidjow fuq il-vidjow.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	iċ-ċertifikat tas-sigurtà tas-sit skada, għalhekk MDM ma jistax ikun ċert li huwa s-sit reali (il-browser tiegħek iwissi dwaru wkoll)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	iċ-ċertifikat tas-sigurtà tas-sit huwa għal isem ta' sit ieħor, għalhekk MDM ma jistax ikun ċert li huwa s-sit reali (il-browser tiegħek iwissi dwaru wkoll)
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	iċ-ċertifikat tas-sigurtà tas-sit mhuwiex fdat (huwa self-signed jew minn emittent mhux magħruf), għalhekk MDM ma jistax ikun ċert li huwa s-sit reali (il-browser tiegħek iwissi dwaru wkoll)
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	iċ-ċertifikat tas-sigurtà tas-sit għadu mhux validu: iċċekkja d-data u l-ħin ta' dan il-kompjuter
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	iċ-ċertifikat tas-sigurtà tas-sit ġie rrifjutat, għalhekk MDM ma jistax ikun ċert li huwa s-sit reali
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	iċ-ċertifikat tas-sigurtà tas-sit ġie revokat mill-emittent tiegħu, għalhekk MDM mhux se jafdaha
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Iċ-ċertifikat tas-sit mhuwiex fdat, la minn yt-dlp u lanqas minn dan il-kompjuter: filtru tal-web ta' antivirus jew proxy li jaqra l-HTTPS jista' jkun qed ifixkel. Itfi l-iskannjar tal-HTTPS tiegħu, jew żid iċ-ċertifikat tiegħu mal-kompjuter, imbagħad erġa' fittex il-paġna.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	iċ-ċertifikat tas-sigurtà tas-sit mhuwiex maħsub għall-websajts, għalhekk MDM ma jistax ikun ċert li dan huwa s-sit reali
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5456,6 +5495,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Meta
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Meta tkun mitfija, it-tniżżil ikompli fil-lista tat-tieqa prinċipali. Ikklikkja darbtejn fuq waħda hemm biex tara l-progress tagħha.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Daqs tal-wildcard
@@ -6381,6 +6423,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Ixgħel
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Ħoll
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Aġġorna Mister Download Manager biex tuża dak kollu li toffri din l-estensjoni
@@ -6513,10 +6559,10 @@ menu	&About Mister Download Manager	&Dwar Mister Download Manager
 #, machine
 menu	&Add new download	&Żid tniżżil ġdid
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	Żid tniżżil &ġdid...
+menu	&Automatic	A&wtomatiku
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6622,11 +6668,6 @@ menu	&Stop All	&Waqqaf Kollha
 #, machine
 menu	&Stop Download	&Waqqaf it-Tniżżil
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Test
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	Ikona tat-&trej
@@ -6643,6 +6684,21 @@ menu	&Undo	&Ħoll
 #, machine
 menu	&Video downloads	Tniżżil ta' &vidjows
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	Sistema tat-twieqi (&T)
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	Żid tniżżil ta' &lott
@@ -6651,6 +6707,11 @@ menu	Add &batch download	Żid tniżżil ta' &lott
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	Żid link tal-&magnet...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	Żid tniżżil &ġdid...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -6866,6 +6927,14 @@ menu	Hide drop target	Aħbi l-mira tal-waqgħa
 #, machine
 menu	High contrast	Kuntrast qawwi
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	Qed tintuża: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	Qed tintuża: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Ma setax jibda: il-log jgħid għaliex
@@ -7056,6 +7125,11 @@ menu	Stop Download	Waqqaf it-Tniżżil
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	Appoġġja lil &MDM
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Test
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine

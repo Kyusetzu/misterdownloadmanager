@@ -1423,6 +1423,10 @@
 #. window title: the download button the extension shows over videos
 #, machine
 	Download panels	Download-Bedienfelder
+#. window title in the Options window
+#. window title: Options → Downloads → Edit... (the progress window's settings)
+#, machine
+	Download progress dialog	Download-Fortschrittsdialog
 #. text in rssdlg.rs
 #. RSS feeds window: the tab of the rules that add articles by themselves
 #, machine
@@ -2843,6 +2847,10 @@
 #, machine
 	Mister Download Manager hit an internal error	Mister Download Manager ist auf einen internen Fehler gestoßen
 #. text in wake.rs
+#. why the computer isn't going to sleep, in the system's list of programs that keep it awake (Windows' power requests, Linux's inhibitors)
+#, machine
+	Mister Download Manager is downloading	Mister Download Manager lädt herunter
+#. text in wake.rs
 #. why the computer isn't going to sleep, in the system's list of programs that keep it awake; {queue} = the queue's name
 #. {queue} = a queue name such as "Main queue" (keep the braces as they are)
 #, machine
@@ -4128,6 +4136,9 @@
 #. checkbox in the Options window; checkbox in a download's progress window
 #, machine
 	Show download complete dialog	Dialogfeld „Download abgeschlossen“ anzeigen
+#. checkbox in the Options window
+#, machine
+	Show download progress dialog when a download starts	Download-Fortschrittsdialog anzeigen, wenn ein Download startet
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4862,10 +4873,38 @@
 #. the Download video window: the site's bot check (Cloudflare) turned yt-dlp away and no browser cookies were used
 #, machine
 	The site's bot check (Cloudflare) refused yt-dlp. If the page opens in your browser, choose that browser in Options → Sites Logins → Cookies for video sites and look the page up again, or use the Download video button over the video.	Die Bot-Überprüfung der Website (Cloudflare) hat yt-dlp abgelehnt. Wenn die Seite in Ihrem Browser geöffnet wird, wählen Sie diesen Browser unter „Optionen → Website-Anmeldungen → Cookies für Videoseiten“ aus und rufen Sie die Seite erneut auf, oder verwenden Sie die Schaltfläche „Video herunterladen“ über dem Video.
+#. text in errors.rs
+#. why a download failed: the site's security certificate (what proves a secure, HTTPS, site is the one it says) is past its end date. Browsers warn about the same site
+#, machine
+	the site's security certificate has expired, so MDM can't be sure it's the real site (your browser warns about it too)	Das Sicherheitszertifikat der Website ist abgelaufen, daher kann MDM nicht sicher sein, dass es die echte Website ist (Ihr Browser warnt ebenfalls davor).
+#. text in errors.rs
+#. why a download failed: the site's security certificate was made for other site names than the one in the address
+#, machine
+	the site's security certificate is for another site name, so MDM can't be sure it's the real site (your browser warns about it too)	Das Sicherheitszertifikat der Website ist für einen anderen Domainnamen ausgestellt, daher kann MDM nicht sicher sein, dass es sich um die tatsächliche Website handelt (Ihr Browser warnt ebenfalls davor).
+#. text in errors.rs
+#. why a download failed: the site's security certificate was signed by the site itself or by an issuer this computer doesn't trust. Browsers warn about the same site
+#, machine
+	the site's security certificate isn't trusted (it's self-signed or from an unknown issuer), so MDM can't be sure it's the real site (your browser warns about it too)	Das Sicherheitszertifikat der Website ist nicht vertrauenswürdig (es ist selbstsigniert oder von einem unbekannten Aussteller), daher kann MDM nicht sicher sein, dass es die echte Website ist (Ihr Browser warnt ebenfalls davor).
+#. text in errors.rs
+#. why a download failed: the site's security certificate's validity hasn't begun; usually this computer's date or time is wrong
+#, machine
+	the site's security certificate isn't valid yet: check this computer's date and time	Das Sicherheitszertifikat der Website ist noch nicht gültig: Überprüfen Sie Datum und Uhrzeit dieses Computers.
+#. text in errors.rs
+#. why a download failed: the site's security certificate was refused for another reason (a bad signature, a broken certificate)
+#, machine
+	the site's security certificate was refused, so MDM can't be sure it's the real site	Das Sicherheitszertifikat der Website wurde abgelehnt, daher kann MDM nicht sicher sein, dass es die echte Website ist.
+#. text in errors.rs
+#. why a download failed: the issuer of the site's security certificate took it back
+#, machine
+	the site's security certificate was revoked by its issuer, so MDM won't trust it	Das Sicherheitszertifikat der Website wurde vom Aussteller widerrufen, daher wird MDM ihm nicht vertrauen.
 #. text in the Download video window
 #. the Download video window: the site's certificate is trusted neither by yt-dlp nor by the computer (asked again with the computer's certificates, #955); usually an antivirus or a proxy that reads secure (HTTPS) connections signs sites with a certificate of its own
 #, machine
 	The site's certificate isn't trusted, by yt-dlp nor by this computer: an antivirus's web filter or a proxy that reads HTTPS may be in the way. Turn its HTTPS scanning off, or add its certificate to the computer's, then look the page up again.	Das Zertifikat der Website wird weder von yt-dlp noch von diesem Computer als vertrauenswürdig eingestuft: Möglicherweise blockiert der Webfilter eines Antivirenprogramms oder ein Proxy, der HTTPS-Verbindungen liest, die Verbindung. Deaktivieren Sie die HTTPS-Überprüfung oder fügen Sie das Zertifikat des Programms zu den Zertifikaten des Computers hinzu, und rufen Sie die Seite dann erneut auf.
+#. text in errors.rs
+#. why a download failed: the site's security certificate is made for other uses than a website (its "extended key usage" leaves out web servers)
+#, machine
+	the site's security certificate isn't made for websites, so MDM can't be sure it's the real site	Das Sicherheitszertifikat der Website ist nicht für Websites ausgestellt, daher kann MDM nicht sicher sein, dass es sich um die echte Website handelt
 #. text in crashui.rs
 #. crash report window: the symbols couldn't be downloaded; the report still works
 #, machine
@@ -5591,6 +5630,9 @@
 #. remote control page (on a phone): label of the choice: start the new download now, or let it wait in a queue
 #, machine
 	When	Wann
+#. text in the Options window
+#, machine
+	When it is off, downloads go on in the main window's list. Double-click one there to see its progress.	Wenn diese Option deaktiviert ist, werden Downloads in der Liste des Hauptfensters fortgesetzt. Doppelklicken Sie dort auf einen Download, um dessen Fortschritt anzuzeigen.
 #. text in the Batch download window
 #, machine
 	Wildcard size	Platzhaltergröße
@@ -6516,6 +6558,10 @@ extension	This page's player streams its video in pieces, so there's no file to 
 #, machine
 extension	Turn on	Aktivieren
 #. text in the browser extension
+#. link beside "Downloads from <site> stay with the browser" in the toolbar button's popup: take the site off the excluded sites again
+#, machine
+extension	Undo	Rückgängig
+#. text in the browser extension
 #. status when the app is older than the extension; keep the name Mister Download Manager as it is
 #, machine
 extension	Update Mister Download Manager to use everything this extension offers	Aktualisieren Sie Mister Download Manager, um alle Funktionen dieser Erweiterung nutzen zu können
@@ -6648,10 +6694,10 @@ menu	&About Mister Download Manager	Ü&ber Mister Download Manager
 #, machine
 menu	&Add new download	Neue&n Download hinzufügen
 #. menu command in the main window
+#. View → Window system: MDM chooses the window system itself at each start
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#. the trailing ... means it opens a window: keep it
 #, machine
-menu	Add &new download...	&Neuen Download hinzufügen...
+menu	&Automatic	Automa&tisch
 #. menu command in the main window
 #. View → Text: letters drawn the classic way, hinted to whole pixels (crisp, coarse on a dense screen)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
@@ -6757,11 +6803,6 @@ menu	&Stop All	Alle &stoppen
 #, machine
 menu	&Stop Download	Download &stoppen
 #. menu command in the main window
-#. View menu: submenu choosing how the text is drawn (smooth or classic)
-#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
-#, machine
-menu	Te&xt	&Text
-#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	&Tray icon	&Taskleistensymbol
@@ -6778,6 +6819,21 @@ menu	&Undo	&Rückgängig
 #, machine
 menu	&Video downloads	&Video-Downloads
 #. menu command in the main window
+#. View → Window system: Wayland's own windows (the name of a Linux display system, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Wayland	&Wayland
+#. menu command in the main window
+#. View menu: submenu choosing the window system MDM's windows use on Linux (X11 through XWayland, or Wayland)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&Window system	&Fenstersystem
+#. menu command in the main window
+#. View → Window system: X11's windows, through XWayland in a Wayland session (names of Linux display systems, usually kept as is)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	&X11 (XWayland)	&X11 (XWayland)
+#. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Add &batch download	&Batch-Download hinzufügen
@@ -6786,6 +6842,11 @@ menu	Add &batch download	&Batch-Download hinzufügen
 #. the trailing ... means it opens a window: keep it
 #, machine
 menu	Add &magnet link...	&Magnet-Link hinzufügen...
+#. menu command in the main window
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#. the trailing ... means it opens a window: keep it
+#, machine
+menu	Add &new download...	&Neuen Download hinzufügen...
 #. menu command in the main window
 #. View → Theme: picks a theme file or a Base16 or pywal colour scheme, copies it into the themes folder and uses it
 #, machine
@@ -7001,6 +7062,14 @@ menu	Hide drop target	Ablageziel ausblenden
 #, machine
 menu	High contrast	Hoher Kontrast
 #. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are Wayland's now
+#, machine
+menu	In use: Wayland	In Verwendung: Wayland
+#. menu command in the main window
+#. View → Window system: a greyed note; MDM's windows are X11's (through XWayland) now
+#, machine
+menu	In use: X11 (XWayland)	In Verwendung: X11 (XWayland)
+#. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: another error, written in MDM's log
 #, machine
 menu	It couldn't start: the log says why	Es konnte nicht gestartet werden: Im Protokoll steht der Grund
@@ -7191,6 +7260,11 @@ menu	Stop Download	Download stoppen
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Support &MDM	MDM &unterstützen
+#. menu command in the main window
+#. View menu: submenu choosing how the text is drawn (smooth or classic)
+#. & marks the keyboard shortcut letter: keep one & before a letter of the translation
+#, machine
+menu	Te&xt	&Text
 #. menu command in the main window
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
