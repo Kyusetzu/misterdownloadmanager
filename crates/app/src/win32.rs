@@ -6952,3 +6952,92 @@ mod classic_text_tests {
         assert!(g.glyph(&req("a", &other, 12.0), false, false).is_none());
     }
 }
+
+/// Global shortcut registration via Win32 `RegisterHotKey` on a dedicated message-queue thread (#558).
+pub struct GlobalHotKeyOs {
+    thread_id: std::sync::Arc<std::sync::atomic::AtomicU32>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl GlobalHotKeyOs {
+    pub fn register(
+        shortcut: crate::hotkey::Shortcut,
+        fired: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        taken: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        ctx: egui::Context,
+    ) -> Option<Self> {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+        use windows_sys::Win32::System::Threading::GetCurrentThreadId;
+        use windows_sys::Win32::UI::Input::KeyboardAndMouse::{RegisterHotKey, UnregisterHotKey};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GetMessageW, MSG, PM_NOREMOVE, PeekMessageW, WM_HOTKEY,
+        };
+
+        let thread_id = Arc::new(AtomicU32::new(0));
+        let stop = Arc::new(AtomicBool::new(false));
+        let tid_clone = thread_id.clone();
+        let stop_clone = stop.clone();
+        let vk = shortcut.key.win32_vk();
+        let mods = shortcut.win32_modifiers();
+        let handle = std::thread::Builder::new()
+            .name("mdm-global-hotkey".into())
+            .spawn(move || {
+                // SAFETY: creates the thread's message queue (`PeekMessageW` with `PM_NOREMOVE`)
+                // before publishing `thread_id`, so `PostThreadMessageW(WM_QUIT)` from `Drop`
+                // never targets a thread without a queue; clears `thread_id` if `RegisterHotKey`
+                // fails or when the message loop ends.
+                unsafe {
+                    let mut msg: MSG = zeroed();
+                    PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_NOREMOVE);
+                    tid_clone.store(GetCurrentThreadId(), Ordering::SeqCst);
+                    if stop_clone.load(Ordering::SeqCst) {
+                        tid_clone.store(0, Ordering::SeqCst);
+                        return;
+                    }
+                    if RegisterHotKey(std::ptr::null_mut(), 1, mods, vk) == 0 {
+                        tid_clone.store(0, Ordering::SeqCst);
+                        taken.store(true, Ordering::SeqCst);
+                        ctx.request_ui_pass(egui::ViewportId::ROOT);
+                        ctx.request_repaint();
+                        return;
+                    }
+                    while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
+                        if msg.message == WM_HOTKEY {
+                            fired.store(true, Ordering::SeqCst);
+                            ctx.request_ui_pass(egui::ViewportId::ROOT);
+                            ctx.request_repaint();
+                        }
+                    }
+                    let _ = UnregisterHotKey(std::ptr::null_mut(), 1);
+                    tid_clone.store(0, Ordering::SeqCst);
+                }
+            })
+            .ok()?;
+        Some(Self {
+            thread_id,
+            stop,
+            handle: Some(handle),
+        })
+    }
+}
+
+impl Drop for GlobalHotKeyOs {
+    fn drop(&mut self) {
+        use std::sync::atomic::Ordering;
+        use windows_sys::Win32::UI::WindowsAndMessaging::{PostThreadMessageW, WM_QUIT};
+
+        self.stop.store(true, Ordering::SeqCst);
+        let tid = self.thread_id.swap(0, Ordering::SeqCst);
+        if tid != 0 {
+            // SAFETY: posts `WM_QUIT` to our own hotkey listener thread whose message queue exists.
+            unsafe {
+                let _ = PostThreadMessageW(tid, WM_QUIT, 0, 0);
+            }
+        }
+        if let Some(h) = self.handle.take() {
+            let _ = h.join();
+        }
+    }
+}

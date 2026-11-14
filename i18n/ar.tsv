@@ -5722,3 +5722,7 @@ unit	{n} MB	{n} ميغابايت
 #. unit after a number in the download list (sizes, speeds, status)
 #. {n} = a number (keep the braces as they are)
 unit	{n} MB/sec	{n} ميغابايت/ثانية
+	Shortcut to show or hide window:	اختصار إظهار أو إخفاء النافذة:
+	Press keys...	اضغط المفاتيح...
+	This shortcut is already in use	هذا الاختصار قيد الاستخدام بالفعل
+	Windows and macOS	Windows و macOS

@@ -745,7 +745,7 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Christmas Island	Christmas Island
-#. button in the download list
+#. button in the download list; button in the Options window
 #. verb: clears this filter
 	Clear	Clear
 #. message or event log entry in the main window; window title in cnl.rs
@@ -2338,7 +2338,7 @@
 	No video this can download on that page	No video this can download on that page
 #. message or event log entry in the main window
 	No web addresses were found in {file}.	No web addresses were found in {file}.
-#. text in the Download video window
+#. text in the Options window; text in the Download video window
 #. in the Subtitles list of Download video: download no subtitles
 	None	None
 #. text in the Download video window
@@ -2660,6 +2660,10 @@
 #. text in debrid.rs
 #. Options → Accounts: a debrid account's state; {days} the days of premium left
 	premium, {days} days left	premium, {days} days left
+#. text in the Options window
+#. Options → General: shown inside the shortcut recorder box while waiting for the user to press a 2-key or 3-key shortcut (#558)
+#. the trailing ... means it is still going on: keep it
+	Press keys...	Press keys...
 #. button in a dialog box
 #. verb: open the part already downloaded
 	Preview	Preview
@@ -2790,8 +2794,9 @@
 #. remote control page (on a phone): question before removing a download; {name} its file name
 #. {name} = a file name (keep the braces as they are)
 	Remove {name} from the list?	Remove {name} from the list?
-#. text in a download's progress window
+#. text in a download's progress window; text in torrent_rename.rs
 #. noun: label before the deferred new file or folder name in the progress window
+#. noun: label before the new file or folder name in Add torrent
 	Rename	Rename
 #. text in the Batch download window
 #. group box title: what the * in the address is replaced with (numbers or letters)
@@ -3021,6 +3026,9 @@
 #. event log entry on a finished torrent when re-attaching it to keep sharing failed; {error} = why
 #. {error} = an error message (keep the braces as they are)
 	Sharing stopped: {error}	Sharing stopped: {error}
+#. text in the Options window
+#. Options → General: label for the global keyboard shortcut that shows or hides MDM's main window (#558)
+	Shortcut to show or hide window:	Shortcut to show or hide window:
 #. text in the download list
 	Show	Show
 #. message or event log entry in the main window
@@ -3709,6 +3717,9 @@
 #. error: a program chosen as yt-dlp or ffmpeg didn't answer as one; {name} = yt-dlp or ffmpeg
 #. {name} = a file name (keep the braces as they are)
 	this program isn't {name}	this program isn't {name}
+#. text in the Options window
+#. Options → General: shown when the chosen global shortcut is already registered by another program (#558)
+	This shortcut is already in use	This shortcut is already in use
 #. text in errors.rs
 #. why a download failed: the site's bot check (Cloudflare) lets browsers through, not programs. Alt+click: the link clicked with the Alt key held, which leaves the download to the browser
 	this site lets only browsers through; Alt+click the link	this site lets only browsers through; Alt+click the link
@@ -4117,6 +4128,9 @@
 #. text in the Scheduler window
 #. the Scheduler, under "Wake the computer to run this queue" (Windows): "Allow wake timers" is on when plugged in, off on battery
 	Windows allows wake timers only while plugged in	Windows allows wake timers only while plugged in
+#. text in the Options window
+#. Options → General → Shortcut to show or hide window: shown in the disabled shortcut box on Linux (#558)
+	Windows and macOS	Windows and macOS
 #. text in the Options window
 #. tooltip of "Mark downloaded files as coming from the internet" on Windows
 	Windows checks the files marked this way: SmartScreen before a program first runs, Office's Protected View before a document opens. Unticked, or under Windows' policy "Do not preserve zone information in file attachments", no download is marked.	Windows checks the files marked this way: SmartScreen before a program first runs, Office's Protected View before a document opens. Unticked, or under Windows' policy "Do not preserve zone information in file attachments", no download is marked.

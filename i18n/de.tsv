@@ -7290,3 +7290,7 @@ unit	{n} MB	{n} MB
 #. {n} = a number (keep the braces as they are)
 #, machine
 unit	{n} MB/sec	{n} MB/s
+	Shortcut to show or hide window:	Tastenkürzel zum Ein-/Ausblenden:
+	Press keys...	Tasten drücken...
+	This shortcut is already in use	Dieses Tastenkürzel wird bereits verwendet
+	Windows and macOS	Windows und macOS
