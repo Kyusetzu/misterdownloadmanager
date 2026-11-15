@@ -284,6 +284,8 @@ main > .sec:last-child { padding-bottom: var(--gap-section); }
 .fields dt { color: var(--ink-3); }
 .fields dd { margin: 2px 0 0; font-size: 16.5px; font-weight: 650; line-height: 1.35; font-variant-numeric: tabular-nums; }
 .fields dd small { font-weight: 500; font-size: 14px; color: var(--ink-3); margin-inline-start: 4px; white-space: nowrap; }
+/* A file's name kept on one line (the other processors' rows, build.py processor_rows). */
+.fields dd a.file { white-space: nowrap; }
 .fields dd a { color: inherit; }
 
 /* ---- The parcel (home, first viewport) ------------------------------------------------------- */

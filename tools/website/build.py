@@ -103,11 +103,18 @@ def published_version() -> str:
 
 
 def setup_size() -> str:
-    """The Windows installer's size as the label shows it ("12.4 MB"), or "" offline."""
+    """The x64 Windows installer's size as the label shows it ("12.4 MB"), or "" offline."""
     for a in LATEST.get("assets", []):
-        if a.get("name", "").endswith("-setup.exe"):
+        if a.get("name") == f"MisterDownloadManager-{VERSION}-setup.exe":
             return f"{a['size'] / 1_000_000:.1f} MB"
     return ""
+
+
+def published(tail: str) -> bool:
+    """Whether the latest published release has MisterDownloadManager-<version>-<tail> (the
+    Windows on ARM, 32-bit Windows and Linux on ARM files come with the release after 0.5.1)."""
+    name = f"MisterDownloadManager-{VERSION}-{tail}"
+    return any(a.get("name") == name for a in LATEST.get("assets", []))
 
 
 def mac_file(arch: str) -> str:
@@ -143,6 +150,17 @@ FILES = {
     "deb": linux_file(".deb"),
     "rpm": linux_file(".rpm"),
     "tar": linux_file(".tar.gz"),
+    # The other processors' (tools/installer/build.ps1 -Arch, build-linux.sh on ARM).
+    "setup_arm64": f"{RELEASE}-setup-arm64.exe",
+    "portable_arm64": f"{RELEASE}-portable-arm64.zip",
+    "zip_arm64": f"{RELEASE}-arm64.zip",
+    "setup_x86": f"{RELEASE}-setup-x86.exe",
+    "portable_x86": f"{RELEASE}-portable-x86.zip",
+    "zip_x86": f"{RELEASE}-x86.zip",
+    "appimage_arm64": f"{RELEASE}-linux-arm64.AppImage",
+    "deb_arm64": f"{RELEASE}-linux-arm64.deb",
+    "rpm_arm64": f"{RELEASE}-linux-arm64.rpm",
+    "tar_arm64": f"{RELEASE}-linux-arm64.tar.gz",
     "chromium": f"{RELEASE}-extension-chromium.zip",
     "firefox": f"{RELEASE}-extension-firefox.xpi",
     "sums": f"{REPO}/releases/download/v{VERSION}/SHA256SUMS.txt",
@@ -1257,9 +1275,65 @@ def third_party_table() -> str:
 
 # ---- Hand-written pages: the home page, download, comparison, 404 --------------------------------
 
+# The processors each system's downloads are built for, as far as the latest published release
+# has their files: (row name, its id, the files as (link text, FILES key)).
+PROCESSORS = {
+    "windows": [
+        ("Windows on ARM", "windows-arm64", [("setup-arm64.exe", "setup_arm64"),
+                                             ("portable-arm64.zip", "portable_arm64"),
+                                             ("arm64.zip", "zip_arm64")]),
+        ("32-bit Windows", "windows-x86", [("setup-x86.exe", "setup_x86"),
+                                           ("portable-x86.zip", "portable_x86"),
+                                           ("x86.zip", "zip_x86")]),
+    ],
+    "linux": [
+        ("ARM64", "linux-arm64", [(".AppImage", "appimage_arm64"), (".deb", "deb_arm64"),
+                                  (".rpm", "rpm_arm64"), (".tar.gz", "tar_arm64")]),
+    ],
+}
+
+
+def processor_out(file_key: str) -> bool:
+    """Whether the latest published release has the file FILES[file_key] links to."""
+    return published(FILES[file_key].rsplit(f"MisterDownloadManager-{VERSION}-", 1)[1])
+
+
+def processor_rows(system: str) -> str:
+    """The download page's rows for `system`'s other processors (<!--@processors windows-->):
+    each one's files where the latest release has them; those still to come in one row with the
+    "Coming with version" tag (none once that version is out without them)."""
+    rows, coming = [], []
+    for name, anchor, files in PROCESSORS[system]:
+        if processor_out(files[0][1]):
+            links = "&nbsp;· ".join(f'<a class="file" href="{FILES[key]}">{text}</a>' for text, key in files)
+            rows.append(f'<div id="{anchor}"><dt>{name}</dt><dd>{links}</dd></div>')
+        else:
+            coming.append(name)
+    tag = coming_banner("tag")
+    if coming and tag:
+        rows.append(f'<div><dt>{" · ".join(coming)}</dt><dd>{tag}</dd></div>')
+    return "\n              ".join(rows)
+
+
+def processor_names(system: str) -> str:
+    """The processors `system`'s published downloads are for, as the cards and "What you need"
+    say it: today's words ("64-bit", "x86-64") until the latest release has another's files."""
+    if system == "windows":
+        names = ["x64"] + [n for n, key in (("ARM64", "setup_arm64"), ("32-bit", "setup_x86"))
+                           if processor_out(key)]
+        if len(names) == 1:
+            return "64-bit"
+    else:
+        names = ["x86-64"] + (["ARM64"] if processor_out("appimage_arm64") else [])
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
 def fill(text: str) -> str:
     for k, v in FILES.items():
         text = text.replace("{{FILE_" + k.upper() + "}}", v)
+    for system in PROCESSORS:
+        text = text.replace(f"<!--@processors {system}-->", processor_rows(system))
+        text = text.replace("{{" + system.upper() + "_CPUS}}", processor_names(system))
     if "{{BENCH_REPORT}}" in text:
         text = text.replace("{{BENCH_REPORT}}", bench_report())
     for k in ("stars", "forks", "issues", "watchers"):

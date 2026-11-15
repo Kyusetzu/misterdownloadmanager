@@ -41,12 +41,13 @@
       <div class="wrap">
         <ul class="service-list os-cards" role="list">
           <li class="service os-card" id="windows" data-os="windows" data-href="{{FILE_SETUP}}" data-label="Download for Windows">
-            <h2 class="h3like"><svg class="os-ico" aria-hidden="true"><use href="#os-windows"/></svg> Windows <small>10 and 11 · 64-bit</small></h2>
+            <h2 class="h3like"><svg class="os-ico" aria-hidden="true"><use href="#os-windows"/></svg> Windows <small>10 and 11 · {{WINDOWS_CPUS}}</small></h2>
             <p class="service-tags"><span class="tag stable">Stable</span><span class="tag">Recommended</span></p>
             <dl class="fields">
               <div><dt><a href="{{FILE_SETUP}}">setup.exe</a></dt><dd>Installs MDM, connects your browsers, asks your language</dd></div>
               <div><dt><a href="{{FILE_PORTABLE}}">portable.zip</a></dt><dd>Unzip anywhere, a USB stick too; everything stays in its folder</dd></div>
               <div><dt><a href="{{FILE_ZIP}}">x64.zip</a></dt><dd>The programs without an installer</dd></div>
+              <!--@processors windows-->
             </dl>
             <a class="btn btn-go" href="{{FILE_SETUP}}"><svg class="os-ico" aria-hidden="true"><use href="#os-windows"/></svg> Download the installer</a>
           </li>
@@ -61,12 +62,13 @@
             <a class="btn btn-line" href="{{FILE_DMG_ARM64}}"><svg class="os-ico" aria-hidden="true"><use href="#os-macos"/></svg> Download for Apple Silicon</a>
           </li>
           <li class="service os-card" id="linux" data-os="linux" data-href="{{FILE_APPIMAGE}}" data-label="Download for Linux">
-            <h2 class="h3like"><svg class="os-ico" aria-hidden="true"><use href="#os-linux"/></svg> Linux <small>x86-64</small></h2>
+            <h2 class="h3like"><svg class="os-ico" aria-hidden="true"><use href="#os-linux"/></svg> Linux <small>{{LINUX_CPUS}}</small></h2>
             <p class="service-tags"><span class="tag try">Experimental</span></p>
             <dl class="fields">
               <div><dt><a href="{{FILE_APPIMAGE}}">.AppImage</a></dt><dd>Any distribution: make it executable and run it</dd></div>
               <div><dt><a href="{{FILE_DEB}}">.deb</a> · <a href="{{FILE_RPM}}">.rpm</a></dt><dd>Debian, Ubuntu, Mint · Fedora, openSUSE, RHEL</dd></div>
               <div><dt><a href="{{FILE_TAR}}">.tar.gz</a></dt><dd>The programs, to unpack anywhere</dd></div>
+              <!--@processors linux-->
             </dl>
             <a class="btn btn-line" href="{{FILE_APPIMAGE}}"><svg class="os-ico" aria-hidden="true"><use href="#os-linux"/></svg> Download the AppImage</a>
           </li>
@@ -108,9 +110,9 @@ winget upgrade AhmedNefzaoui.MisterDownloadManager</code></pre>
 
       <h2>What you need</h2>
       <ul>
-        <li><b>Windows 10 or 11</b>, 64-bit; about 100 MB of disk space.</li>
+        <li><b>Windows 10 or 11</b>, {{WINDOWS_CPUS}}; about 100 MB of disk space.</li>
         <li><b>macOS 11</b> or later on Apple Silicon or Intel (experimental).</li>
-        <li><b>Linux</b> on x86-64 with a desktop session, X11 or Wayland (today's files experimental).</li>
+        <li><b>Linux</b> on {{LINUX_CPUS}} with a desktop session, X11 or Wayland (today's files experimental).</li>
         <li>For video pages, MDM downloads yt-dlp (and ffmpeg if you want merged qualities) on first use.</li>
       </ul>
 

@@ -124,13 +124,28 @@ fn report(mode: &str) -> String {
     }
 }
 
+/// The report names the functions from the program's own debug info where that is read: x86-64
+/// and ARM64 (analyze.rs). A 32-bit program's report has their addresses until the release's
+/// symbols are fetched; it is still written, with its signature.
+const NAMED: bool = cfg!(any(target_arch = "x86_64", target_arch = "aarch64"));
+
+/// The signature `want` where functions are named, else one of the same kind.
+fn signed(r: &str, want: &str) -> bool {
+    if NAMED {
+        r.contains(want)
+    } else {
+        // "Signature: freeze …": the kind, wherever the addresses lead.
+        r.contains(want.split(" in ").next().unwrap_or(want))
+    }
+}
+
 #[test]
 fn a_freeze_reports_the_frozen_function() {
     let r = report("freeze");
     assert!(r.contains("The window stopped responding"), "{r}");
-    assert!(r.contains("crashy_frozen_here"), "{r}");
+    assert!(!NAMED || r.contains("crashy_frozen_here"), "{r}");
     assert!(
-        r.contains("Signature: freeze in crashy::crashy_frozen_here"),
+        signed(&r, "Signature: freeze in crashy::crashy_frozen_here"),
         "{r}"
     );
 }
@@ -140,7 +155,7 @@ fn a_panic_reports_its_message_and_function() {
     let r = report("panic");
     assert!(r.contains("crashy: a test panic"), "{r}");
     assert!(
-        r.contains("Signature: panic in crashy::crashy_panics_here"),
+        signed(&r, "Signature: panic in crashy::crashy_panics_here"),
         "{r}"
     );
 }
@@ -150,7 +165,7 @@ fn a_native_crash_reports_where_it_crashed() {
     let r = report("crash");
     assert!(r.contains("Description: MDM crashed"), "{r}");
     assert!(
-        r.contains("Signature: crash in crashy::crashy_crashes_here"),
+        signed(&r, "Signature: crash in crashy::crashy_crashes_here"),
         "{r}"
     );
 }

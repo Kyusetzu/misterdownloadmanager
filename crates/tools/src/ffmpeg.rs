@@ -1,6 +1,7 @@
 //! ffmpeg for merging video and audio (D-011, user 2026-10-30): BtbN's LGPL "shared" Windows
-//! build of the newest stable line (`ffmpeg-nX.Y-latest-win64-lgpl-shared-X.Y.zip`), downloaded
-//! on first need, checked against the release's `checksums.sha256` and GitHub's own digest of the
+//! build of the newest stable line for this processor
+//! (`ffmpeg-nX.Y-latest-win64-lgpl-shared-X.Y.zip`, `…-winarm64-…` on Windows on ARM; BtbN builds
+//! none for 32-bit Windows), downloaded on first need, checked against the release's `checksums.sha256` and GitHub's own digest of the
 //! asset, its `bin/` unpacked into `tools/ffmpeg/<version>/`, switched to atomically, the previous
 //! version kept.
 
@@ -29,13 +30,34 @@ struct Asset {
     digest: Option<String>,
 }
 
-/// The stable line of an LGPL shared win64 asset, named as BtbN's `latest` release names it
-/// (`ffmpeg-n9.0-latest-win64-lgpl-shared-9.0.zip`) or as a dated build does
-/// (`ffmpeg-n9.0.2-47-gb204e94e90-win64-lgpl-shared-9.0.zip`) → `9.0`. Never the development
-/// (`master`, `ffmpeg-N-…`) builds.
-fn stable_line(name: &str) -> Option<&str> {
+/// BtbN's name for its Windows builds for this processor (`win64`, `winarm64`); None where it
+/// publishes none (32-bit Windows), and off Windows, where the system's ffmpeg is used.
+pub fn build() -> Option<&'static str> {
+    build_for(std::env::consts::OS, std::env::consts::ARCH)
+}
+
+/// Whether MDM downloads an ffmpeg of its own on this system ([`build`]). Where it doesn't, the
+/// person's own (chosen in Helpers) or the system's is used.
+pub fn available() -> bool {
+    build().is_some()
+}
+
+/// [`build`] for a system and a processor, as Rust names them (`std::env::consts`).
+fn build_for(os: &str, arch: &str) -> Option<&'static str> {
+    match (os, arch) {
+        ("windows", "x86_64") => Some("win64"),
+        ("windows", "aarch64") => Some("winarm64"),
+        _ => None,
+    }
+}
+
+/// The stable line of an LGPL shared asset for `build` (`win64`, `winarm64`), named as BtbN's
+/// `latest` release names it (`ffmpeg-n9.0-latest-win64-lgpl-shared-9.0.zip`) or as a dated build
+/// does (`ffmpeg-n9.0.2-47-gb204e94e90-win64-lgpl-shared-9.0.zip`) → `9.0`. Never the development
+/// (`master`, `ffmpeg-N-…`) builds, nor another processor's.
+fn stable_line<'a>(name: &'a str, build: &str) -> Option<&'a str> {
     let rest = name.strip_prefix("ffmpeg-n")?.strip_suffix(".zip")?;
-    let (head, line) = rest.rsplit_once("-win64-lgpl-shared-")?;
+    let (head, line) = rest.rsplit_once(&format!("-{build}-lgpl-shared-"))?;
     let numeric = |v: &str| !v.is_empty() && v.split('.').all(|p| p.parse::<u32>().is_ok());
     let (version, build) = head.split_once('-')?;
     let of_line = version == line || version.starts_with(&format!("{line}."));
@@ -46,13 +68,13 @@ fn stable_line(name: &str) -> Option<&str> {
     (numeric(line) && numeric(version) && of_line && build_ok).then_some(line)
 }
 
-/// The release's LGPL shared win64 build of the newest stable line.
-fn best_build(release: &Release) -> Option<&Asset> {
+/// The release's LGPL shared build for `build` of the newest stable line.
+fn best_build<'a>(release: &'a Release, build: &str) -> Option<&'a Asset> {
     let parts = |v: &str| -> Vec<u32> { v.split('.').filter_map(|p| p.parse().ok()).collect() };
     release
         .assets
         .iter()
-        .filter_map(|a| stable_line(&a.name).map(|l| (parts(l), a)))
+        .filter_map(|a| stable_line(&a.name, build).map(|l| (parts(l), a)))
         .max_by(|(a, _), (b, _)| a.cmp(b))
         .map(|(_, a)| a)
 }
@@ -87,11 +109,13 @@ pub async fn install_latest(
     if let Some(mine) = crate::chosen::chosen(dir, crate::chosen::Helper::Ffmpeg) {
         return Ok(mine);
     }
-    if !cfg!(windows) {
-        return Err(Error::Missing(
-            "ffmpeg build for this system (install ffmpeg)".into(),
-        ));
-    }
+    let Some(build) = build() else {
+        return Err(Error::Missing(if cfg!(windows) {
+            "ffmpeg build for this processor (choose your own ffmpeg in Helpers)".into()
+        } else {
+            "ffmpeg build for this system (install ffmpeg)".into()
+        }));
+    };
     let client = crate::client(net, RELEASES)?;
     let body = client
         .get(RELEASES)
@@ -108,10 +132,10 @@ pub async fn install_latest(
         .iter()
         .find_map(|r| {
             let has_sums = r.assets.iter().any(|a| a.name == "checksums.sha256");
-            best_build(r).filter(|_| has_sums).map(|a| (r, a))
+            best_build(r, build).filter(|_| has_sums).map(|a| (r, a))
         })
-        .ok_or_else(|| Error::Missing("LGPL Windows build".into()))?;
-    let line = stable_line(&asset.name).unwrap_or_default();
+        .ok_or_else(|| Error::Missing(format!("LGPL Windows build ({build})")))?;
+    let line = stable_line(&asset.name, build).unwrap_or_default();
     // `9.0.20261028`: the line, then the build date (the release is rebuilt daily).
     let date: String = release
         .published_at
@@ -212,32 +236,27 @@ fn unpack(zip_path: &Path, root: &Path, version: &str, from: &str) -> Result<Pat
 mod tests {
     use super::*;
 
+    fn line(name: &str) -> Option<&str> {
+        stable_line(name, "win64")
+    }
+
     #[test]
     fn picks_stable_lgpl_shared_builds_only() {
         assert_eq!(
-            stable_line("ffmpeg-n9.0-latest-win64-lgpl-shared-9.0.zip"),
+            line("ffmpeg-n9.0-latest-win64-lgpl-shared-9.0.zip"),
             Some("9.0")
         );
-        assert_eq!(stable_line("ffmpeg-n9.0-latest-win64-lgpl-9.0.zip"), None);
-        assert_eq!(
-            stable_line("ffmpeg-master-latest-win64-lgpl-shared.zip"),
-            None
-        );
-        assert_eq!(
-            stable_line("ffmpeg-n9.0-latest-win64-gpl-shared-9.0.zip"),
-            None
-        );
-        assert_eq!(
-            stable_line("ffmpeg-n8.1-latest-win64-lgpl-shared-9.0.zip"),
-            None
-        );
+        assert_eq!(line("ffmpeg-n9.0-latest-win64-lgpl-9.0.zip"), None);
+        assert_eq!(line("ffmpeg-master-latest-win64-lgpl-shared.zip"), None);
+        assert_eq!(line("ffmpeg-n9.0-latest-win64-gpl-shared-9.0.zip"), None);
+        assert_eq!(line("ffmpeg-n8.1-latest-win64-lgpl-shared-9.0.zip"), None);
         // A dated build's names (what GitHub calls "latest" while BtbN remakes its own).
         assert_eq!(
-            stable_line("ffmpeg-n9.0.2-47-gb204e94e90-win64-lgpl-shared-9.0.zip"),
+            line("ffmpeg-n9.0.2-47-gb204e94e90-win64-lgpl-shared-9.0.zip"),
             Some("9.0")
         );
         assert_eq!(
-            stable_line("ffmpeg-n8.1.3-34-ga35157abb9-win64-lgpl-shared-8.1.zip"),
+            line("ffmpeg-n8.1.3-34-ga35157abb9-win64-lgpl-shared-8.1.zip"),
             Some("8.1")
         );
         for other in [
@@ -247,9 +266,56 @@ mod tests {
             "ffmpeg-n9.0.2-47-gb204e94e90-linux64-lgpl-shared-9.0.tar.xz",
             "ffmpeg-n8.1.3-34-ga35157abb9-win64-lgpl-shared-9.0.zip",
             "ffmpeg-n9.0.2-x-gzz-win64-lgpl-shared-9.0.zip",
+            // Windows on ARM's: not x64's.
+            "ffmpeg-n9.0-latest-winarm64-lgpl-shared-9.0.zip",
         ] {
-            assert_eq!(stable_line(other), None, "{other}");
+            assert_eq!(line(other), None, "{other}");
         }
+    }
+
+    /// Each processor takes BtbN's build for it, never another's: x64's on x64, ARM64's on
+    /// Windows on ARM; 32-bit Windows (BtbN builds none for it) and other systems none.
+    #[test]
+    fn each_processor_takes_its_own_build() {
+        assert_eq!(build_for("windows", "x86_64"), Some("win64"));
+        assert_eq!(build_for("windows", "aarch64"), Some("winarm64"));
+        assert_eq!(build_for("windows", "x86"), None);
+        assert_eq!(build_for("linux", "x86_64"), None);
+        assert_eq!(build_for("macos", "aarch64"), None);
+        assert_eq!(available(), build().is_some());
+        // Today's `latest` release (2026-11-13), as BtbN names its files.
+        let release = Release {
+            published_at: "2026-11-13T13:02:35Z".into(),
+            assets: [
+                "ffmpeg-n8.1-latest-winarm64-lgpl-shared-8.1.zip",
+                "ffmpeg-n9.0-latest-linuxarm64-lgpl-shared-9.0.tar.xz",
+                "ffmpeg-n9.0-latest-win64-lgpl-shared-9.0.zip",
+                "ffmpeg-n9.0-latest-winarm64-lgpl-shared-9.0.zip",
+                "checksums.sha256",
+            ]
+            .iter()
+            .map(|n| Asset {
+                name: (*n).into(),
+                browser_download_url: format!("https://x/{n}"),
+                digest: None,
+            })
+            .collect(),
+        };
+        assert_eq!(
+            best_build(&release, "win64").map(|a| a.name.as_str()),
+            Some("ffmpeg-n9.0-latest-win64-lgpl-shared-9.0.zip")
+        );
+        assert_eq!(
+            best_build(&release, "winarm64").map(|a| a.name.as_str()),
+            Some("ffmpeg-n9.0-latest-winarm64-lgpl-shared-9.0.zip")
+        );
+        assert_eq!(
+            stable_line(
+                "ffmpeg-n9.0.2-57-gd838f9f9ae-winarm64-lgpl-shared-9.0.zip",
+                "winarm64"
+            ),
+            Some("9.0")
+        );
     }
 
     /// Today's case: the newest release is a dated build; and a release still uploading (no
@@ -270,7 +336,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            best_build(&dated).map(|a| a.name.as_str()),
+            best_build(&dated, "win64").map(|a| a.name.as_str()),
             Some("ffmpeg-n9.0.2-47-gb204e94e90-win64-lgpl-shared-9.0.zip")
         );
         let uploading = Release {
@@ -281,7 +347,9 @@ mod tests {
         releases.sort_by(|a, b| b.published_at.cmp(&a.published_at));
         let pick = releases.iter().find_map(|r| {
             let has_sums = r.assets.iter().any(|a| a.name == "checksums.sha256");
-            best_build(r).filter(|_| has_sums).map(|a| a.name.clone())
+            best_build(r, "win64")
+                .filter(|_| has_sums)
+                .map(|a| a.name.clone())
         });
         assert_eq!(
             pick.as_deref(),

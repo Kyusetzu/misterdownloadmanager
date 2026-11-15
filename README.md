@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  Windows 10 and 11 · Linux (Ubuntu, Debian, Mint, Fedora, openSUSE, Arch and more) · macOS (Apple Silicon and Intel, experimental)<br>
+  Windows 10 and 11 (x64, ARM64, 32-bit) · Linux (Ubuntu, Debian, Mint, Fedora, openSUSE, Arch and more; x86-64 and ARM64) · macOS (Apple Silicon and Intel, experimental)<br>
   86 languages · no ads, no trial, no sign-up
 </p>
 
@@ -106,7 +106,12 @@ one:
 | **`...-setup.exe`** | **Not sure? Take this one.** It installs MDM, connects it to your browser and asks your language. |
 | `...-portable.zip` | You want MDM on a USB stick or without installing: unzip and run. Everything stays in its folder. |
 | `...-x64.zip` | You want the plain programs without an installer. |
+| `...-setup-arm64.exe`, `...-portable-arm64.zip`, `...-arm64.zip` | The same three for **Windows on ARM** (Snapdragon and other ARM PCs). |
+| `...-setup-x86.exe`, `...-portable-x86.zip`, `...-x86.zip` | The same three for **32-bit Windows 10**. There, choose your own ffmpeg in **Helpers** for the best video qualities: none is built for it that MDM can check. |
 | `...-extension-chromium.zip` | You want to add the browser extension by hand (Chrome, Edge, Brave, Opera, Vivaldi). From the stores is easier: [Add to Chrome](https://chromewebstore.google.com/detail/mister-download-manager/ejoleppdfgjdndddcjoehopknmlglojp), [Add to Firefox](https://addons.mozilla.org/firefox/addon/mister-download-manager/). |
+
+The ARM64 and 32-bit files come with every release after 0.5.2; **Check for updates** keeps each
+copy on its own processor's files.
 
 > [!NOTE]
 > Windows may say *"Windows protected your PC"* the first time, because this early version isn't
@@ -134,6 +139,7 @@ Up to version 0.2.4, the files' names end in `-experimental`.
 | `...-linux-x86_64.rpm` | Fedora, openSUSE, RHEL: `sudo dnf install ./<file>.rpm`. |
 | `...-linux-x86_64.AppImage` | Any Linux. Make it executable and run it. |
 | `...-linux-x86_64.tar.gz` | The plain programs, for any distribution. |
+| `...-linux-arm64.*` | The same four for 64-bit ARM computers, from the release after 0.5.2 (built and tested on GitHub's ARM machines). |
 
 <p align="center">
   <picture>
@@ -379,8 +385,11 @@ This makes `misterdownloadmanager.exe` (the app), `misterdownloadmanager-cli.exe
 command line), `misterdownloadmanager-mcp.exe` (the MCP server for AI assistants) and
 `misterdownloadmanager-nmhost.exe` (the browser host) in `target\release\`.
 `tools\installer\build.ps1` builds the installer and both zips into `target\dist\` (needs
-[Inno Setup 6](https://jrsoftware.org/isinfo.php)); a `vX.Y.Z` tag does the same on GitHub
-Actions and publishes the release.
+[Inno Setup 6.3](https://jrsoftware.org/isinfo.php) or later), for x64; `-Arch arm64` or
+`-Arch x86` for Windows on ARM or 32-bit Windows (after `rustup target add
+aarch64-pc-windows-msvc` or `i686-pc-windows-msvc`). `tools/installer/build-linux.sh` builds the
+Linux files for the machine's own processor (x86-64 or ARM64). A `vX.Y.Z` tag does all of them
+on GitHub Actions and publishes the release.
 
 Browser integration from a build: register the native messaging host with
 `target\release\misterdownloadmanager-nmhost.exe --register` (undo with `--unregister`), then in

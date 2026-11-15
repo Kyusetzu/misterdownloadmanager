@@ -1,10 +1,13 @@
-# Builds the downloads: Windows (tools/installer/build.ps1: installer, portable zip, plain zip),
-# the browser extensions (tools/extension/pack.ps1: Chromium zip, Firefox .xpi),
-# Linux (build-linux.sh: AppImage, tar.gz, .deb, .rpm) and, experimental and not yet tested by
-# us, macOS (build-macos.sh: a .dmg for Apple Silicon, one for Intel; named "-experimental").
+# Builds the downloads: Windows (tools/installer/build.ps1: installer, portable zip, plain zip)
+# for x64, ARM64 and 32-bit (x86), the browser extensions (tools/extension/pack.ps1: Chromium zip,
+# Firefox .xpi), Linux for x86-64 and ARM64 (build-linux.sh: AppImage, tar.gz, .deb, .rpm) and,
+# experimental and not yet tested by us, macOS (build-macos.sh: a .dmg for Apple Silicon, one for
+# Intel; named "-experimental"). Each build's programs are tried on the machine that built them
+# first (tools/installer/smoke.py): the processor they are for, and a download.
 # - A pushed tag vX.Y.Z (matching Cargo.toml's version) publishes a GitHub release with them and
 #   SHA256SUMS.txt, its notes from CHANGELOG.md (Help -> Check for updates sees it at once). The
-#   release waits for Windows and the extensions: a failed Linux or macOS build leaves those out.
+#   release waits for x64 Windows and the extensions: a failed build of another processor or
+#   system leaves its files out.
 # - Run by hand (Actions -> Release -> Run workflow) it only builds and keeps them as artifacts:
 #   nothing is published, and nothing is sent to addons.mozilla.org or the Chrome Web Store.
 name: Release
@@ -41,8 +44,27 @@ jobs:
           retention-days: 7
 
   windows:
+    # One build per processor, each on a runner of its own: x64 and 32-bit on GitHub's x64 Windows
+    # (32-bit programs run there too, for the tests), ARM64 on its Windows on ARM.
+    name: windows-${{ matrix.arch }}
     needs: geo
-    runs-on: windows-latest
+    # A cold build with its tests takes about 45 minutes; a stuck or long-queued runner (the ARM
+    # ones) is cut off instead of holding the release for GitHub's 6 hours.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+          - arch: arm64
+            runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+          - arch: x86
+            runner: windows-latest
+            target: i686-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -53,8 +75,25 @@ jobs:
           name: geo-data
           path: crates/geo/data
 
+      # Windows on ARM's runner may come without rustup: rustup's own installer, checked.
+      - name: rustup
+        if: runner.arch == 'ARM64'
+        shell: pwsh
+        run: |
+          if (Get-Command rustup -ErrorAction SilentlyContinue) { exit 0 }
+          $url = "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe"
+          $exe = "$env:RUNNER_TEMP\rustup-init.exe"
+          Invoke-WebRequest $url -OutFile $exe
+          $want = (Invoke-WebRequest "$url.sha256").Content.Split()[0]
+          if ((Get-FileHash $exe -Algorithm SHA256).Hash -ne $want) { throw "rustup-init's checksum doesn't match" }
+          & $exe -y --default-toolchain none --profile minimal
+          if ($LASTEXITCODE) { throw "rustup-init failed" }
+          "$env:USERPROFILE\.cargo\bin" >> $env:GITHUB_PATH
+
       - name: Toolchain
-        run: rustup show active-toolchain || rustup toolchain install
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup target add ${{ matrix.target }}
 
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -62,8 +101,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: release-${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-          restore-keys: release-${{ runner.os }}-cargo-
+          key: release-${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: release-${{ runner.os }}-${{ matrix.target }}-cargo-
 
       - name: Tag matches Cargo.toml
         if: startsWith(github.ref, 'refs/tags/')
@@ -72,17 +111,29 @@ jobs:
           $v = [regex]::Match((Get-Content Cargo.toml -Raw), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
           if ("v$v" -ne "${{ github.ref_name }}") { throw "tag ${{ github.ref_name }} but Cargo.toml says $v" }
 
-      # BoringSSL, under the browser-like connection (#668, crates/engine/src/browserlike.rs), is
-      # built with NASM on Windows; the runner has CMake and LLVM's libclang already.
+      # BoringSSL, under the browser-like connection (#668, crates/engine/src/browserlike.rs), and
+      # AWS-LC are built with NASM for x64 and 32-bit Windows; the runner has CMake and LLVM's
+      # libclang already.
       - name: NASM
-        if: runner.os == 'Windows'
+        if: runner.arch != 'ARM64'
         shell: pwsh
         run: |
           choco install nasm --version 2.16.3 --no-progress -y
           "C:\Program Files\NASM" >> $env:GITHUB_PATH
 
+      # Windows on ARM: LLVM (clang and libclang) for their assembly and bindings there.
+      - name: LLVM
+        if: runner.arch == 'ARM64'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "C:\Program Files\LLVM\bin\clang-cl.exe")) {
+            choco install llvm --no-progress -y
+          }
+          "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" >> $env:GITHUB_ENV
+
       - name: Tests
-        run: cargo test --workspace
+        run: cargo test --workspace --target ${{ matrix.target }}
 
       - name: Inno Setup
         shell: pwsh
@@ -109,7 +160,11 @@ jobs:
         shell: pwsh
         env:
           MDM_SIGN_COMMAND: ${{ steps.cert.outputs.command }}
-        run: ./tools/installer/build.ps1
+        run: ./tools/installer/build.ps1 -Arch ${{ matrix.arch }}
+
+      # The programs on the machine that built them: for this processor, and a download works.
+      - name: Smoke test
+        run: python tools/installer/smoke.py target/${{ matrix.target }}/release ${{ matrix.arch }}
 
       # Crash reports: the release's symbols (dump_syms reads each program's .pdb beside it; no
       # download includes the .pdb files themselves).
@@ -120,13 +175,14 @@ jobs:
         run: |
           $v = [regex]::Match((Get-Content Cargo.toml -Raw), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
           $exes = "misterdownloadmanager", "misterdownloadmanager-nmhost", "misterdownloadmanager-cli", "misterdownloadmanager-mcp" |
-            ForEach-Object { "target/release/$_.exe" }
-          python tools/installer/symbols.py windows-x64 $v target/dist @exes
+            ForEach-Object { "target/${{ matrix.target }}/release/$_.exe" }
+          python tools/installer/symbols.py windows-${{ matrix.arch }} $v target/dist @exes
           if ($LASTEXITCODE) { throw "symbols failed" }
 
+      # x64's under the name it always had ("windows"), the others' with their processor.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: windows
+          name: ${{ matrix.arch == 'x64' && 'windows' || format('windows-{0}', matrix.arch) }}
           path: target/dist/*
 
   extension:
@@ -224,9 +280,21 @@ jobs:
           path: target/dist/*
 
   linux:
-    # The oldest supported Ubuntu: the programs run on its glibc (2.35) and newer.
+    # The oldest supported Ubuntu: the programs run on its glibc (2.35) and newer. x86-64 and
+    # ARM64, each on a runner of its own.
+    name: linux-${{ matrix.arch }}
     needs: geo
-    runs-on: ubuntu-22.04
+    # As Windows' (above).
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -246,8 +314,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: release-${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-          restore-keys: release-${{ runner.os }}-cargo-
+          key: release-${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: release-${{ runner.os }}-${{ runner.arch }}-cargo-
 
       - name: Libraries and packaging tools
         run: |
@@ -256,14 +324,40 @@ jobs:
             libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev rpm python3-pil zsync \
             cmake libclang-dev
 
+      # The extension is packed with PowerShell (tools/extension/pack.ps1): on a runner without
+      # it (ARM's), PowerShell's own build for the machine, checked against its release's list.
+      - name: PowerShell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if command -v pwsh >/dev/null; then exit 0; fi
+          v=7.4.6
+          case "$(uname -m)" in aarch64) a=arm64 ;; *) a=x64 ;; esac
+          file="powershell-$v-linux-$a.tar.gz"
+          python3 tools/installer/fetch_release.py PowerShell/PowerShell "v$v" "$file" "$RUNNER_TEMP/$file"
+          python3 tools/installer/fetch_release.py PowerShell/PowerShell "v$v" hashes.sha256 "$RUNNER_TEMP/hashes.sha256"
+          want=$(tr -d '\r' < "$RUNNER_TEMP/hashes.sha256" | awk -v f="$file" '{n=$2; sub(/^\*/, "", n)} n == f {print tolower($1)}')
+          got=$(sha256sum "$RUNNER_TEMP/$file" | cut -d' ' -f1)
+          [ -n "$want" ] && [ "$want" = "$got" ] || { echo "$file: checksum $got, the list says ${want:-nothing}" >&2; exit 1; }
+          sudo mkdir -p /opt/microsoft/powershell/7
+          sudo tar -xzf "$RUNNER_TEMP/$file" -C /opt/microsoft/powershell/7
+          sudo chmod +x /opt/microsoft/powershell/7/pwsh
+          sudo ln -sf /opt/microsoft/powershell/7/pwsh /usr/local/bin/pwsh
+          pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+
       - name: AppImage, tar.gz, .deb, .rpm
         env:
           GH_TOKEN: ${{ github.token }} # downloads the build's helpers signed in (fetch_release.py)
         run: bash tools/installer/build-linux.sh
 
+      # The programs on the machine that built them: for this processor, and a download works.
+      - name: Smoke test
+        run: python3 tools/installer/smoke.py target/release ${{ matrix.arch }}
+
+      # x64's under the name it always had ("linux"), ARM64's with its processor.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: linux
+          name: ${{ matrix.arch == 'x64' && 'linux' || format('linux-{0}', matrix.arch) }}
           path: target/dist/*
 
   macos:
@@ -307,8 +401,10 @@ jobs:
       actions: write # rebuilding the website
       issues: read # the release notes' Thanks to (tools/contributors.py)
       pull-requests: read
+    # x64 Windows is checked below by its files: the Windows job's result says failure when any
+    # processor's build failed, and only x64's must be there.
     if: >-
-      always() && startsWith(github.ref, 'refs/tags/') && needs.windows.result == 'success' &&
+      always() && startsWith(github.ref, 'refs/tags/') && needs.windows.result != 'cancelled' &&
       needs.extension.result == 'success'
     needs: [windows, extension, linux, macos]
     runs-on: ubuntu-latest
@@ -328,6 +424,11 @@ jobs:
           MDM_RELEASE_KEY: ${{ secrets.MDM_RELEASE_KEY }}
         shell: pwsh
         run: |
+          # The release waits for x64 Windows (the names every copy before had): its files or none.
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          foreach ($f in "setup.exe", "portable.zip", "x64.zip") {
+            if (-not (Test-Path "dist/MisterDownloadManager-$v-$f")) { throw "x64 Windows' $f isn't there: no release" }
+          }
           # One SHA256SUMS.txt for every file (each build wrote its own).
           Remove-Item dist/SHA256SUMS*.txt -ErrorAction SilentlyContinue
           $files = Get-ChildItem dist -File | Sort-Object Name

@@ -126,15 +126,25 @@ pub fn tools_dir() -> Option<PathBuf> {
     mdm_ipc::data_dir().map(|d| d.join("tools"))
 }
 
-/// yt-dlp's file name for this platform in its releases. On Windows and macOS, its folder build:
-/// why, in `folder`.
-pub fn ytdlp_asset() -> &'static str {
-    if cfg!(windows) {
-        "yt-dlp_win.zip"
-    } else if cfg!(target_os = "macos") {
-        "yt-dlp_macos.zip"
-    } else {
-        "yt-dlp_linux"
+/// yt-dlp's file name for this system and processor in its releases; None where it publishes
+/// none (the system's yt-dlp, or one chosen in Helpers, works there).
+pub fn ytdlp_asset() -> Option<&'static str> {
+    ytdlp_asset_for(std::env::consts::OS, std::env::consts::ARCH)
+}
+
+/// yt-dlp's file name in its releases for a system and a processor, as Rust names them
+/// (`std::env::consts`). On Windows and macOS, its folder build (why, in `folder`): Windows on
+/// ARM and 32-bit Windows have their own; macOS's is one for both processors. On Linux, the
+/// single program for that processor.
+fn ytdlp_asset_for(os: &str, arch: &str) -> Option<&'static str> {
+    match (os, arch) {
+        ("windows", "x86_64") => Some("yt-dlp_win.zip"),
+        ("windows", "aarch64") => Some("yt-dlp_win_arm64.zip"),
+        ("windows", "x86") => Some("yt-dlp_win_x86.zip"),
+        ("macos", _) => Some("yt-dlp_macos.zip"),
+        ("linux", "x86_64") => Some("yt-dlp_linux"),
+        ("linux", "aarch64") => Some("yt-dlp_linux_aarch64"),
+        _ => None,
     }
 }
 
@@ -338,6 +348,8 @@ pub async fn install_latest(
     if let Some(mine) = chosen::chosen(dir, chosen::Helper::YtDlp) {
         return Ok(mine);
     }
+    let asset =
+        ytdlp_asset().ok_or_else(|| Error::Missing("yt-dlp build for this system".into()))?;
     let client = client(net, RELEASES)?;
     let body = client
         .get(RELEASES)
@@ -371,7 +383,6 @@ pub async fn install_latest(
         signed_by_ytdlp,
     )
     .await?;
-    let asset = ytdlp_asset();
     let expected =
         sum_for(&sums, asset).ok_or_else(|| Error::Missing(format!("checksum for {asset}")))?;
     let exe_url = url(asset)?;
@@ -517,6 +528,32 @@ mod tests {
             "f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d"
         );
         assert!(sum_for(&sums, "yt-dlp.ex").is_none());
+    }
+
+    /// Each system and processor MDM is published for takes yt-dlp's own build for it, and the
+    /// release's signed list has a checksum for each (a real release's list).
+    #[test]
+    fn ytdlp_has_a_build_for_each_processor() {
+        let sums = String::from_utf8_lossy(SUMS);
+        for (os, arch, asset) in [
+            ("windows", "x86_64", "yt-dlp_win.zip"),
+            ("windows", "aarch64", "yt-dlp_win_arm64.zip"),
+            ("windows", "x86", "yt-dlp_win_x86.zip"),
+            ("linux", "x86_64", "yt-dlp_linux"),
+            ("linux", "aarch64", "yt-dlp_linux_aarch64"),
+            ("macos", "aarch64", "yt-dlp_macos.zip"),
+            ("macos", "x86_64", "yt-dlp_macos.zip"),
+        ] {
+            assert_eq!(ytdlp_asset_for(os, arch), Some(asset), "{os} {arch}");
+            assert!(sum_for(&sums, asset).is_some(), "{asset} not in the list");
+        }
+        // No build of yt-dlp's own: the system's, or one chosen in Helpers.
+        assert_eq!(ytdlp_asset_for("linux", "riscv64"), None);
+        assert_eq!(ytdlp_asset_for("freebsd", "x86_64"), None);
+        assert_eq!(
+            ytdlp_asset(),
+            ytdlp_asset_for(std::env::consts::OS, std::env::consts::ARCH)
+        );
     }
 
     #[test]

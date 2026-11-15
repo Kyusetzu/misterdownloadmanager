@@ -92,7 +92,10 @@ pub const GPU: Option<Api> = if !cfg!(gpu) {
 
 /// What draws when the user chose nothing (the settings' `renderer: None`): Direct3D on Windows
 /// (#89), OpenGL elsewhere (#206: Vulkan and Metal are choices until real cards have tried them).
-pub const DEFAULT: Api = if cfg!(windows) {
+/// 32-bit Windows draws with OpenGL too: there wgpu's Direct3D 12 can't make egui's pipeline
+/// ("The parameter is incorrect", tried on an NVIDIA card), and the windows MDM opened after
+/// falling back stayed blank.
+pub const DEFAULT: Api = if cfg!(all(windows, not(target_arch = "x86"))) {
     Api::Direct3D
 } else {
     Api::OpenGl
@@ -1616,9 +1619,10 @@ mod tests {
         let p = plan(Some(api), None, k(true, false, false));
         assert_eq!(p.attempts, [Attempt::OpenGl, any]);
         assert_eq!(p.watched(), WATCH_GL);
-        // Nothing chosen: Direct3D on Windows (#89), OpenGL on Linux and macOS (#206).
+        // Nothing chosen: Direct3D on Windows (#89), OpenGL on Linux, macOS (#206) and 32-bit
+        // Windows.
         let p = plan(None, None, NONE);
-        if cfg!(windows) {
+        if DEFAULT == Api::Direct3D {
             assert_eq!(p.attempts, [gpu, Attempt::OpenGl, soft]);
             assert!(p.watched());
             assert_eq!(
@@ -1627,7 +1631,8 @@ mod tests {
             );
         } else {
             assert_eq!(p.attempts, [Attempt::OpenGl, any]);
-            assert!(!p.watched());
+            // Watched on Windows (32-bit), as OpenGL chosen is.
+            assert_eq!(p.watched(), WATCH_GL);
         }
         // The card's start is watched, and OpenGL's where its failure would send the next start
         // to the software renderer (Windows).
@@ -1709,7 +1714,11 @@ mod tests {
             Attempt::OpenGl,
             Attempt::Gpu(Adapters::Any),
         );
-        for setting in [None, Some(Api::Direct3D)] {
+        // Nothing chosen means Direct3D where it is the default (not on 32-bit Windows).
+        for setting in [Some(Api::Direct3D)]
+            .into_iter()
+            .chain((DEFAULT == Api::Direct3D).then_some(None))
+        {
             // A card with Direct3D 12: as before; OpenGL's start after it is watched too.
             let p = plan(setting, None, NONE);
             assert_eq!(p.attempts, [d3d, gl, warp]);
@@ -1833,7 +1842,11 @@ mod tests {
         let any = Attempt::Gpu(Adapters::Any);
         let warp = Attempt::Gpu(Adapters::Software);
         let gl = Attempt::OpenGl;
-        for setting in [None, Some(Api::Direct3D)] {
+        // Nothing chosen means Direct3D where it is the default (not on 32-bit Windows).
+        for setting in [Some(Api::Direct3D)]
+            .into_iter()
+            .chain((DEFAULT == Api::Direct3D).then_some(None))
+        {
             assert_eq!(plan(setting, None, NONE).attempts, [d3d, gl, warp]);
             assert_eq!(
                 plan(setting, None, k(true, false, false)).attempts,
@@ -1846,7 +1859,9 @@ mod tests {
             [d3d, gl]
         );
         assert_eq!(plan(None, Some("warp"), NONE).attempts, [warp, gl]);
-        assert_eq!(plan(None, Some("vulkan"), NONE).attempts[0], d3d);
+        // Another system's API asked for: the default (OpenGL on 32-bit Windows).
+        let default = if DEFAULT == Api::Direct3D { d3d } else { gl };
+        assert_eq!(plan(None, Some("vulkan"), NONE).attempts[0], default);
         // Its files keep their names.
         if let Some(f) = file(FAILED) {
             assert!(f.ends_with("direct3d-failed.txt"));

@@ -8,3 +8,10 @@ rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.aarch64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.i686-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[env]
+# Windows on ARM: BoringSSL's build there (windows-arm64.cmake says why).
+CMAKE_TOOLCHAIN_FILE_aarch64_pc_windows_msvc = { value = ".cargo/windows-arm64.cmake", relative = true }

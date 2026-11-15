@@ -28,6 +28,7 @@ resumes, and uses your proxy settings:
 
 - **yt-dlp** (about 23 MB) looks the page up and finds where the video and its sound come from; MDM downloads them ([How a video comes down](#how-a-video-comes-down)). The first time, click **Install yt-dlp**. MDM checks the download against the signature yt-dlp's developers publish before it uses it.
 - **ffmpeg** (about 80 MB) joins a video and its sound when a site keeps them apart, which most sites do for the higher qualities, and turns the sound into an MP3, Opus or FLAC file. Click **Install ffmpeg** when MDM offers it. MDM checks it against the checksums its release publishes.
+- **Each processor gets its own build:** yt-dlp's for x64, ARM64 and 32-bit Windows and for Linux on ARM, and ffmpeg's for x64 and ARM64 Windows. No ffmpeg is built for 32-bit Windows that MDM can check, so there MDM offers none: choose your own in **Helpers...** (below), or download the qualities that come with their sound.
 
 Both are kept in a `tools` folder in MDM's data folder.
 

@@ -43,8 +43,9 @@ async fn gallery_dl_names_the_server_and_the_failure() {
     assert_eq!(e.network().map(|n| n.1), Some(Fault::Refused), "{e}");
 }
 
-/// ffmpeg is installed by MDM on Windows only (elsewhere the system's is used).
-#[cfg(windows)]
+/// ffmpeg is installed by MDM on 64-bit Windows only (elsewhere the system's is used, or one
+/// chosen in Helpers: BtbN builds none for 32-bit Windows).
+#[cfg(all(windows, any(target_arch = "x86_64", target_arch = "aarch64")))]
 #[tokio::test]
 async fn ffmpeg_names_the_server_and_the_failure() {
     let dir = tempfile::tempdir().unwrap();
@@ -57,4 +58,17 @@ async fn ffmpeg_names_the_server_and_the_failure() {
         Some(("api.github.com".to_owned(), Fault::Refused)),
         "{e}"
     );
+}
+
+/// 32-bit Windows: no ffmpeg of MDM's (BtbN builds none), said at once, without asking a server.
+#[cfg(all(windows, target_arch = "x86"))]
+#[tokio::test]
+async fn ffmpeg_on_32_bit_windows_says_it_has_none() {
+    let dir = tempfile::tempdir().unwrap();
+    let net = through_a_missing_proxy().await;
+    let e = mdm_tools::ffmpeg::install_latest(dir.path(), &net, None)
+        .await
+        .expect_err("no build");
+    assert!(matches!(e, mdm_tools::Error::Missing(_)), "{e}");
+    assert!(!mdm_tools::ffmpeg::available());
 }

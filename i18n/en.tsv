@@ -2072,6 +2072,9 @@
 #. remote control page (on a phone): MDM can't be reached now; the page keeps trying by itself
 #. the trailing ... means it is still going on: keep it
 	MDM does not answer. Trying again...	MDM does not answer. Trying again...
+#. text in helpers.rs
+#. Video helpers: MDM can't download this helper on this Windows (ffmpeg on 32-bit Windows); "Use another program" is the button below
+	MDM has no copy for this system: install it, or use another program	MDM has no copy for this system: install it, or use another program
 #. text in remote.rs
 #. remote control page (on a phone): no pairing code is shown in MDM; "Pair a device" is MDM's button
 	MDM shows no code now. Click Pair a device there first.	MDM shows no code now. Click Pair a device there first.
@@ -2410,7 +2413,6 @@
 #. value in a column's filter list in the download list
 	Not in a queue	Not in a queue
 #. text in helpers.rs
-#. Video helpers: no copy of this helper yet
 	Not installed yet	Not installed yet
 #. text in the Link grabber window
 #. Link grabber, a link's status: a web page sent it (Click'n'Load), so it isn't looked up (name, size, online) before it is added
@@ -3416,6 +3418,10 @@
 	The archive was moved to the Trash	The archive was moved to the Trash
 #. text in the Download video window
 	The best qualities, MP3, Opus and FLAC need ffmpeg (about 80 MB).	The best qualities, MP3, Opus and FLAC need ffmpeg (about 80 MB).
+#. text in the Download video window
+#. in Download video, on 32-bit Windows (no button: no ffmpeg build MDM can check exists for it); Helpers... is the button below
+#. the trailing ... means it is still going on: keep it
+	The best qualities, MP3, Opus and FLAC need ffmpeg, which MDM has no copy of for 32-bit Windows: choose your own with Helpers...	The best qualities, MP3, Opus and FLAC need ffmpeg, which MDM has no copy of for 32-bit Windows: choose your own with Helpers...
 #. text in the Download video window
 #. in Download video, on macOS and Linux (no button: the system installs it)
 	The best qualities, MP3, Opus and FLAC need ffmpeg: install it with your system's package manager (or Homebrew).	The best qualities, MP3, Opus and FLAC need ffmpeg: install it with your system's package manager (or Homebrew).

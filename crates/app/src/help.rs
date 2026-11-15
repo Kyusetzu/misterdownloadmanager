@@ -128,10 +128,17 @@ fn report_fields() -> Vec<(&'static str, String)> {
     } else {
         "Other"
     };
+    // The processor of a Windows or Linux build other than x64's (Windows on ARM, 32-bit, Linux
+    // on ARM): a bug may be its build's alone. The Mac's is in "os" already.
+    let build = match mdm_tools::update::Arch::THIS {
+        Some(mdm_tools::update::Arch::Arm64) if !cfg!(target_os = "macos") => ", ARM64",
+        Some(mdm_tools::update::Arch::X86) => ", 32-bit",
+        _ => "",
+    };
     let mut fields = vec![
         ("os", os.to_owned()),
         ("os-version", os_version),
-        ("version", format!("{VERSION} ({COMMIT})")),
+        ("version", format!("{VERSION} ({COMMIT}{build})")),
         ("language", crate::i18n::code().to_owned()),
     ];
     fields.push((

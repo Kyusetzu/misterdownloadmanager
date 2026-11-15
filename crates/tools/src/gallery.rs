@@ -42,16 +42,22 @@ pub const USER_AGENT: &str = concat!(
     " (+https://misterdownloadmanager.com) gallery-dl"
 );
 
-/// gallery-dl's program for this system in its releases. None on macOS (it publishes no build
-/// for it: Homebrew's `gallery-dl`, chosen in Helpers, works there) and on Linux other than
-/// x86-64 (the same, from the system's packages or pip).
+/// gallery-dl's program for this system and processor in its releases: see [`asset_for`].
 pub fn asset() -> Option<&'static str> {
-    if cfg!(windows) {
-        Some("gallery-dl.exe")
-    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        Some("gallery-dl.bin")
-    } else {
-        None
+    asset_for(std::env::consts::OS, std::env::consts::ARCH)
+}
+
+/// gallery-dl's program in its releases for a system and a processor, as Rust names them
+/// (`std::env::consts`). It builds for 64-bit and 32-bit Windows and for Linux on x86-64; Windows
+/// on ARM runs the x64 one (Windows 11 runs x64 programs on ARM). None on macOS (no build: Homebrew's
+/// `gallery-dl`, chosen in Helpers, works there) and on Linux on ARM (the same, from the system's
+/// packages or pip).
+fn asset_for(os: &str, arch: &str) -> Option<&'static str> {
+    match (os, arch) {
+        ("windows", "x86_64" | "aarch64") => Some("gallery-dl.exe"),
+        ("windows", "x86") => Some("gallery-dl_x86.exe"),
+        ("linux", "x86_64") => Some("gallery-dl.bin"),
+        _ => None,
     }
 }
 
@@ -818,6 +824,36 @@ mod tests {
         assert_eq!(
             hex::encode(crate::sum_for(&sums, "gallery-dl.exe").unwrap()),
             "4dda3f14efbc8a8e616af1fc7e1e88d795995326b47692453e620117254dec18"
+        );
+    }
+
+    /// Each processor MDM is published for takes gallery-dl's build for it, or the x64 one on
+    /// Windows on ARM, and the release's signed list has a checksum for each.
+    #[test]
+    fn gallery_dl_has_a_build_for_each_windows_processor() {
+        let sums = String::from_utf8_lossy(SUMS);
+        for (os, arch, want) in [
+            ("windows", "x86_64", "gallery-dl.exe"),
+            ("windows", "aarch64", "gallery-dl.exe"),
+            ("windows", "x86", "gallery-dl_x86.exe"),
+            ("linux", "x86_64", "gallery-dl.bin"),
+        ] {
+            assert_eq!(asset_for(os, arch), Some(want), "{os} {arch}");
+            assert!(
+                crate::sum_for(&sums, want).is_some(),
+                "{want} not in the list"
+            );
+        }
+        for (os, arch) in [
+            ("linux", "aarch64"),
+            ("macos", "aarch64"),
+            ("macos", "x86_64"),
+        ] {
+            assert_eq!(asset_for(os, arch), None, "{os} {arch}");
+        }
+        assert_eq!(
+            asset(),
+            asset_for(std::env::consts::OS, std::env::consts::ARCH)
         );
     }
 

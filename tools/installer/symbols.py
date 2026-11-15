@@ -28,11 +28,15 @@ DUMP_SYMS = "v2.3.9"
 
 
 def fetch_dump_syms(work):
+    # The build machine's: it reads every processor's programs (Windows on ARM runs the x64 one
+    # emulated, as dump_syms has no ARM build for Windows).
     if sys.platform == "win32":
         name = "dump_syms-x86_64-pc-windows-msvc.zip"
     elif sys.platform == "darwin":
         name = ("dump_syms-aarch64-apple-darwin.tar.xz" if platform.machine() == "arm64"
                 else "dump_syms-x86_64-apple-darwin.tar.xz")
+    elif platform.machine() in ("aarch64", "arm64"):
+        name = "dump_syms-aarch64-unknown-linux-gnu.tar.xz"
     else:
         name = "dump_syms-x86_64-unknown-linux-gnu.tar.xz"
     data = fetch("mozilla/dump_syms", DUMP_SYMS, name)

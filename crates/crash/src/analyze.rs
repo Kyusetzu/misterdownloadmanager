@@ -93,9 +93,18 @@ pub fn analyze(dump: &Path, symbols: &[PathBuf]) -> Result<Analysis, String> {
         if !dirs.is_empty() {
             provider.add(Box::new(Symbolizer::new(simple_symbol_supplier(dirs))));
         }
-        provider.add(Box::new(
-            minidump_unwind::debuginfo::DebugInfoSymbolProvider::new(&system_info, &modules).await,
-        ));
+        // The modules' own debug info unwinds x86-64 and ARM64 programs only (it panics on any
+        // other, such as a 32-bit Windows one): those are read with the .sym files alone, which
+        // carry their unwinding too.
+        if matches!(
+            system_info.cpu,
+            minidump::system_info::Cpu::X86_64 | minidump::system_info::Cpu::Arm64
+        ) {
+            provider.add(Box::new(
+                minidump_unwind::debuginfo::DebugInfoSymbolProvider::new(&system_info, &modules)
+                    .await,
+            ));
+        }
         let state = minidump_processor::process_minidump(&dump, &provider)
             .await
             .map_err(|e| e.to_string())?;

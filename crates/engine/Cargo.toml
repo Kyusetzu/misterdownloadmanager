@@ -58,6 +58,11 @@ tokio-rustls.workspace = true
 # Sparse part files (src/sparse.rs, D-008 amendment) and the free-space probe (src/disk.rs).
 windows-sys.workspace = true
 
+# 32-bit Windows: QuickJS's bindings don't come with it for that system, so they are made from
+# its C headers as it builds (libclang, as BoringSSL's are).
+[target.'cfg(all(windows, target_arch = "x86"))'.dependencies]
+rquickjs = { version = "0.14.0", default-features = false, features = ["std", "bindgen"] }
+
 [target.'cfg(unix)'.dependencies]
 # The free-space probe (src/disk.rs): statvfs and statfs, safely (already in the tree).
 rustix = { version = "1.1.6", features = ["fs"] }

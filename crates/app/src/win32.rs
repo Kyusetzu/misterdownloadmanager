@@ -15,12 +15,31 @@ use windows_sys::Win32::System::Threading::GetCurrentProcessId;
 use windows_sys::Win32::UI::Shell::{
     DefSubclassProc, SHFILEINFOW, SHGFI_USEFILEATTRIBUTES, SHGetFileInfoW, SetWindowSubclass,
 };
+#[cfg(target_pointer_width = "64")]
+use windows_sys::Win32::UI::WindowsAndMessaging::SetWindowLongPtrW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     DestroyIcon, EnumWindows, GWL_EXSTYLE, GWL_STYLE, GetIconInfo, GetWindowLongPtrW,
     GetWindowThreadProcessId, ICONINFO, InternalGetWindowText, SWP_FRAMECHANGED, SWP_NOACTIVATE,
-    SWP_NOMOVE, SWP_NOZORDER, SetWindowLongPtrW, SetWindowPos, WM_NCCALCSIZE, WM_NCHITTEST,
-    WS_EX_DLGMODALFRAME, WS_THICKFRAME,
+    SWP_NOMOVE, SWP_NOZORDER, SetWindowPos, WM_NCCALCSIZE, WM_NCHITTEST, WS_EX_DLGMODALFRAME,
+    WS_THICKFRAME,
 };
+
+/// 32-bit Windows: `SetWindowLongPtrW` is `SetWindowLongW` there, whose value is 32 bits (all a
+/// pointer is on it); taking a pointer-sized value as the 64-bit one does, the calls below are the
+/// same on both.
+#[cfg(target_pointer_width = "32")]
+#[allow(non_snake_case)]
+unsafe fn SetWindowLongPtrW(
+    hwnd: HWND,
+    index: windows_sys::Win32::UI::WindowsAndMessaging::WINDOW_LONG_PTR_INDEX,
+    value: isize,
+) -> isize {
+    // SAFETY: the caller's call, as the 64-bit function's.
+    unsafe {
+        windows_sys::Win32::UI::WindowsAndMessaging::SetWindowLongW(hwnd, index, value as i32)
+            as isize
+    }
+}
 
 struct Find {
     pid: u32,
@@ -2180,11 +2199,14 @@ pub fn tray_icon_tip(hwnd: isize, id: u32, tip: &str) -> bool {
         // SAFETY: a plain C struct; all zero is its empty value.
         ..unsafe { zeroed() }
     };
-    // The last unit stays the NUL that ends it.
-    let room = nid.szTip.len() - 1;
-    for (slot, unit) in nid.szTip.iter_mut().zip(tip.encode_utf16().take(room)) {
+    // The last unit stays the NUL that ends it. Filled in a copy: on 32-bit Windows the struct
+    // is packed, and its fields can't be borrowed in place.
+    let mut text = nid.szTip;
+    let room = text.len() - 1;
+    for (slot, unit) in text.iter_mut().zip(tip.encode_utf16().take(room)) {
         *slot = unit;
     }
+    nid.szTip = text;
     // SAFETY: nid lives for the call; the shell only reads it.
     unsafe { Shell_NotifyIconW(NIM_MODIFY, &nid) != 0 }
 }
@@ -5064,8 +5086,10 @@ pub fn type_name(file_name: &str) -> Option<String> {
             size_of::<SHFILEINFOW>() as u32,
             SHGFI_TYPENAME | SHGFI_USEFILEATTRIBUTES,
         );
-        let len = info.szTypeName.iter().position(|c| *c == 0).unwrap_or(0);
-        (ok != 0 && len > 0).then(|| String::from_utf16_lossy(&info.szTypeName[..len]))
+        // A copy: on 32-bit Windows the struct is packed, and its fields can't be borrowed.
+        let type_name = info.szTypeName;
+        let len = type_name.iter().position(|c| *c == 0).unwrap_or(0);
+        (ok != 0 && len > 0).then(|| String::from_utf16_lossy(&type_name[..len]))
     }
 }
 

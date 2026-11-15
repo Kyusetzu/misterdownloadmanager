@@ -28,6 +28,17 @@ page](/download.html) offers three files:
 **Help → Check for updates → Update now** downloads a new version, checks its signature, puts it
 in place and restarts, for the setup and both zips.
 
+## Windows on ARM and 32-bit Windows
+
+From the version after 0.5.2, the three files come for two more kinds of PC, with the processor
+in their names: **Windows on ARM** (`setup-arm64.exe`, `portable-arm64.zip`, `arm64.zip`), for
+PCs with a Snapdragon or another ARM processor, which then run MDM without Windows translating it;
+and **32-bit Windows 10** (`setup-x86.exe`, `portable-x86.zip`, `x86.zip`). **Update now** keeps
+each copy on its own processor's files. MDM downloads yt-dlp's own build for each, and ffmpeg's
+for Windows on ARM; no ffmpeg is built for 32-bit Windows that MDM can check, so there you choose
+your own in **Helpers...** for the best video qualities. Linux gets its four files for 64-bit
+ARM computers too (`linux-arm64`).
+
 ## Portable: everything in one folder
 
 Unzip the portable copy anywhere, a USB stick included. The download list, the settings, the

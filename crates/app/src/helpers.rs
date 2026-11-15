@@ -612,13 +612,17 @@ impl Programs {
                 .filter(|c| h == Helper::GalleryDl && mdm_tools::gallery::too_old(&c.version));
             let checking = self.checking.as_ref().is_some_and(|(c, _)| *c == h);
             let downloading = self.installing.as_ref().is_some_and(|(i, _)| *i == h);
-            // The system's yt-dlp or gallery-dl may be old: MDM's own copy can replace it (#452,
-            // #571), where MDM has one for this system (gallery-dl: none on macOS).
-            let replaceable = match h {
-                Helper::YtDlp => true,
+            // Whether MDM downloads a copy of its own on this system and processor: yt-dlp
+            // almost everywhere, gallery-dl not on macOS nor Linux on ARM, ffmpeg on 64-bit
+            // Windows only (BtbN builds none for 32-bit Windows).
+            let has_own = match h {
+                Helper::YtDlp => mdm_tools::ytdlp_asset().is_some(),
                 Helper::GalleryDl => mdm_tools::gallery::asset().is_some(),
-                Helper::Ffmpeg => false,
+                Helper::Ffmpeg => mdm_tools::ffmpeg::available(),
             };
+            // The system's yt-dlp or gallery-dl may be old: MDM's own copy can replace it (#452,
+            // #571), where MDM has one for this system.
+            let replaceable = has_own && h != Helper::Ffmpeg;
             let system = replaceable && found.is_some_and(mdm_tools::Installed::is_system);
             let status = match (too_old, found) {
                 _ if downloading => {
@@ -657,8 +661,17 @@ impl Programs {
                     crate::i18n::t("Mister Download Manager's own copy, version {version}"),
                     &[("version", &i.version)],
                 ),
+                // Linux and macOS as before: there the system's package manager (or Homebrew)
+                // installs what MDM has no copy of, and MDM finds it.
                 // i18n: Video helpers: no copy of this helper yet
-                (None, None) => crate::i18n::t("Not installed yet").to_owned(),
+                (None, None) if has_own || !cfg!(windows) => {
+                    crate::i18n::t("Not installed yet").to_owned()
+                }
+                // i18n: Video helpers: MDM can't download this helper on this Windows (ffmpeg on 32-bit Windows); "Use another program" is the button below
+                (None, None) => crate::i18n::t(
+                    "MDM has no copy for this system: install it, or use another program",
+                )
+                .to_owned(),
             };
             winui::fit(
                 ui,

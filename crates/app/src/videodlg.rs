@@ -684,13 +684,22 @@ impl VideoDialog {
                     "Video lookups use yt-dlp (about 23 MB, checked against its signature).",
                 ),
             )),
-            // MDM installs ffmpeg on Windows only (its builds are Windows ones); elsewhere the
-            // system's package manager has it, and the note says so instead of a button.
-            (Some(_), None) if cfg!(windows) => Some((
+            // MDM installs ffmpeg on 64-bit Windows only (its builds are Windows ones, x64 and
+            // ARM64); elsewhere the system's package manager has it, and the note says so instead
+            // of a button.
+            (Some(_), None) if mdm_tools::ffmpeg::available() => Some((
                 Tool::Ffmpeg,
                 // i18n: button: download and install the ffmpeg program
                 crate::i18n::mark("Install ffmpeg"),
                 crate::i18n::t("The best qualities, MP3, Opus and FLAC need ffmpeg (about 80 MB)."),
+            )),
+            (Some(_), None) if cfg!(windows) => Some((
+                Tool::Ffmpeg,
+                "",
+                // i18n: in Download video, on 32-bit Windows (no button: no ffmpeg build MDM can check exists for it); Helpers... is the button below
+                crate::i18n::t(
+                    "The best qualities, MP3, Opus and FLAC need ffmpeg, which MDM has no copy of for 32-bit Windows: choose your own with Helpers...",
+                ),
             )),
             (Some(_), None) => Some((
                 Tool::Ffmpeg,

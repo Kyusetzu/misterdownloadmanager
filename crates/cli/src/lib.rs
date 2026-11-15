@@ -75,7 +75,8 @@ enum Cmd {
     /// yt-dlp's signing key, the program against that list.
     InstallYtdlp,
     /// Install (or update) ffmpeg, for the video qualities that merge video and audio: BtbN's
-    /// LGPL build, checked against its release's SHA-256 list (Windows; elsewhere the system's).
+    /// LGPL build, checked against its release's SHA-256 list (x64 and ARM64 Windows; elsewhere
+    /// the system's, and on 32-bit Windows one chosen in Helpers).
     InstallFfmpeg,
     /// Install (or update) gallery-dl for image galleries: its checksum list is verified against
     /// its author's signing key, the program against that list (Windows and Linux x86-64).

@@ -25,9 +25,15 @@ use crate::{Error, Installed, make_current};
 
 /// Whether this system installs the folder build.
 pub(crate) const BUILD: bool = cfg!(any(windows, target_os = "macos"));
-/// The folder build's program, beside its `_internal` folder.
-#[cfg(windows)]
+/// The folder build's program, beside its `_internal` folder: each Windows archive names it for
+/// its processor (`yt-dlp_win_arm64.zip` holds `yt-dlp_arm64.exe`, `yt-dlp_win_x86.zip`
+/// `yt-dlp_x86.exe`; checked against yt-dlp 2026.10.26's archives).
+#[cfg(all(windows, target_arch = "x86_64"))]
 pub(crate) const PROGRAM: &str = "yt-dlp.exe";
+#[cfg(all(windows, target_arch = "aarch64"))]
+pub(crate) const PROGRAM: &str = "yt-dlp_arm64.exe";
+#[cfg(all(windows, target_arch = "x86"))]
+pub(crate) const PROGRAM: &str = "yt-dlp_x86.exe";
 #[cfg(not(windows))]
 pub(crate) const PROGRAM: &str = "yt-dlp_macos";
 /// What the folder build keeps beside its program; the one-file build has none.

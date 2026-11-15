@@ -1,5 +1,6 @@
 ; Mister Download Manager's Windows installer (Inno Setup 6). Built by tools/installer/build.ps1,
-; which passes /DAppVersion=... and, when a certificate is set up, /DSign with /Smdmsign=...
+; which passes /DAppVersion=..., /DArch=... and /DBin=... and, when a certificate is set up,
+; /DSign with /Smdmsign=...
 ;
 ; Install for the current user (no administrator rights, %LOCALAPPDATA%\Programs) or for
 ; everyone (Program Files); the wizard asks. Tasks: browser integration (native messaging host
@@ -15,7 +16,14 @@
 #define AppExe "misterdownloadmanager.exe"
 #define HostExe "misterdownloadmanager-nmhost.exe"
 #define Root "..\.."
-#define Bin Root + "\target\release"
+; The processor (build.ps1 -Arch): x64, arm64 or x86, an installer each; and the folder its
+; programs were built in (target\<Rust's target>\release).
+#ifndef Arch
+  #define Arch "x64"
+#endif
+#ifndef Bin
+  #define Bin Root + "\target\x86_64-pc-windows-msvc\release"
+#endif
 
 [Setup]
 ; Never change AppId: upgrades and the uninstaller find the installation by it.
@@ -34,15 +42,33 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 ; The Run entry is the installing user's, also when installing for everyone.
 UsedUserAreasWarning=no
+; One installer per processor, all with the same AppId: the ARM64 one run on a Windows on ARM PC
+; that has the x64 one replaces it in place. x64 runs on x64 Windows and, emulated, on Windows 11
+; on ARM; ARM64 on Windows on ARM only; the 32-bit one on 32-bit Windows only (x86os): on a 64-bit
+; one it would replace a per-user x64 copy (which would then update to the 32-bit files for good)
+; or add a second copy in Program Files (x86). There Setup refuses with its own message, which
+; names the processors it is for.
+#if Arch == "arm64"
+ArchitecturesAllowed=arm64
+ArchitecturesInstallIn64BitMode=arm64
+#elif Arch == "x86"
+ArchitecturesAllowed=x86os
+#else
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+#endif
 MinVersion=10.0
 WizardStyle=modern
 SetupIconFile={#Root}\crates\app\assets\icons\app\mdm.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 OutputDir={#Root}\target\dist
+; x64's keeps the name it had before there were others: MDM's Update now looks for it by name.
+#if Arch == "x64"
 OutputBaseFilename=MisterDownloadManager-{#AppVersion}-setup
+#else
+OutputBaseFilename=MisterDownloadManager-{#AppVersion}-setup-{#Arch}
+#endif
 ; A 64 MB dictionary (#25): an 8 MB one (lzma2/max) only finds what repeats close by in the
 ; solid archive. A few MB smaller; building needs about 750 MB of memory, installing 64 MB.
 Compression=lzma2/ultra64
@@ -75,6 +101,13 @@ lang_en.TaskStartup=Start {#AppName} when &Windows starts
 lang_en.TaskGroupOther=Other:
 lang_en.Launch=Start {#AppName}
 lang_en.KeepData=Also delete your download list and settings?%n%nYour downloaded files are not touched either way.
+
+; 32-bit Windows' setup run on 64-bit Windows (x86os above): which setup to take instead. Other
+; languages show Setup's own message, that this Windows isn't supported.
+#if Arch == "x86"
+[Messages]
+lang_en.WindowsVersionNotSupported=This is the setup for 32-bit Windows, and this computer runs 64-bit Windows. Download MisterDownloadManager-{#AppVersion}-setup.exe instead (or MisterDownloadManager-{#AppVersion}-setup-arm64.exe on a Windows on ARM PC).
+#endif
 
 [Tasks]
 Name: "browser"; Description: "{cm:TaskBrowser}"
