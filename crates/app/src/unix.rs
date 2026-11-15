@@ -2648,6 +2648,33 @@ pub fn macos_is_active_and_visible() -> bool {
     }
 }
 
+/// macOS: unhides the application if [`macos_hide_window`] hid it, without activating it or
+/// ordering any window back to the front. While `NSApp` is hidden, macOS lets none of its windows
+/// draw, so eframe runs only the app's logic: a window a command opens (the browser's Download
+/// video, Download File Info) is never created, and the browser's click seems to do nothing.
+/// The main window stays ordered out (hidden to the menu bar) as it was.
+#[cfg(target_os = "macos")]
+#[allow(unsafe_code)]
+pub fn macos_unhide_app() {
+    use objc2::msg_send;
+    use objc2::runtime::{AnyClass, AnyObject, Bool};
+    // SAFETY: called on the main UI thread; reads `isHidden` of, and sends
+    // `unhideWithoutActivation` to, `NSApplication.sharedApplication`.
+    unsafe {
+        let Some(cls) = AnyClass::get(c"NSApplication") else {
+            return;
+        };
+        let app: *mut AnyObject = msg_send![cls, sharedApplication];
+        if app.is_null() {
+            return;
+        }
+        let hidden: Bool = msg_send![app, isHidden];
+        if hidden.as_bool() {
+            let _: () = msg_send![app, unhideWithoutActivation];
+        }
+    }
+}
+
 /// macOS: orders out the main window and hides the application when no other titled window is
 /// visible, so focus returns cleanly to the previously active app (#558).
 #[cfg(target_os = "macos")]

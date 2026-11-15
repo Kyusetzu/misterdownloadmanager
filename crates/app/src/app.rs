@@ -11076,15 +11076,29 @@ impl App {
         crate::crash::logic_begin();
         crate::crash::step(crate::crash::Step::Commands);
         let mut handled = false;
+        // A command that may open a window (not a question answered at once).
+        let mut opens = false;
         while let Ok(inc) = self.commands.try_recv() {
             handled = true;
             match inc.reply {
                 Some(reply) => {
                     let _ = reply.send(self.answer(&inc.cmd));
                 }
-                None => self.handle_command(inc.cmd, ctx),
+                None => {
+                    opens = true;
+                    self.handle_command(inc.cmd, ctx);
+                }
             }
         }
+        // macOS: hidden from the menu bar icon, the whole app is hidden and draws no window, so
+        // the window the command opens would never appear (the browser's Download video button
+        // did nothing). Unhide the app; the main window stays hidden.
+        #[cfg(target_os = "macos")]
+        if opens && !crate::offscreen() {
+            crate::unix::macos_unhide_app();
+        }
+        #[cfg(not(target_os = "macos"))]
+        let _ = opens;
         if handled {
             ctx.request_ui_pass(egui::ViewportId::ROOT);
         }

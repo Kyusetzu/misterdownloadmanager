@@ -674,6 +674,9 @@ const ok = (what) => {
   const values = rule.addRules[0].condition.responseHeaders[0].values;
   assert.ok(values.includes("application/pdf*") && values.includes("audio/mpeg*"));
   assert.ok(!values.some((v) => v.startsWith("video/mp4")), "MP4 not listed");
+  // #1087: one a page shows in a frame, an <embed> or an <object> too, never one its script
+  // fetches (the page's own viewer reads it).
+  assert.deepEqual(rule.addRules[0].condition.resourceTypes, ["main_frame", "sub_frame", "object"]);
   // Options' excluded sites keep opening in the browser, with their subdomains whether written
   // with *. or not (#1049), and so do the files their pages lead to on another host.
   const ex = fakeApi({ firefox: false, types: "PDF", rules: { excludedSites: "*.docs.test files.test:8080 docs.test" } });
@@ -3379,6 +3382,31 @@ const ask = (listeners) => (m, sender) => new Promise((r) => listeners.message(m
   assert.deepEqual(await held(refused.listeners, answer("https://x.test/a.zip", { "Content-Type": "application/zip" })), {});
   assert.equal(natives(refused.calls).length, 1);
   ok("#208 Firefox: a PDF taken when Options say so; the app's no lets the browser go on");
+}
+// #1087: a PDF a page shows in a frame, an <embed> or an <object> (a course's, from a CDN, at a
+// signed address) is taken as one the tab goes to is, with the page as its referrer; the page,
+// in a tab just opened, stays. One the page's script fetches is never held: its listener isn't
+// asked for those.
+{
+  const { api, calls, listeners } = fakeApi({ firefox: true });
+  load(api, true);
+  await settle();
+  assert.deepEqual([...listeners.headersReceivedSpec[0].types], ["main_frame", "sub_frame", "object"]);
+  assert.deepEqual([...listeners.beforeSendHeadersSpec[0].types], ["main_frame", "sub_frame", "object"]);
+  const pdf = { "Content-Type": "application/pdf", "Content-Length": "448712" };
+  const signed = "https://d1.cloudfront.test/pro/course/content/01M5.pdf?Expires=1893456000&Signature=a~b__&Key-Pair-Id=K2";
+  listeners.tabCreated({ id: 14 });
+  for (const [i, type] of ["sub_frame", "object"].entries()) {
+    const requestId = `f${i}`;
+    listeners.beforeSendHeaders({ requestId, method: "GET", url: signed, type, requestHeaders: [{ name: "Referer", value: "https://course.test/lesson/7" }] });
+    const res = await held(listeners, answer(signed, pdf, { requestId, type, tabId: 14, frameId: 5 }));
+    assert.deepEqual(res, { cancel: true }, type);
+    const m = natives(calls)[i];
+    assert.deepEqual([m.url, m.filename, m.size, m.referrer], [signed, "01M5.pdf", 448712, "https://course.test/lesson/7"], type);
+  }
+  await settle();
+  assert.ok(!calls.some((c) => c[0] === "closeTab"), "the page's tab stays");
+  ok("#1087 Firefox: a PDF in a frame, an <embed> or an <object> taken, its page stays");
 }
 // Alt held, Options' excluded sites, a file under the minimum size, a form that can't be posted
 // again, paused: the browser keeps it, nothing asked.
