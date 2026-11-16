@@ -872,7 +872,14 @@ pub fn part_path(dest: &Path) -> PathBuf {
 /// `dir/name`, or `dir/stem (N).ext` with the lowest N that is free — IDM's default for a
 /// duplicate link is "add the duplicate with a numbered file name" (notes/ENGINE.md §6).
 pub fn unique_path(dir: &Path, name: &str) -> PathBuf {
-    let taken = |p: &Path| p.exists() || part_path(p).exists() || is_reserved(p);
+    // A resume state beside the name is data too: another row's unfinished download, or one a
+    // plain Delete kept. Starting there would resume that link instead of this one (#597).
+    let taken = |p: &Path| {
+        p.exists()
+            || part_path(p).exists()
+            || crate::state::state_path(p).exists()
+            || is_reserved(p)
+    };
     let first = dir.join(name);
     if !taken(&first) {
         return first;
@@ -1709,6 +1716,19 @@ mod tests {
         // A folder of that name.
         std::fs::create_dir(d.path().join("box")).unwrap();
         assert_eq!(replacing_path(d.path(), "box"), d.path().join("box (1)"));
+    }
+
+    /// #597: a resume state beside the name is data even with no file and no part left, so a
+    /// new download takes the next free name instead of resuming that state's own link.
+    #[test]
+    fn a_resume_state_makes_the_name_taken() {
+        let d = tempfile::tempdir().unwrap();
+        let state = crate::state::state_path(&d.path().join("song.mp3"));
+        std::fs::write(&state, b"{}").unwrap();
+        assert_eq!(
+            destination(d.path(), "song.mp3"),
+            d.path().join("song (1).mp3")
+        );
     }
 
     /// Windows with long paths off, as #1102's report: 259 UTF-16 units a path, 255 a name.

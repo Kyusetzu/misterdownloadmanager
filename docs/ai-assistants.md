@@ -15,7 +15,7 @@ The assistant starts the server itself; you only tell the assistant where it is,
 
 | Tool | What it does |
 |---|---|
-| `list_downloads` | Lists your downloads, newest first: file, address, folder, status, size, how much is done, speed. It can list only one status (Queued, Downloading, Stopped, Complete, Error) or only names and addresses that contain some text. |
+| `list_downloads` | Lists your downloads, newest first: file, address, folder, status, size, how much is done, speed. It can list only one status (Queued, Downloading, Stopped, Complete, Error), only names and addresses that contain some text, or only one category or queue. |
 | `add_download` | Adds an http, https, ftp or ftps address and starts it, or only queues it (into the main queue by default, or a designated queue). It can say which folder, file name and category to use. A magnet link opens **Add torrent** in MDM, for you to choose the files. |
 | `pause_downloads` | Pauses running downloads. |
 | `resume_downloads` | Starts or resumes stopped, queued or failed downloads. |

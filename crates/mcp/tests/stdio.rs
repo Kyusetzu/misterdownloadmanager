@@ -30,9 +30,17 @@ fn fake_app(dir: &std::path::Path, api_on: bool) -> Arc<Mutex<Vec<Value>>> {
                 json!({ "error": "the automation API is off", "code": "api-off" }).to_string()
             } else if req["query"] == "list" {
                 json!({ "downloads": [
-                    { "id": 1, "file": "old.zip", "url": "https://example.com/old.zip", "status": "Complete", "path": "/downloads/f", "size": 100, "downloaded": 50, "speed": 0, "added": null },
-                    { "id": 2, "file": "new.iso", "url": "https://example.com/new.iso", "status": "Downloading", "path": "/downloads/f", "size": 100, "downloaded": 50, "speed": 0, "added": null },
-                ], "speed": 1000 })
+                    { "id": 1, "file": "old.zip", "url": "https://example.com/old.zip", "status": "Complete", "path": "/downloads/f", "size": 100, "downloaded": 50, "speed": 0, "added": null, "category": "Compressed" },
+                    { "id": 2, "file": "new.iso", "url": "https://example.com/new.iso", "status": "Downloading", "path": "/downloads/f", "size": 100, "downloaded": 50, "speed": 0, "added": null, "category": "General" },
+                ], "speed": 1000,
+                "queues": [
+                    { "name": "Main", "running": true, "ids": [1] },
+                    { "name": "Night", "running": false, "ids": [2] },
+                ],
+                "categories": [
+                    { "key": "General", "name": "General" },
+                    { "key": "Compressed", "name": "Compressed" },
+                ] })
                 .to_string()
             } else if req["action"].is_string() {
                 json!({ "done": req["ids"], "skipped": [] }).to_string()
@@ -149,6 +157,19 @@ fn an_assistant_lists_adds_and_acts_through_the_app() {
     );
 
     let (list, err) = mcp.call("list_downloads", json!({ "status": "downloading" }));
+    assert!(!err, "{list}");
+    let list: Value = serde_json::from_str(&list).unwrap();
+    assert_eq!(list["downloads"][0]["id"], 2);
+    assert_eq!(list["matching"], 1);
+    assert!(list["queues"].is_array() && list["categories"].is_array());
+
+    let (list, err) = mcp.call("list_downloads", json!({ "category": "Compressed" }));
+    assert!(!err, "{list}");
+    let list: Value = serde_json::from_str(&list).unwrap();
+    assert_eq!(list["downloads"][0]["id"], 1);
+    assert_eq!(list["matching"], 1);
+
+    let (list, err) = mcp.call("list_downloads", json!({ "queue": "Night" }));
     assert!(!err, "{list}");
     let list: Value = serde_json::from_str(&list).unwrap();
     assert_eq!(list["downloads"][0]["id"], 2);

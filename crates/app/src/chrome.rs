@@ -635,16 +635,21 @@ pub fn start_keyboard(ctx: &egui::Context, id: &str) {
 /// Keyboard cues on: the user reached for the keyboard (Alt, F10, a menu opened by keys), so
 /// light mode underlines access letters from now on, the Windows rule (dark mode always does).
 pub fn show_cues(ctx: &egui::Context) {
-    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("keyboard-cues"), true));
+    ctx.data_mut(|d| d.insert_temp(cues_key(), true));
+}
+
+fn cues_key() -> egui::Id {
+    egui::Id::unique("keyboard-cues")
+}
+
+/// Whether [`show_cues`] turned the keyboard cues on, whatever the look.
+pub fn cues_shown(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<bool>(cues_key()).unwrap_or(false))
 }
 
 /// Whether access letters are underlined: always in dark mode, after [`show_cues`] in light.
 pub fn cues(ctx: &egui::Context) -> bool {
-    crate::theme::colors().access_keys_always
-        || ctx.data(|d| {
-            d.get_temp::<bool>(egui::Id::unique("keyboard-cues"))
-                .unwrap_or(false)
-        })
+    crate::theme::colors().access_keys_always || cues_shown(ctx)
 }
 
 /// The next item of `level` from `from` in direction `dir`, skipping separators (wraps).

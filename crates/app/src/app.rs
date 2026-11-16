@@ -2405,6 +2405,14 @@ impl App {
     /// Info": once the address answered (name and size known) and its folder exists, the
     /// download starts behind the dialog; the dialog's answer then keeps, moves or drops it.
     fn start_early(&mut self, fi: &mut FileInfo) {
+        // The download this dialog started has its own place: Save As must not count its own
+        // part and state files as taken (#597). Follows the engine's numbered name once it has
+        // one.
+        let own = fi
+            .early
+            .and_then(|id| self.item(id))
+            .map(|i| i.dest.clone());
+        fi.set_early_place(own);
         if !self.settings.start_immediately || fi.early.is_some() || !fi.probed() {
             return;
         }

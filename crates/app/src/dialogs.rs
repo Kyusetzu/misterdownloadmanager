@@ -903,6 +903,9 @@ impl AddUrl {
 pub(crate) struct PlaceAsk {
     pub dir: PathBuf,
     pub name: String,
+    /// The place the early download already has, when there is one (#597): its own part and
+    /// state files beside exactly this path are its own, not other data.
+    pub own: Option<PathBuf>,
     /// A name MDM gave: numbered on when it is taken there (`naming::destination`). A typed one
     /// only has its folder looked at (its download is numbered as it starts if it is taken).
     pub number: bool,
@@ -925,7 +928,12 @@ fn look(ask: &PlaceAsk) -> Found {
     mdm_engine::naming::wait_cleared(&ask.dir);
     Found {
         dest: if ask.number {
-            mdm_engine::naming::destination(&ask.dir, &ask.name)
+            match &ask.own {
+                // The download that started early is already writing here: its own part and
+                // state files must not number it (#597).
+                Some(own) if mdm_engine::naming::guess(&ask.dir, &ask.name) == *own => own.clone(),
+                _ => mdm_engine::naming::destination(&ask.dir, &ask.name),
+            }
         } else {
             ask.dir.join(&ask.name)
         },
@@ -942,6 +950,9 @@ fn look(ask: &PlaceAsk) -> Found {
 pub(crate) struct SaveAsPlace {
     look: Look,
     repaint: Option<egui::Context>,
+    /// The early download's own place (#597), if the dialog started one: Save As keeps that
+    /// name even though its `.mdm.part` and `.mdm.json` sit beside it.
+    own: Option<PathBuf>,
     /// The last question, Save As's text it is for (as the answer set it, once taken), and its
     /// answer to come. A new question asks on a thread of its own: one that hangs on a dead
     /// share holds up nothing else.
@@ -959,8 +970,14 @@ impl SaveAsPlace {
         SaveAsPlace {
             look,
             repaint: repaint.cloned(),
+            own: None,
             asking: None,
         }
+    }
+
+    /// The place the download this dialog started early has (#597); None when there is none.
+    pub fn own(&mut self, own: Option<PathBuf>) {
+        self.own = own;
     }
 
     /// `name` in `dir` as MDM names it: Save As's text for now (fitted, not numbered: no wait
@@ -970,6 +987,7 @@ impl SaveAsPlace {
         let ask = PlaceAsk {
             dir: dir.to_owned(),
             name: name.to_owned(),
+            own: self.own.clone(),
             number: true,
         };
         self.ask(ask, &shown);
@@ -1035,6 +1053,7 @@ impl SaveAsPlace {
         let ask = PlaceAsk {
             dir: dir.to_owned(),
             name: name.to_string_lossy().into_owned(),
+            own: self.own.clone(),
             number: false,
         };
         self.ask(ask, &save_as.clone());
@@ -1348,6 +1367,12 @@ impl FileInfo {
     /// The chosen destination as an absolute path.
     pub fn dest(&self) -> PathBuf {
         resolve_path(&self.save_as)
+    }
+
+    /// The place the download this dialog started early already has (#597): Save As's look
+    /// keeps its own part and state files from counting its name as taken.
+    pub fn set_early_place(&mut self, dest: Option<PathBuf>) {
+        self.place.own(dest);
     }
 
     pub(crate) fn set_category(&mut self, c: Category) {
@@ -4657,6 +4682,33 @@ mod tests {
         let mut save_as = place.name_in(&gone, "a.zip");
         assert_eq!(answered(&mut place, &mut save_as), Some(false));
         assert_eq!(save_as, display_path(&gone.join("a.zip")));
+    }
+
+    /// #597: with Start immediately on, the early download's own `.mdm.part` and `.mdm.json`
+    /// sit beside its name. Picking the same folder in Save As keeps that name, so `adopt_early`
+    /// sees no move and the download is not restarted.
+    #[test]
+    fn the_early_downloads_own_part_and_state_keep_its_name() {
+        let d = tempfile::tempdir().unwrap();
+        let own = d.path().join("song.mp3");
+        std::fs::write(mdm_engine::naming::part_path(&own), b"x").unwrap();
+        std::fs::write(mdm_engine::state::state_path(&own), b"{}").unwrap();
+        let mut place = SaveAsPlace::new(None);
+        place.own(Some(own.clone()));
+        let mut save_as = place.name_in(d.path(), "song.mp3");
+        assert_eq!(answered(&mut place, &mut save_as), Some(true));
+        assert_eq!(save_as, display_path(&own));
+        // What `adopt_early` compares: the dialog's place is the item's own, so no restart.
+        assert_eq!(resolve_path(&save_as), own);
+        // Another download's part beside another name still counts.
+        std::fs::write(
+            mdm_engine::naming::part_path(&d.path().join("other.mp3")),
+            b"x",
+        )
+        .unwrap();
+        let mut other = place.name_in(d.path(), "other.mp3");
+        assert_eq!(answered(&mut place, &mut other), Some(true));
+        assert_eq!(other, display_path(&d.path().join("other (1).mp3")));
     }
 
     /// #1088: a name chosen in the Save dialog that a file there already has is taken as a typed

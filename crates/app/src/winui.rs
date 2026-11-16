@@ -4036,8 +4036,10 @@ fn button_face(
     if let Some(before) = mnemonic
         && let Some(letter) = shown[before.len()..].chars().next()
     {
-        // Underlined as the menus are (always dark; light once the keyboard is in use), while
-        // Alt+letter always works.
+        // Underlined as the menus are (always in a dark classic look; elsewhere once the
+        // keyboard is in use: Alt pressed in this window, as in the main one), while Alt+letter
+        // always works.
+        cues_on_alt(ui);
         if crate::chrome::cues(ui.ctx()) {
             let (x0, x1) = char_span(p, &tahoma(), &shown, before.chars().count(), drawn);
             hline(p, x0, x1, baseline + 3.0, face.text);
@@ -4046,7 +4048,10 @@ fn button_face(
     }
     let resp = if pressed_by_key {
         let mut r = resp;
-        r.flags.insert(egui::response::Flags::CLICKED);
+        // A click as egui's own keyboard clicks are (Space or Enter on the focused button):
+        // `clicked()` reads the plain CLICKED flag only with a pointer click in the same pass,
+        // so Alt+letter pressed nothing anywhere.
+        r.flags.insert(egui::response::Flags::FAKE_PRIMARY_CLICKED);
         r
     } else {
         resp
@@ -4244,9 +4249,47 @@ fn button_colors_in(
     }
 }
 
+/// Alt as an access key's modifier: without Ctrl (Ctrl+Alt is AltGr on Windows, which types).
+fn access_alt(m: &egui::Modifiers) -> bool {
+    m.alt && !m.ctrl && !m.command
+}
+
+/// Whether this pass's input holds Alt, alone or with a key. Read from the events too, not only
+/// from the pass's modifiers: Alt pressed and let go within one pass (X11 often sends a key and
+/// Alt's release together; a screen reader passes a key on with its release, #328) never shows
+/// in those.
+fn alt_in(i: &egui::InputState) -> bool {
+    access_alt(&i.modifiers)
+        || i.events.iter().any(|e| match e {
+            egui::Event::ModifiersChanged(m) => access_alt(m),
+            egui::Event::Key {
+                pressed: true,
+                modifiers,
+                ..
+            } => access_alt(modifiers),
+            _ => false,
+        })
+}
+
+/// Alt in a window with access letters (a dialog's buttons): the keyboard is in use, so the
+/// letters are underlined from now on in every look (Windows' rule; the main window's menu bar
+/// does the same for its Alt). Not on macOS, whose apps have no access keys.
+fn cues_on_alt(ui: &Ui) {
+    if !cfg!(target_os = "macos") && ui.input(alt_in) {
+        crate::chrome::show_cues(ui.ctx());
+    }
+}
+
 /// Alt+`letter` was pressed (and is taken): Latin letters as egui keys, other scripts (Cyrillic,
 /// Greek, Arabic…) as the text typed with Alt held.
+///
+/// Never on macOS: its apps have no access keys (the menu bar there takes no Alt+letter either,
+/// app.rs), and Option, its Alt, types letters (Option+C is "ç"), which the focused box takes
+/// (`without_alt_text`): the same keys must not also press a button.
 pub fn mnemonic_pressed(ui: &Ui, letter: char) -> bool {
+    if cfg!(target_os = "macos") {
+        return false;
+    }
     let upper: String = letter.to_uppercase().collect();
     if let Some(key) = egui::Key::from_name(&upper)
         && ui.input_mut(|i| i.consume_key(egui::Modifiers::ALT, key))
@@ -4255,11 +4298,25 @@ pub fn mnemonic_pressed(ui: &Ui, letter: char) -> bool {
     }
     let lower: String = letter.to_lowercase().collect();
     ui.input_mut(|i| {
-        let alt = i.modifiers.alt;
-        let at = i
-            .events
-            .iter()
-            .position(|e| matches!(e, egui::Event::Text(t) if alt && t.to_lowercase() == lower));
+        // A text comes after the key that typed it, which says whether Alt was held: on X11 Alt
+        // is often let go in the same pass, and the pass's own modifiers no longer have it.
+        let pass_alt = access_alt(&i.modifiers);
+        let mut with_alt = false;
+        let mut at = None;
+        for (k, e) in i.events.iter().enumerate() {
+            match e {
+                egui::Event::Key {
+                    pressed: true,
+                    modifiers,
+                    ..
+                } => with_alt = access_alt(modifiers),
+                egui::Event::Text(t) if (with_alt || pass_alt) && t.to_lowercase() == lower => {
+                    at = Some(k);
+                    break;
+                }
+                _ => {}
+            }
+        }
         at.map(|k| i.events.remove(k)).is_some()
     })
 }
@@ -8023,10 +8080,177 @@ example.org"; // values typed in, not texts to translate
             Primary,
         );
         b.typed(egui::Key::S, "s", egui::Modifiers::ALT);
-        assert_eq!(b.access, Some(('s', 1)));
-        // macOS: Option+letter types a letter (Option+S is "ß"), which its boxes take.
+        // macOS: Option+letter types a letter (Option+S is "ß"), which its boxes take, and
+        // presses nothing (no access keys there).
         #[cfg(not(target_os = "macos"))]
-        assert_eq!(b.value, text, "nothing typed");
+        {
+            assert_eq!(b.access, Some(('s', 1)));
+            assert_eq!(b.value, text, "nothing typed");
+        }
+        #[cfg(target_os = "macos")]
+        assert_eq!(b.access, Some(('s', 0)));
+    }
+
+    /// A dialog's "&Close" button ([`button_light`]) drawn pass after pass, one pass per entry
+    /// of `passes` after a first empty one: whether it was clicked in any of them, and whether
+    /// the keyboard cues (the underlined letters) were turned on.
+    fn close_by_keys(kind: ButtonKind, passes: Vec<Vec<egui::Event>>) -> (bool, bool) {
+        button_by_keys("&Close", kind, passes)
+    }
+
+    /// [`close_by_keys`] for a button labelled `label`.
+    fn button_by_keys(
+        label: &str,
+        kind: ButtonKind,
+        passes: Vec<Vec<egui::Event>>,
+    ) -> (bool, bool) {
+        let ctx = egui::Context::default();
+        let mut defs = egui::FontDefinitions::default();
+        install_fonts(&mut defs, None);
+        ctx.set_fonts(defs);
+        let rc = Rect::from_min_size(pos2(20.0, 20.0), egui::vec2(73.0, 21.0));
+        let mut clicked = false;
+        let mut t = 0.0;
+        for events in std::iter::once(Vec::new()).chain(passes) {
+            t += 0.05;
+            let raw = egui::RawInput {
+                time: Some(t),
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, egui::vec2(200.0, 100.0))),
+                events,
+                ..Default::default()
+            };
+            let mut out = ctx.run_ui(raw, |ui| {
+                clicked |= button_light(ui, rc, label, kind, false).clicked();
+            });
+            out.textures_delta.clear();
+        }
+        (clicked, crate::chrome::cues_shown(&ctx))
+    }
+
+    fn key(key: egui::Key, pressed: bool, modifiers: egui::Modifiers) -> egui::Event {
+        egui::Event::Key {
+            key,
+            physical_key: Some(key),
+            pressed,
+            repeat: false,
+            modifiers,
+        }
+    }
+
+    /// Alt+C presses "&Close" and underlines the access letters; C alone, Ctrl+Alt+C (AltGr,
+    /// which types) and Alt+C on a disabled button press nothing. Alt+C presses nothing on macOS,
+    /// where Option types letters. Main pressed nothing anywhere: the button's response was
+    /// flagged as a pointer's click, which egui reads only with a pointer click in that pass.
+    #[test]
+    fn alt_and_an_access_letter_press_the_button() {
+        use egui::{Key, Modifiers};
+        let (alt, none) = (Modifiers::ALT, Modifiers::NONE);
+        let ctrl_alt = Modifiers {
+            ctrl: true,
+            command: !cfg!(target_os = "macos"),
+            ..Modifiers::ALT
+        };
+        // As X11 sends them (GNOME on Xorg, logged): Alt's key and the modifiers in one pass,
+        // C with Alt held, its text and every release in the next.
+        let x11 = vec![
+            vec![
+                key(Key::AltLeft, true, none),
+                egui::Event::ModifiersChanged(alt),
+            ],
+            vec![
+                key(Key::C, true, alt),
+                egui::Event::Text("c".into()),
+                key(Key::AltLeft, false, alt),
+                egui::Event::ModifiersChanged(none),
+                key(Key::C, false, none),
+            ],
+        ];
+        // All in one pass (a screen reader passes keys on with their release, #328).
+        let one_pass = vec![vec![
+            egui::Event::ModifiersChanged(alt),
+            key(Key::C, true, alt),
+            egui::Event::Text("c".into()),
+            key(Key::C, false, alt),
+            egui::Event::ModifiersChanged(none),
+        ]];
+        let plain = vec![vec![
+            key(Key::C, true, none),
+            egui::Event::Text("c".into()),
+            key(Key::C, false, none),
+        ]];
+        let altgr = vec![vec![
+            egui::Event::ModifiersChanged(ctrl_alt),
+            key(Key::C, true, ctrl_alt),
+            egui::Event::Text("c".into()),
+        ]];
+        let alt_alone = vec![vec![
+            key(Key::AltLeft, true, none),
+            egui::Event::ModifiersChanged(alt),
+            key(Key::AltLeft, false, alt),
+            egui::Event::ModifiersChanged(none),
+        ]];
+        let mac = cfg!(target_os = "macos");
+        assert_eq!(close_by_keys(ButtonKind::Normal, x11), (!mac, !mac), "X11");
+        assert_eq!(
+            close_by_keys(ButtonKind::Normal, one_pass.clone()),
+            (!mac, !mac),
+            "one pass"
+        );
+        assert_eq!(
+            close_by_keys(ButtonKind::Normal, plain),
+            (false, false),
+            "C"
+        );
+        assert_eq!(
+            close_by_keys(ButtonKind::Normal, altgr),
+            (false, false),
+            "AltGr"
+        );
+        assert_eq!(
+            close_by_keys(ButtonKind::Disabled, one_pass),
+            (false, !mac),
+            "disabled"
+        );
+        assert_eq!(
+            close_by_keys(ButtonKind::Normal, alt_alone),
+            (false, !mac),
+            "Alt alone"
+        );
+    }
+
+    /// An access letter of another script, typed with Alt held as X11 sends it (on an Arabic
+    /// layout "ل" is on G's key): Alt is let go in the same pass, so the pass's own modifiers no
+    /// longer hold it and only the key that typed the letter says it was held. Main pressed
+    /// nothing.
+    #[test]
+    fn alt_and_an_access_letter_of_another_script_press_the_button() {
+        use egui::{Key, Modifiers};
+        let (alt, none) = (Modifiers::ALT, Modifiers::NONE);
+        let x11 = vec![
+            vec![
+                key(Key::AltLeft, true, none),
+                egui::Event::ModifiersChanged(alt),
+            ],
+            vec![
+                key(Key::G, true, alt),
+                egui::Event::Text("\u{644}".into()),
+                key(Key::AltLeft, false, alt),
+                egui::Event::ModifiersChanged(none),
+                key(Key::G, false, none),
+            ],
+        ];
+        let typed = vec![vec![
+            key(Key::G, true, none),
+            egui::Event::Text("\u{644}".into()),
+        ]];
+        // "&لصق" (Paste): ل is its access letter.
+        let label = "&\u{644}\u{635}\u{642}";
+        let mac = cfg!(target_os = "macos");
+        assert_eq!(button_by_keys(label, ButtonKind::Normal, x11).0, !mac);
+        assert!(
+            !button_by_keys(label, ButtonKind::Normal, typed).0,
+            "no Alt"
+        );
     }
 
     /// #1084: text selected by dragging stays selected under a right-click on it, and Copy copies

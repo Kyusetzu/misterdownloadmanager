@@ -564,6 +564,13 @@ Bug fixes from the first days of 0.5.0, a Safari extension, and more file types.
 
 These ship in the next version.
 
+- ✅ **Alt** and a button's underlined letter press the button (the **Scheduler**'s **Apply**,
+  **Close** and the others pressed nothing), letters of other scripts too, and **Alt** in such a
+  window underlines the letters in every look, as in the main window
+- ✅ With **Start immediately** on, picking the folder the early download already saves to in
+  **Save As** keeps its name: the download's own `.mdm.part` and `.mdm.json` no longer count as
+  taken, so it isn't offered as `song (1).mp3` and doesn't start over
+  ([#597](https://github.com/anefzaoui/misterdownloadmanager/issues/597))
 - ✅ The crash crate's tests build on 32-bit Windows again: the alternate-stack test uses a
   top a 32-bit `usize` can hold, with that crash's own address kept in its comment, so CI's
   `windows-x86` job is green again
@@ -1365,6 +1372,8 @@ These ship in the next version.
   [@abdul-karim-mia](https://github.com/abdul-karim-mia))
 - ✅ The command line adds downloads to the running app: `add <url>`, with folder, file name, category, queue and silent flags (thanks to
 - ✅ AI assistants (MCP) can choose a download queue and a category when adding downloads, and start or stop a queue by name (thanks to
+  [@abdul-karim-mia](https://github.com/abdul-karim-mia))
+- ✅ AI assistants (MCP) can filter downloads by category or queue in `list_downloads`, and see the app's available queues and categories (thanks to
   [@abdul-karim-mia](https://github.com/abdul-karim-mia))
 - ✅ Linux (X11): Minimize to the notification area takes the window out of the taskbar's window
   list, as closing it does ([#1255](https://github.com/anefzaoui/misterdownloadmanager/issues/1255))
