@@ -493,11 +493,6 @@ fn external_7zip_goes_through_the_same_checks() {
 
 /// Like [`run`], with HatchZip and in place as given (7-Zip as installed unless `no_7zip`),
 /// MDM's records of its runs in `runs`.
-///
-/// The stand-in HatchZips are scripts these tests write and run at once. While one is written,
-/// another test's thread may start a program, which holds the script open for writing until it
-/// runs: Linux then refuses to run the script ("Text file busy"), and the stand-in never ran.
-/// That is tried again, a little later; nothing else is.
 fn run_hz(
     archive: &Path,
     dest: &Path,
@@ -520,14 +515,7 @@ fn run_hz(
         on_file: &mut on_file,
         cancel: None,
     };
-    let mut r = extract(archive, &mut policy);
-    for _ in 0..50 {
-        if !matches!(&r, Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::ExecutableFileBusy) {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(20));
-        r = extract(archive, &mut policy);
-    }
+    let r = extract(archive, &mut policy);
     (r, seen)
 }
 
