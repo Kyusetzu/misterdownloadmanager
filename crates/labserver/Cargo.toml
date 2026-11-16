@@ -33,7 +33,7 @@ time.workspace = true
 rustls.workspace = true
 tokio-rustls.workspace = true
 # The HTTPS lab (`Config::tls`): its connections served by hand, axum's own features.
-hyper-util = { workspace = true, features = ["server", "http1", "tokio", "service"] }
+hyper-util = { workspace = true, features = ["server", "server-auto", "http1", "http2", "tokio", "service"] }
 url.workspace = true
 
 [dev-dependencies]

@@ -88,6 +88,11 @@ fn crashy_is_found_in_each_layout() {
 /// Run crashy in `mode` and wait (up to 90 s: reading the dump's symbols takes a while in a
 /// debug build) for its report.
 fn report(mode: &str) -> String {
+    report_with(mode, None)
+}
+
+/// [`report`], its monitor listening `late` after it starts when given.
+fn report_with(mode: &str, late: Option<Duration>) -> String {
     let data = tempfile::tempdir().unwrap();
     /// The program, ended and reaped however the test leaves (a failed assert too).
     struct Running(std::process::Child);
@@ -97,11 +102,13 @@ fn report(mode: &str) -> String {
             let _ = self.0.wait();
         }
     }
+    let mut cmd = Command::new(crashy());
+    cmd.arg(mode).arg(data.path());
+    if let Some(late) = late {
+        cmd.env("CRASHY_MONITOR_LATE_MS", late.as_millis().to_string());
+    }
     let _child = Running(
-        Command::new(crashy())
-            .arg(mode)
-            .arg(data.path())
-            .spawn()
+        cmd.spawn()
             .expect("examples/crashy is built with the tests"),
     );
     let crashes = data.path().join("crashes");
@@ -166,6 +173,31 @@ fn a_native_crash_reports_where_it_crashed() {
     assert!(r.contains("Description: MDM crashed"), "{r}");
     assert!(
         signed(&r, "Signature: crash in crashy::crashy_crashes_here"),
+        "{r}"
+    );
+}
+
+/// A crash on another thread than the main one is reported too: each thread has an alternate
+/// signal stack of its own (#1239).
+#[test]
+fn a_native_crash_on_a_thread_reports_where_it_crashed() {
+    let r = report("thread-crash");
+    assert!(r.contains("Description: MDM crashed"), "{r}");
+    assert!(
+        signed(&r, "Signature: crash in crashy::crashy_crashes_here"),
+        "{r}"
+    );
+}
+
+/// A monitor that listens only after the window thread's first try (half a second) is still
+/// connected to, from beside the window, and the panic is reported. (The first try's end gave
+/// the monitor up, and the session went without crash reports.)
+#[test]
+fn a_panic_is_reported_when_the_monitor_is_slow_to_start() {
+    let r = report_with("panic", Some(Duration::from_millis(1500)));
+    assert!(r.contains("crashy: a test panic"), "{r}");
+    assert!(
+        signed(&r, "Signature: panic in crashy::crashy_panics_here"),
         "{r}"
     );
 }

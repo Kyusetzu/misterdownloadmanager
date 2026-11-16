@@ -46,6 +46,9 @@ struct Args {
     /// certificate errors' tests); "test-ca" (the default) is the good one.
     #[arg(long, requires = "tls", default_value = "test-ca")]
     tls_cert: String,
+    /// With --tls, offer HTTP/2 too (ALPN h2), as most sites do.
+    #[arg(long, requires = "tls")]
+    http2: bool,
 }
 
 #[tokio::main]
@@ -81,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
         files: args.files.clone(),
         rss_dir: args.rss_dir,
         tls: args.tls,
+        http2: args.http2,
         cert,
     })
     .await?;

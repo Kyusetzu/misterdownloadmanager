@@ -89,6 +89,10 @@ pub struct Faults {
     /// The same check answering this status instead, empty, with `Retry-After: 0` (FileHippo's
     /// 412 to whatever isn't a browser, #630, #668).
     pub refuse_programs: Option<u16>,
+    /// Every request that asks for a range answered with this status (4xx or 5xx), the whole
+    /// file still served: a site that lets the browser-like connection download a file, but
+    /// not in parts (#668).
+    pub refuse_ranges: Option<u16>,
     /// A one-time link: the first request for this path and query is served, every later one
     /// (HEAD and ranges included) gets 410 Gone.
     #[serde(deserialize_with = "flag_opt")]
@@ -134,6 +138,7 @@ impl Faults {
             refuse: over.refuse.or(self.refuse),
             browser_only: over.browser_only.or(self.browser_only),
             refuse_programs: over.refuse_programs.or(self.refuse_programs),
+            refuse_ranges: over.refuse_ranges.or(self.refuse_ranges),
             require_referer: over
                 .require_referer
                 .clone()

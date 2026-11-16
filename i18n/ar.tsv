@@ -649,6 +649,10 @@
 #. text in the Link grabber window
 #. Link grabber, a link's status: the server asked to try later (429, 503)
 	Busy, try later	مشغول، حاول لاحقا
+#. text in the Options window
+#. Options → Download panels: the size of the download button over videos, chosen after it (Full / Compact)
+#, machine
+	Button size:	حجم الزر:
 #. message or event log entry in the main window
 	by batch download	عن طريق التنزيل الجماعي
 #. message or event log entry in the main window
@@ -846,6 +850,10 @@
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Comoros	جزر القمر
+#. option (radio button) in the Options window
+#. Options → Download panels → Button size: only the round button (the logo, the arrow, the close mark) over every video
+#, machine
+	Compact	مدمج
 #. item in the Categories tree in the download list; value in a column's filter list in the download list; text in the download list (sizes, speeds, status); text in a download's progress window; text in remote.rs
 #. a download's status (state it is in, not a command)
 #. a download's status (state it is in, not a command): finished
@@ -1208,6 +1216,14 @@
 #, machine
 	Dragged out of Download complete and moved to {folder}	أخرج بالسحب من «اكتمل التنزيل» ونقل إلى {folder}
 #. message or event log entry in the main window
+#. a download's note: its file was dragged out of the download list and moved somewhere MDM can't tell (a program took it, the Recycle Bin)
+#, machine
+	Dragged out of the list and moved to a place MDM couldn't learn	أخرج بالسحب من القائمة ونقل إلى مكان تعذر على MDM معرفته
+#. message or event log entry in the main window
+#. a download's note: its file was dragged out of the download list and moved to that folder
+#, machine
+	Dragged out of the list and moved to {folder}	أخرج بالسحب من القائمة ونقل إلى {folder}
+#. message or event log entry in the main window
 #. in Import, where the addresses came from: dragged onto the window
 	Dropped links	روابط مفلتة
 #. window title in a dialog box
@@ -1556,6 +1572,10 @@
 	From:	من:
 #. checkbox in the Options window
 	ftp	FTP
+#. text in the Options window
+#. Options → Download panels → Button size: the button with its words ("Download video", the quality) where they fit (the default)
+#, machine
+	Full	كامل
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Gabon	الغابون
@@ -1723,6 +1743,10 @@
 #. text in the Options window
 #. Options → DNS settings: checkbox: when the chosen DNS can't be reached, use the system's instead
 	If it can't be reached, use the system's DNS	إذا تعذر الوصول إليه، فاستخدم DNS الخاص بالنظام
+#. text in extension.rs
+#. under "macOS keeps Mister Download Manager out of …'s folder" (Test browser integration, the browser extension's window): how to allow it. The quoted words and System Settings → Privacy & Security → Full Disk Access are macOS's own: use Apple's words in this language, or keep the English ones when unsure
+#, machine
+	If macOS asks whether it may access data from other apps, allow it. Or turn on Mister Download Manager in System Settings → Privacy & Security → Full Disk Access. Then press Set it up.	إذا سألك macOS عما إذا كان يمكنه الوصول إلى بيانات من تطبيقات أخرى، فاسمح بذلك. أو فعّل Mister Download Manager في إعدادات النظام ← الخصوصية والأمن ← الوصول الكامل إلى القرص. ثم اضغط «إعداده».
 #. text in errors.rs
 #. what to do when a helper's server couldn't be reached; {proxy} = the Options tab Proxy / Socks; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
 #. {name} = a file name (keep the braces as they are)
@@ -2061,6 +2085,14 @@
 #. tooltip of "Mark downloaded files as coming from the internet" on macOS
 #, machine
 	macOS checks the files marked this way: Gatekeeper before a program first opens. Unticked, no download is marked.	يتحقق macOS من الملفات التي تم وضع علامة عليها بهذه الطريقة: Gatekeeper قبل فتح البرنامج لأول مرة. إذا لم يتم تحديدها، فلن يتم وضع علامة على أي تنزيل.
+#. text in extension.rs
+#. a check of Test browser integration, and the browser extension's window (macOS): macOS refused to let MDM read or write a browser's folder (where the browser finds MDM's helper)
+#, machine
+	macOS keeps Mister Download Manager out of a browser's folder.	يمنع macOS برنامج Mister Download Manager من الوصول إلى مجلد أحد المستعرضات.
+#. text in extension.rs
+#. a check of Test browser integration, and the browser extension's window (macOS): macOS refused to let MDM read or write {browser}'s folder (where the browser finds MDM's helper); {browser} is a browser's name
+#, machine
+	macOS keeps Mister Download Manager out of {browser}'s folder.	يمنع macOS برنامج Mister Download Manager من الوصول إلى مجلد {browser}.
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Madagascar	مدغشقر
@@ -3259,6 +3291,26 @@
 #. text in the Options window
 #. Options → Accounts: the account's sign-in can't be read (signed out, or the settings came from another computer)
 	signed out: sign in again	تم تسجيل الخروج: سجل الدخول مرة أخرى
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system doesn't draw MDM; {date}: the day that was found
+#, machine
+	Since {date}	منذ {date}
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; MDM tries it again once the graphics driver is updated
+#, machine
+	Since {date}: MDM tries it again after a driver update	منذ {date}: سيحاول MDM مرة أخرى بعد تحديث برنامج التشغيل
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; MDM tries that graphics system again when it next starts
+#, machine
+	Since {date}: MDM tries it again at its next start	منذ {date}: سيحاول MDM مرة أخرى عند تشغيله التالي
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; {retry}: the day MDM tries it again
+#, machine
+	Since {date}: MDM tries it again on {retry}	منذ {date}: سيحاول MDM مرة أخرى في {retry}
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; {retry}: the day MDM tries it again, unless the graphics driver is updated before
+#, machine
+	Since {date}: MDM tries it again on {retry}, or after a driver update	منذ {date}: سيحاول MDM مرة أخرى في {retry} أو بعد تحديث برنامج التشغيل
 #. text in countries.rs
 #. a country's name (where a download's server is)
 	Singapore	سنغافورة
@@ -3350,6 +3402,26 @@
 	Speed Limiter	محدد السرعة
 #. window title in a dialog box
 	Speed Limiter settings	إعدادات محدد السرعة
+#. text in the download list (sizes, speeds, status)
+#. tip of a download's Transfer rate in the list: {limit} is the most this download may take ("512 KB/sec"), set with the Speed Limiter
+#, machine
+	Speed Limiter: at most {limit} for this download	محدد السرعة: {limit} كحد أقصى لهذا التنزيل
+#. text in the download list (sizes, speeds, status)
+#. the status bar and the tray icon's tip while the Speed Limiter's limit for all downloads together is on: {limit} is the most they may take together ("1024 KB/sec")
+#, machine
+	Speed Limiter: {limit} for all downloads	محدد السرعة: {limit} لجميع التنزيلات
+#. text in the download list (sizes, speeds, status)
+#. tip of a download's Transfer rate in the list: {limit} is the most all downloads together may take ("1024 KB/sec"), set in the Speed Limiter's settings
+#, machine
+	Speed Limiter: {limit} for all downloads together	محدد السرعة: {limit} لجميع التنزيلات معا
+#. text in the download list (sizes, speeds, status)
+#. the status bar and the tray icon's tip while Downloads → Speed Limiter is turned on: {limit} is the most each download may take ("512 KB/sec")
+#, machine
+	Speed Limiter: {limit} per download	محدد السرعة: {limit} لكل تنزيل
+#. text in the download list (sizes, speeds, status)
+#. the status bar and the tray icon's tip while both Speed Limiter limits are on: {one} is the most each download may take ("512 KB/sec"), {all} the most all of them together may take ("1024 KB/sec")
+#, machine
+	Speed Limiter: {one} per download, {all} for all	محدد السرعة: {one} لكل تنزيل، {all} للجميع
 #. message or event log entry in the main window
 #. tooltip on the disabled Rename box when the file is one part of a split archive (.part1.rar, .7z.001…)
 #, machine
@@ -4603,7 +4675,7 @@
 	{file} is too large to be a list of addresses ({size}). Import reads text files, web pages and .ef2 exports of up to {limit}.	حجم {file} كبير جدا ليكون قائمة عناوين ({size}). يستورد البرنامج الملفات النصية وصفحات الويب وملفات التصدير بصيغة .ef2 التي يصل حجمها إلى {limit}.
 #. text in a dialog box
 #, machine
-	{file} was moved elsewhere by dragging it out of Download complete, and MDM couldn't learn where. Look for it where you dropped it.	تم نقل {file} إلى مكان آخر بسحبه من «اكتمل التنزيل»، ولم يتمكن MDM من معرفة مكانه. ابحث عنه حيث أسقطته.
+	{file} was moved elsewhere by dragging it out of MDM, and MDM couldn't learn where. Look for it where you dropped it.	تم نقل {file} إلى مكان آخر بسحبه من MDM، ولم يتمكن MDM من معرفة مكانه. ابحث عنه حيث أسقطته.
 #. text in the Checksum window
 #. {algorithm} = a checksum algorithm such as "SHA-256" (keep the braces as they are)
 	{file}: the file does NOT match its checksum ({algorithm})	{file}: الملف لا يطابق بصمته ({algorithm})
@@ -4715,6 +4787,16 @@
 #. why a helper couldn't be downloaded ({problem}), then what to do about it ({advice}, whole sentences)
 #, machine
 	{problem}. {advice}	{problem}. {advice}
+#. text in the download list (sizes, speeds, status)
+#. the progress window's Transfer rate row while the limit for all downloads together applies: {rate} is this download's speed now ("512.000 KB/sec"), {limit} the most all downloads together may take ("1024 KB/sec"). The row is narrow: keep it short
+#. {rate} = a speed such as "1.2 MB/sec" (keep the braces as they are)
+#, machine
+	{rate} (limit for all downloads: {limit})	{rate} (الحد لجميع التنزيلات: {limit})
+#. text in the download list (sizes, speeds, status)
+#. the progress window's Transfer rate row while a speed limit applies: {rate} is the download's speed now ("512.000 KB/sec"), {limit} the most this download may take ("512 KB/sec"). The row is narrow: keep it short
+#. {rate} = a speed such as "1.2 MB/sec" (keep the braces as they are)
+#, machine
+	{rate} (limit: {limit})	{rate} (الحد: {limit})
 #. text in errors.rs
 #. a debrid service's error: too many requests; MDM waits and retries
 	{service} asks to slow down; MDM will try again in a minute	تطلب {service} التباطؤ؛ سيعاود MDM المحاولة في دقيقة
@@ -4868,8 +4950,7 @@ extension	Audio	صوت
 extension	best	الأفضل
 #. text in the browser extension
 #. the name this browser gets in the other MDM's list of paired devices
-#, machine
-extension	Browser extension	ملحق المتصفح
+extension	Browser extension	ملحق المستعرض
 #. text in the browser extension
 #. menu command of the download button over a video: opens its settings in Mister Download Manager
 #. the trailing ... means it is still going on: keep it
@@ -5060,8 +5141,7 @@ extension	No video or sound found on this page yet. Play it, then open this agai
 extension	No video to download here	لا يوجد فيديو للتنزيل هنا
 #. text in the browser extension
 #. pairing failed: the other MDM didn't answer
-#, machine
-extension	Not reached. Open its address once in this browser and accept its certificate, then try again.	لم يتم الوصول إليه. افتح عنوانه مرة واحدة في هذا المتصفح واقبل شهادته، ثم حاول مرة أخرى.
+extension	Not reached. Open its address once in this browser and accept its certificate, then try again.	لم يتم الوصول إليه. افتح عنوانه مرة واحدة في هذا المستعرض واقبل شهادته، ثم حاول مرة أخرى.
 #. text in the browser extension
 #. on the download button over a video (grey) when the button is turned off on this web site; a 'Turn on' button follows it; short
 #, machine
@@ -5161,8 +5241,7 @@ extension	The extension isn't allowed to read this site (the browser's site acce
 extension	The last download was left to the browser.	تم ترك آخر تنزيل للمتصفح.
 #. text in the browser extension
 #. why a download stayed with the browser: the app's Options don't capture downloads from this browser (its box is unticked in the list of browsers)
-#, machine
-extension	This browser isn't ticked in Options → General.	لم يتم تحديد هذا المتصفح في خيارات ← عام.
+extension	This browser isn't ticked in Options → General.	لم يتم تحديد هذا المستعرض في خيارات ← عام.
 #. text in the browser extension
 #. choice under Send downloads to: the Mister Download Manager on this computer
 #, machine
@@ -5187,8 +5266,7 @@ extension	Undo	تراجع
 extension	Update Mister Download Manager to use everything this extension offers	قم بتحديث Mister Download Manager لاستخدام كل ما يوفره هذا الملحق
 #. text in the browser extension
 #. why a download stayed with the browser: the app's setting 'Use advanced browser integration' is off; keep the setting's name as the app shows it
-#, machine
-extension	Use advanced browser integration is off in Options → General.	استخدام تكامل المتصفح المتقدم معطل في خيارات ← عام.
+extension	Use advanced browser integration is off in Options → General.	استخدام الربط المتقدم بالمستعرض معطل في خيارات ← عام.
 #. text in the browser extension
 #. tab above the list of qualities in the menu under the download button over a video: the choices that include picture (video with sound); short, one word
 #, machine

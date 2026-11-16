@@ -6,9 +6,9 @@
 //! The download list is the truth: on start, torrents the session restored but the list no
 //! longer has are forgotten (their files stay), and the rest wait paused until started.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex, OnceLock, mpsc};
 
 use mdm_engine::Snapshot;
 use mdm_engine::download::State;
@@ -181,6 +181,131 @@ pub fn save_torrent(hash: &str, bytes: &[u8]) -> std::io::Result<()> {
     let tmp = path.with_extension("torrent.tmp");
     std::fs::write(&tmp, bytes)?;
     std::fs::rename(&tmp, &path)
+}
+
+/// A change of a torrent's kept files, beside the window.
+type Change = Box<dyn FnOnce() + Send>;
+
+/// MDM's own files for the torrents of the list, in its data folder: the .torrent kept for each
+/// and the record of a single file's new name (#517). A torrent's Delete changes them beside the
+/// window, on a thread of their own, one change after the other (an antivirus or a busy disk
+/// could hold the window on them); a torrent added while changes are under way has its files
+/// written after them, so a Delete never takes away the files of the same torrent added again,
+/// and what reads them for a torrent ([`read_kept`]) waits for that torrent's changes first.
+pub struct KeptFiles {
+    /// None when no thread could be made: then each change is made on the caller's.
+    tx: Option<mpsc::Sender<(String, Change)>>,
+    /// The changes handed over and not made yet, by torrent (lowercase info hash).
+    pending: Arc<(Mutex<HashMap<String, usize>>, Condvar)>,
+}
+
+impl KeptFiles {
+    fn new() -> KeptFiles {
+        let pending: Arc<(Mutex<HashMap<String, usize>>, Condvar)> = Arc::default();
+        let (tx, rx) = mpsc::channel::<(String, Change)>();
+        let spawned = std::thread::Builder::new()
+            .name("torrent files".into())
+            .spawn({
+                let pending = pending.clone();
+                move || {
+                    for (hash, change) in rx {
+                        let began = std::time::Instant::now();
+                        change();
+                        if began.elapsed() >= std::time::Duration::from_secs(1) {
+                            tracing::info!(
+                                "torrents: a kept file's change took {} ms, beside the window",
+                                began.elapsed().as_millis()
+                            );
+                        }
+                        KeptFiles::done(&pending, &hash);
+                    }
+                }
+            });
+        let tx = match spawned {
+            Ok(_) => Some(tx),
+            Err(e) => {
+                tracing::warn!("torrents: no thread for the kept files ({e}); changed at once");
+                None
+            }
+        };
+        KeptFiles { tx, pending }
+    }
+
+    fn done(pending: &(Mutex<HashMap<String, usize>>, Condvar), hash: &str) {
+        let (map, cv) = pending;
+        let mut map = map.lock().unwrap();
+        if let Some(n) = map.get_mut(hash) {
+            *n -= 1;
+            if *n == 0 {
+                map.remove(hash);
+            }
+        }
+        cv.notify_all();
+    }
+
+    /// Make `change` to torrent `hash`'s kept files after the changes before. Returns at once.
+    pub fn change(&self, hash: &str, change: impl FnOnce() + Send + 'static) {
+        let hash = hash.to_ascii_lowercase();
+        *self
+            .pending
+            .0
+            .lock()
+            .unwrap()
+            .entry(hash.clone())
+            .or_default() += 1;
+        let job = (hash, Box::new(change) as Change);
+        let (hash, change) = match &self.tx {
+            Some(tx) => match tx.send(job) {
+                Ok(()) => return,
+                Err(mpsc::SendError(job)) => job,
+            },
+            None => job,
+        };
+        change();
+        KeptFiles::done(&self.pending, &hash);
+    }
+
+    /// Whether any change is under way (a torrent added now has its files written after them).
+    pub fn changing(&self) -> bool {
+        !self.pending.0.lock().unwrap().is_empty()
+    }
+
+    /// Whether torrent `hash`'s files are being changed. Never waits.
+    pub fn changing_for(&self, hash: &str) -> bool {
+        self.pending
+            .0
+            .lock()
+            .unwrap()
+            .contains_key(&hash.to_ascii_lowercase())
+    }
+
+    /// Wait until torrent `hash`'s changes are made (on a thread that may wait).
+    pub fn settle(&self, hash: &str) {
+        let hash = hash.to_ascii_lowercase();
+        let (map, cv) = &*self.pending;
+        let map = map.lock().unwrap();
+        let _unused = cv.wait_while(map, |m| m.contains_key(&hash)).unwrap();
+    }
+}
+
+/// The kept files' changes, for the whole app.
+pub fn kept_files() -> &'static KeptFiles {
+    static KEPT: OnceLock<KeptFiles> = OnceLock::new();
+    KEPT.get_or_init(KeptFiles::new)
+}
+
+/// The .torrent kept for `hash`, read once its changes under way are made ([`KeptFiles`]), on
+/// the torrents' own tasks.
+pub async fn read_kept(hash: &str) -> Result<Vec<u8>, String> {
+    if kept_files().changing_for(hash) {
+        let h = hash.to_owned();
+        let _ = tokio::task::spawn_blocking(move || kept_files().settle(&h)).await;
+    }
+    let file = torrent_file(hash).ok_or_else(|| crate::i18n::t("no data folder").to_owned())?;
+    std::fs::read(&file).map_err(|_| {
+        // i18n: an error: the copy of the .torrent file the app keeps is missing
+        crate::i18n::t("the .torrent file kept for it is gone").to_owned()
+    })
 }
 
 /// A magnet link for a torrent in the list, with its trackers, from the .torrent kept for it.
@@ -475,9 +600,7 @@ impl Host {
         let hash = spec.hash.as_str();
         match act {
             Act::AddTrackers(more) => {
-                let file = torrent_file(hash).ok_or(crate::i18n::t("no data folder"))?;
-                let bytes = std::fs::read(&file)
-                    .map_err(|_| crate::i18n::t("the .torrent file kept for it is gone"))?;
+                let bytes = read_kept(hash).await?;
                 let with = mdm_torrent::trackers::add(&bytes, &more)
                     .ok_or_else(|| err(mdm_torrent::TorrentError::NotATorrent))?;
                 let added = mdm_torrent::trackers::listed(&with).len()
@@ -494,9 +617,7 @@ impl Host {
             }
             Act::Recheck => {
                 let t = self.session(known).await?;
-                let file = torrent_file(hash).ok_or(crate::i18n::t("no data folder"))?;
-                let bytes = std::fs::read(&file)
-                    .map_err(|_| crate::i18n::t("the .torrent file kept for it is gone"))?;
+                let bytes = read_kept(hash).await?;
                 if t.has(hash) {
                     t.readd(hash, &bytes, true).await.map_err(err)?;
                 } else {
@@ -516,9 +637,7 @@ impl Host {
             Act::Choose { files, pause } => {
                 if let Some(t) = self.get() {
                     if !t.has(hash) {
-                        let file = torrent_file(hash).ok_or(crate::i18n::t("no data folder"))?;
-                        let bytes = std::fs::read(&file)
-                            .map_err(|_| crate::i18n::t("the .torrent file kept for it is gone"))?;
+                        let bytes = read_kept(hash).await?;
                         t.add(&bytes, &spec.folder, Some(files.clone()), Vec::new(), pause)
                             .await
                             .map_err(err)?;
@@ -627,13 +746,7 @@ impl Host {
                 && let Some(t) = &session
                 && let Some(folder) = reattach_at
             {
-                let bytes = match torrent_file(&spec.hash) {
-                    None => Err(crate::i18n::t("no data folder").to_owned()),
-                    Some(file) => std::fs::read(&file).map_err(|_| {
-                        crate::i18n::t("the .torrent file kept for it is gone").to_owned()
-                    }),
-                };
-                match bytes {
+                match read_kept(&spec.hash).await {
                     Ok(bytes) => {
                         if let Err(e) = t
                             .attach(&spec.hash, &bytes, folder, spec.files.clone(), detached)
@@ -784,17 +897,22 @@ impl Host {
 
     /// Forget a torrent the list no longer has; its files stay unless `files` (and the session
     /// runs: it knows which files are the torrent's).
+    /// The .torrent kept for it and the record of its new name go beside the window
+    /// ([`KeptFiles`]).
     pub fn forget(&self, rt: &tokio::runtime::Handle, hash: &str, files: bool) {
-        crate::torrent_rename::on_forget_torrent(hash);
         if let Some(t) = self.get() {
             let hash = hash.to_owned();
             rt.spawn(async move {
                 let _ = t.remove(&hash, files).await;
             });
         }
-        if let Some(f) = torrent_file(hash) {
-            let _ = std::fs::remove_file(f);
-        }
+        let h = hash.to_owned();
+        kept_files().change(hash, move || {
+            crate::torrent_rename::on_forget_torrent(&h);
+            if let Some(f) = torrent_file(&h) {
+                let _ = std::fs::remove_file(f);
+            }
+        });
     }
 }
 
@@ -903,11 +1021,7 @@ impl Run {
                         .await
                         .map_err(|e| crate::errors::torrent(&e))?;
                 } else {
-                    let file = torrent_file(&spec2.hash).ok_or(crate::i18n::t("no data folder"))?;
-                    let bytes = std::fs::read(&file).map_err(|_| {
-                        // i18n: an error: the copy of the .torrent file the app keeps is missing
-                        crate::i18n::t("the .torrent file kept for it is gone").to_owned()
-                    })?;
+                    let bytes = read_kept(&spec2.hash).await?;
                     t.add(
                         &bytes,
                         &spec2.folder,
@@ -1431,5 +1545,54 @@ mod tests {
             "padding isn't marked"
         );
         assert!(!dir.path().join("gone.bin").exists(), "nothing created");
+    }
+}
+
+#[cfg(test)]
+mod kept_files_tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    /// A Delete's changes on a disk that takes its time hold neither the caller nor the other
+    /// torrents: `change` returns at once, the changes are made in order, and only what reads the
+    /// same torrent's files waits for them.
+    #[test]
+    fn a_slow_change_holds_only_its_own_torrents_readers() {
+        let kept = KeptFiles::new();
+        let gate = Arc::new(Mutex::new(()));
+        let held = gate.lock().unwrap();
+        let order = Arc::new(Mutex::new(Vec::new()));
+        let at = Instant::now();
+        for n in 0..3 {
+            let (gate, order) = (gate.clone(), order.clone());
+            kept.change("ABC", move || {
+                drop(gate.lock().unwrap());
+                order.lock().unwrap().push(n);
+            });
+        }
+        assert!(
+            at.elapsed() < Duration::from_secs(5),
+            "the caller never waits"
+        );
+        assert!(kept.changing() && kept.changing_for("abc"));
+        assert!(!kept.changing_for("def"));
+        kept.settle("def");
+        let kept = Arc::new(kept);
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn({
+            let kept = kept.clone();
+            move || {
+                kept.settle("Abc");
+                let _ = tx.send(());
+            }
+        });
+        assert!(
+            rx.recv_timeout(Duration::from_millis(200)).is_err(),
+            "its reader waits"
+        );
+        drop(held);
+        rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(*order.lock().unwrap(), [0, 1, 2]);
+        assert!(!kept.changing());
     }
 }

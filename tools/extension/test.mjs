@@ -4,7 +4,11 @@ import { readFileSync, readdirSync } from "node:fs";
 import vm from "node:vm";
 import assert from "node:assert/strict";
 
-const code = readFileSync(new URL("../../extension/background.js", import.meta.url), "utf8");
+// A file's text with LF line endings: a Windows checkout (core.autocrlf=true) hands us CRLF, and
+// the tests slice and match sources, JSON and locales by "\n".
+const readText = (url) => readFileSync(url instanceof URL ? url : new URL(url, import.meta.url), "utf8").replace(/\r\n/g, "\n");
+
+const code = readText("../../extension/background.js");
 const DEFAULT_TYPES = "3GP 7Z AAC EXE ISO MP3 MP4 MSI PDF R0* RAR ZIP";
 
 // A fake extension API; `firefox` picks which download event exists. `reply` is the app's
@@ -29,6 +33,9 @@ function fakeApi({
   host = true,
   finished,
   panelOn,
+  // Options → Download panels → Button size (#1278): Compact (a function: the app's answer now);
+  // undefined: an older host, which doesn't say.
+  panelCompact,
   access = true,
   rules = {},
   rulesReply,
@@ -144,7 +151,11 @@ function fakeApi({
         }
         calls.push(["native", name, m]);
         // The video button: "may it show" follows `panelOn` (a function: the app's answer now).
-        if (m.panel) return { ok: typeof panelOn === "function" ? panelOn(m) : panelOn !== false };
+        if (m.panel) {
+          const on = typeof panelOn === "function" ? panelOn(m) : panelOn !== false;
+          const compact = typeof panelCompact === "function" ? panelCompact(m) : panelCompact;
+          return { ok: on, ...(on && compact !== undefined ? { compact } : {}) };
+        }
         // A notice of a download left alone (#208): an older host, which knows none, takes it
         // for an address it can't download (`noticeReply`).
         if (m.declined) return noticeReply || { ok: true };
@@ -226,11 +237,27 @@ function fakeApi({
 let served = {};
 const fetched = [];
 async function fakeFetch(url, opts) {
-  fetched.push([String(url), opts && opts.credentials]);
+  const range = /^bytes=(\d+)-(\d+)$/.exec((opts && opts.headers && opts.headers.Range) || "");
+  fetched.push([String(url), opts && opts.credentials, ...(range ? [range[0]] : [])]);
   const r = served[url];
   if (!r) throw new TypeError("Failed to fetch");
   // Its body as a stream too, 1 KB a chunk: `r.read` counts what was pulled (#171 reads 4 KB).
-  const bytes = new TextEncoder().encode(r.body);
+  // `r.bytes`: a file's (#1092), whose ranges are served as a server does (206); `r.noRange`:
+  // a server that ignores them (the whole file, 200).
+  if (r.bytes && range && !r.noRange) {
+    const part = r.bytes.slice(Number(range[1]), Number(range[2]) + 1);
+    r.ranges = [...(r.ranges || []), range[0]];
+    let sent = 0;
+    const body = new ReadableStream({
+      pull(c) {
+        if (sent >= part.length) return c.close();
+        c.enqueue(part.slice(sent, sent + 1024));
+        sent += 1024;
+      },
+    });
+    return { ok: true, status: 206, headers: { get: () => null }, body };
+  }
+  const bytes = r.bytes || new TextEncoder().encode(r.body);
   r.read = 0;
   const body = new ReadableStream({
     pull(c) {
@@ -264,7 +291,7 @@ function load(api, firefox, extra = {}) {
   else ctx.chrome = api;
   Object.assign(ctx, extra);
   vm.runInNewContext(code, ctx);
-  // Its globals (the functions it declares), for the tests of its parts.
+  // Its globals (the functions it declares), for the tests of its parts (#1092: called as they are).
   return ctx;
 }
 
@@ -579,6 +606,12 @@ const ok = (what) => {
   assert.ok(await keep({ id: 65, url: "https://dl.mirror.org/f.zip", filename: "f.zip" }), "*.mirror.*");
   assert.ok(await keep({ id: 66, url: "https://mirror.net/g.zip", filename: "g.zip" }), "*.mirror.* takes the domain");
   assert.ok(await keep({ id: 67, url: "https://cdn.files.test/h.zip", referrer: "https://www.kept.test/", filename: "h.zip" }), "*kept*");
+  // `example.test.` is `example.test` (the root's dot), for the file and for its page.
+  assert.ok(await keep({ id: 68, url: "https://www.example.test./i.zip", filename: "i.zip" }), "the root's dot");
+  assert.ok(
+    await keep({ id: 69, url: "https://cdn.files.test/j.zip", referrer: "https://www.example.test./get", filename: "j.zip" }),
+    "a page with the root's dot",
+  );
   assert.equal(natives(calls).length, 3);
   ok("#1049: excluded sites take their subdomains and the files their pages link to");
 }
@@ -881,8 +914,8 @@ const ok = (what) => {
       );
       if (!async_) resolve(undefined);
     });
-  assert.deepEqual(await ask({ type: "panel" }), { on: true });
-  assert.deepEqual(await ask({ type: "panel" }, "https://tube.test/embed/2"), { on: true });
+  assert.deepEqual(await ask({ type: "panel" }), { on: true, compact: false });
+  assert.deepEqual(await ask({ type: "panel" }, "https://tube.test/embed/2"), { on: true, compact: false });
   assert.equal(natives(calls).filter((m) => m.panel).length, 1, "asked once for the site");
   assert.equal((await ask({ type: "video", page: "https://evil.test/" })).ok, true);
   const video = natives(calls).find((m) => m.video);
@@ -893,8 +926,8 @@ const ok = (what) => {
   assert.deepEqual(video.cookieJar, [{ name: "sid", value: "1", domain: ".tube.test", hostOnly: false, path: "/", secure: true, expirationDate: 1893456000.5 }]);
   assert.deepEqual(await ask({ type: "hide-site", host: "elsewhere.test" }), { ok: true });
   assert.ok(natives(calls).some((m) => m.hideSite === "tube.test"));
-  assert.deepEqual(await ask({ type: "panel" }, "https://tube.test/embed/3"), { on: false }, "off at once");
-  assert.deepEqual(await ask({ type: "panel" }, "https://tube.test:8443/embed/4"), { on: false }, "whatever the port");
+  assert.deepEqual(await ask({ type: "panel" }, "https://tube.test/embed/3"), { on: false, compact: false }, "off at once");
+  assert.deepEqual(await ask({ type: "panel" }, "https://tube.test:8443/embed/4"), { on: false, compact: false }, "whatever the port");
   assert.deepEqual(await ask({ type: "video" }, "javascript:alert(1)"), { ok: false });
   // The video's own address, when the content script names one of its site's: a watch page opened
   // from a mix or a playlist is the list in the address bar, but the video the button is on is one
@@ -989,26 +1022,58 @@ const ok = (what) => {
   const top = { id: "ours", url: "https://tube.test/watch", frameId: 0, tab: { url: "https://tube.test/watch" } };
   const ask = (sender) =>
     new Promise((r) => listeners.message({ type: "panel" }, sender, (v) => r(JSON.parse(JSON.stringify(v)))));
-  assert.deepEqual(await ask(embed), { on: true });
+  assert.deepEqual(await ask(embed), { on: true, compact: false });
   const asked = () => natives(calls).filter((m) => m.panel);
   assert.equal(asked()[0].referrer, "https://blog.test/post", "the tab's address with an embedded player's question");
-  assert.deepEqual(await ask(top), { on: true });
+  assert.deepEqual(await ask(top), { on: true, compact: false });
   assert.equal(asked()[1].referrer, undefined, "none for the tab's own page");
   appSays = false;
   clock.t += 1000;
-  assert.deepEqual(await ask(top), { on: true }, "kept a moment (the page's frames ask together)");
+  assert.deepEqual(await ask(top), { on: true, compact: false }, "kept a moment (the page's frames ask together)");
   assert.equal(asked().length, 2);
   clock.t += 5000;
-  assert.deepEqual(await ask(top), { on: false }, "switched off in Options: the next question has it");
-  assert.deepEqual(await ask(embed), { on: false });
+  assert.deepEqual(await ask(top), { on: false, compact: false }, "switched off in Options: the next question has it");
+  assert.deepEqual(await ask(embed), { on: false, compact: false });
   appSays = true;
   clock.t += 6000;
-  assert.deepEqual(await ask(embed), { on: true }, "and on again");
+  assert.deepEqual(await ask(embed), { on: true, compact: false }, "and on again");
   // "Never on this site" from the embed: off at once, in its tab and in any other.
   await new Promise((r) => listeners.message({ type: "hide-site" }, embed, r));
-  assert.deepEqual(await ask(embed), { on: false });
-  assert.deepEqual(await ask({ ...embed, tab: { url: "https://news.test/" } }), { on: false }, "whatever the tab");
+  assert.deepEqual(await ask(embed), { on: false, compact: false });
+  assert.deepEqual(await ask({ ...embed, tab: { url: "https://news.test/" } }), { on: false, compact: false }, "whatever the tab");
   ok("#532: the video button follows Options within seconds; an embed asks with its tab's address");
+}
+// #1278: Options → Download panels → Button size comes with the answer, and follows a change in
+// Options as "may it show" does (kept a few seconds); an older host that doesn't say: Full.
+{
+  const clock = { t: Date.now() };
+  class FakeDate extends Date {
+    static now() {
+      return clock.t;
+    }
+  }
+  let compact = true;
+  let on = true;
+  const { api, listeners } = fakeApi({ firefox: false, panelOn: () => on, panelCompact: () => compact });
+  load(api, false, { Date: FakeDate });
+  const page = { id: "ours", url: "https://tube.test/watch", frameId: 0, tab: { url: "https://tube.test/watch" } };
+  const ask = () =>
+    new Promise((r) => listeners.message({ type: "panel" }, page, (v) => r(JSON.parse(JSON.stringify(v)))));
+  assert.deepEqual(await ask(), { on: true, compact: true });
+  compact = false;
+  clock.t += 1000;
+  assert.deepEqual(await ask(), { on: true, compact: true }, "kept a moment");
+  clock.t += 5000;
+  assert.deepEqual(await ask(), { on: true, compact: false }, "Full again in Options: the next question has it");
+  compact = true;
+  on = false;
+  clock.t += 6000;
+  assert.deepEqual(await ask(), { on: false, compact: false }, "off: never compact");
+  const older = fakeApi({ firefox: false, panelOn: () => true });
+  load(older.api, false);
+  const said = await new Promise((r) => older.listeners.message({ type: "panel" }, page, (v) => r(JSON.parse(JSON.stringify(v)))));
+  assert.deepEqual(said, { on: true, compact: false }, "an older host: Full");
+  ok("#1278: the video button's size comes from Options with its answer, and follows a change");
 }
 {
   const { api, listeners } = fakeApi({ firefox: true, panelOn: false });
@@ -1016,7 +1081,7 @@ const ok = (what) => {
   const on = await new Promise((r) =>
     listeners.message({ type: "panel" }, { id: "ours", url: "https://x.test/", tab: {} }, (v) => r(JSON.parse(JSON.stringify(v)))),
   );
-  assert.deepEqual(on, { on: false }, "where the app says no");
+  assert.deepEqual(on, { on: false, compact: false }, "where the app says no");
   ok("video button messages");
 }
 
@@ -1200,7 +1265,7 @@ const ok = (what) => {
 // not by its own ("… from Justin Barry on Vimeo"): the film page a browser saw, reduced
 // (crates/app/tests/data/embedded-player-title.json; the app's side is videodlg.rs').
 {
-  const film = JSON.parse(readFileSync(new URL("../../crates/app/tests/data/embedded-player-title.json", import.meta.url), "utf8"));
+  const film = JSON.parse(readText("../../crates/app/tests/data/embedded-player-title.json"));
   const ask = (listeners, m, sender) => new Promise((r) => listeners.message(m, sender, (x) => r(JSON.parse(JSON.stringify(x)))));
   const tab = { id: 8, url: film.tab.url, title: film.tab.title, status: "complete" };
   const frames = { 0: { href: film.tab.url, players: [] }, 4: { href: film.frame.url, players: [] } };
@@ -1455,7 +1520,7 @@ const MPD = (protect) => `<?xml version="1.0"?>
   assert.equal((await saved(given))[0], "Movie the title - FL262-1E01-4.mp4");
   assert.equal((await saved(bare))[0], "Movie the title.webm");
   // The popup's tag is the saved file's type (popup.js tagOf), its name the saved one (nameOf).
-  const popup = readFileSync(new URL("../../extension/popup.js", import.meta.url), "utf8");
+  const popup = readText("../../extension/popup.js");
   const part = (name) => popup.slice(popup.indexOf(`function ${name}(`), popup.indexOf("\n}\n", popup.indexOf(`function ${name}(`)) + 2);
   const shown = new Function(`const TYPES = {}; ${part("tagOf")}\n${part("nameOf")}\nreturn [tagOf, nameOf];`)();
   const [tagOf, nameOf] = shown;
@@ -1474,9 +1539,9 @@ const MPD = (protect) => `<?xml version="1.0"?>
   const ctx = { URL, URLSearchParams, console: quietConsole, setTimeout, clearTimeout, Promise, TextDecoder, fetch: fakeFetch, navigator: { userAgent: "UA" } };
   ctx.chrome = fakeApi({ firefox: false }).api;
   vm.runInNewContext(code, ctx);
-  const cases = JSON.parse(readFileSync(new URL("../../crates/engine/tests/data/media-names.json", import.meta.url), "utf8")).cases;
+  const cases = JSON.parse(readText("../../crates/engine/tests/data/media-names.json")).cases;
   for (const [u, mime, title, want] of cases) assert.equal(ctx.mediaName(u, mime, title, false).name, want, u);
-  const naming = readFileSync(new URL("../../crates/engine/src/naming.rs", import.meta.url), "utf8");
+  const naming = readText("../../crates/engine/src/naming.rs");
   const table = naming.slice(naming.indexOf("pub const TYPES"), naming.indexOf("];", naming.indexOf("pub const TYPES")));
   const rustTypes = Object.fromEntries([...table.matchAll(/\("([^"]+)", "([^"]+)"\)/g)].map((m) => [m[1], m[2]]));
   assert.ok(Object.keys(rustTypes).length > 30);
@@ -1488,7 +1553,7 @@ const MPD = (protect) => `<?xml version="1.0"?>
   };
   assert.deepEqual([...vm.runInNewContext("SCRIPT_EXTENSIONS", ctx)], list("SCRIPT_EXTENSIONS"));
   assert.deepEqual([...vm.runInNewContext("PAGE_EXTENSIONS", ctx)], list("PAGE_EXTENSIONS"));
-  const video = readFileSync(new URL("../../extension/video.js", import.meta.url), "utf8");
+  const video = readText("../../extension/video.js");
   const scripts = JSON.parse(/const SCRIPT_EXTENSIONS = (\[[^\]]+\]);/.exec(video)[1]);
   assert.deepEqual(scripts, [...list("SCRIPT_EXTENSIONS"), ...list("PAGE_EXTENSIONS")], "video.js knows the same scripts and pages");
   // The button over a plain file says its type as the address says it: a script's file= value's,
@@ -1791,7 +1856,7 @@ const MPD = (protect) => `<?xml version="1.0"?>
 
 // The button's logo is the extension's own icon, kept in video.js as data.
 {
-  const video = readFileSync(new URL("../../extension/video.js", import.meta.url), "utf8");
+  const video = readText("../../extension/video.js");
   const icon = readFileSync(new URL("../../extension/icons/icon-48.png", import.meta.url)).toString("base64");
   assert.ok(video.includes(`"data:image/png;base64,${icon}"`), "video.js's LOGO is extension/icons/icon-48.png");
   ok("video button logo");
@@ -1800,7 +1865,7 @@ const MPD = (protect) => `<?xml version="1.0"?>
 // video.js's videoPage, with what it calls (from it to its end mark), run against `location` and
 // `document`: the address the button hands the app for a <video>.
 const videoPageOn = (() => {
-  const source = readFileSync(new URL("../../extension/video.js", import.meta.url), "utf8");
+  const source = readText("../../extension/video.js");
   const start = source.indexOf("function videoPage(v) {");
   const end = source.indexOf("// ---- the video's own address: end.");
   assert.ok(start > 0 && end > start, "video.js has videoPage and its end mark");
@@ -1913,6 +1978,29 @@ const videoPageOn = (() => {
     assert.deepEqual(list.media.map((m) => m.url), ["https://x.test/song.mp3"]);
   }
   ok("in-place navigation and YouTube's player: the video playing now, or nothing");
+}
+
+// #1271: the player the background asks on YouTube (playingAt, run in the page) is the one at the
+// point video.js sends. YouTube's main player under its home page has no box (the window's
+// corner, 0,0) and still names the video watched last; a hover preview it stopped has none either
+// (hidden in a container of no size). Neither is at any point, the corner included: the preview
+// playing there is, and with nothing there the address video.js named (the card's link) goes.
+{
+  const source = code.slice(code.indexOf("function playingAt("), code.indexOf("const isYouTube"));
+  const page = (...videos) => new Function("document", `${source}
+return playingAt;`)({ querySelectorAll: () => videos });
+  const video = (id, left, top, width, height) => ({
+    getBoundingClientRect: () => ({ left, top, right: left + width, bottom: top + height, width, height }),
+    closest: () => ({ getVideoData: () => ({ video_id: id }) }),
+  });
+  const main = video("watchedLast", 0, 0, 0, 0);
+  const stopped = page(main, video("thePreview1", 0, 0, 0, 0));
+  assert.equal(stopped(0, 0), "", "the corner: no player there");
+  assert.equal(stopped(660, 239), "", "where the stopped preview was");
+  const playing = page(main, video("thePreview1", 476, 135, 369, 208));
+  assert.equal(playing(660, 239), "thePreview1", "the preview playing there");
+  assert.equal(playing(0, 0), "");
+  ok("#1271: YouTube's player at a point: one with no box is at none");
 }
 
 // A small DOM for the sample pages (tools/extension/feeds): elements with their attributes, open
@@ -2030,7 +2118,7 @@ function samplePage(html) {
   };
   let checked = 0;
   for (const file of pages) {
-    const { document, page, videos } = samplePage(readFileSync(new URL(file, dir), "utf8"));
+    const { document, page, videos } = samplePage(readText(new URL(file, dir)));
     assert.ok(videos.length, `${file}: its videos`);
     for (const at of [page, ...(OTHER[file] || [])]) {
       const location = new URL(at);
@@ -2061,11 +2149,12 @@ function samplePage(html) {
     /^https?:\/\/www\.tiktok\.com\/@[\w.-]+\/video\/(\d+)/,
     /^https?:\/\/vimeo\.com\/(\d+)(?:\/[\da-f]{10})?$/,
     /^https?:\/\/www\.dailymotion\.com\/video\/([^/?_&#]+)/,
+    /^https?:\/\/(?:www\.)?douyin\.com\/video\/([0-9]+)/,
   ];
   const dir = new URL("feeds/", import.meta.url);
   let checked = 0;
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".html") && !/^(social|article)\.html$/.test(f))) {
-    const { page, videos } = samplePage(readFileSync(new URL(file, dir), "utf8"));
+    const { page, videos } = samplePage(readText(new URL(file, dir)));
     for (const v of videos) {
       const expect = v.getAttribute("data-expect").replaceAll("{origin}", new URL(page).origin);
       // fb.watch's short links lead to the video's page; a LinkedIn post known by its ugcPost
@@ -2133,9 +2222,11 @@ function samplePage(html) {
 // #670: video.js's button against a fake DOM — whether it shows over a video while the page is
 // in full screen, with the popup's option off (as installed) or on.
 function videoButton({ stored = {} } = {}) {
-  const source = readFileSync(new URL("../../extension/video.js", import.meta.url), "utf8");
+  const source = readText("../../extension/video.js");
   const handlers = {};
-  const queued = [];
+  // The frames asked for, by id: one cancelled since (a tick after a hide) does not run.
+  const frames = new Map();
+  let frameId = 0;
   let root = null;
   const node = (name = "") => {
     const style = new Map();
@@ -2254,8 +2345,8 @@ function videoButton({ stored = {} } = {}) {
     document: doc,
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     getComputedStyle: () => ({ visibility: "visible", display: "block", opacity: "1" }),
-    requestAnimationFrame: (f) => (queued.push(f), queued.length),
-    cancelAnimationFrame: () => {},
+    requestAnimationFrame: (f) => (frames.set(++frameId, f), frameId),
+    cancelAnimationFrame: (id) => frames.delete(id),
     addEventListener: (n, f) => ((handlers[n] = handlers[n] || []).push(f)),
     removeEventListener: () => {},
     setTimeout,
@@ -2269,11 +2360,16 @@ function videoButton({ stored = {} } = {}) {
     console: quietConsole,
   });
   // The pointer over the video, up to the button's question being answered: only its look runs
-  // (its tick would ask for another frame).
+  // (its tick would ask for another frame). Each move lands a pixel to the side, as the script
+  // ignores a move at the same spot (#741).
+  let moved = 0;
   const move = async () => {
-    for (const f of handlers.pointermove || []) f({ clientX: 320, clientY: 180 });
-    assert.ok(queued.length, "the look queued");
-    await queued.shift()();
+    moved += 1;
+    for (const f of handlers.pointermove || []) f({ clientX: 320 + (moved % 2), clientY: 180 });
+    assert.ok(frames.size, "the look queued");
+    const [id, look] = [...frames].pop();
+    frames.delete(id);
+    await look();
     await settle();
   };
   return {
@@ -2295,20 +2391,25 @@ function videoButton({ stored = {} } = {}) {
   };
 }
 {
-  // Off, as installed: the button shows in full screen, placed there or entering it afterwards.
+  // Off, as installed: the button shows in full screen once the pointer moves, and entering full
+  // screen leaves it out of the way until then.
   const b = videoButton();
   b.setFullscreen(true);
   await b.move();
   assert.equal(b.display(), "block", "off: the button shows in full screen");
   b.setFullscreen(false);
   await b.fullscreenchange();
+  await b.move();
+  assert.equal(b.display(), "block", "off, not fullscreen: the button shows");
   b.setFullscreen(true);
   await b.fullscreenchange();
-  assert.equal(b.display(), "block", "off: entering full screen keeps it");
-  ok("#670: with the option off, the button shows in full screen");
+  assert.equal(b.display(), "none", "off: entering full screen hides it");
+  await b.move();
+  assert.equal(b.display(), "block", "off: the pointer's next move brings it back");
+  ok("#670: with the option off, the button shows in full screen once the pointer moves");
 }
 {
-  // On: it never shows while the page is in full screen — entering it hides a placed button,
+  // On: it never shows while the page is in full screen: entering it hides a placed button,
   // leaving it shows the button again.
   const b = videoButton({ stored: { hideVideoFullscreen: true } });
   await b.move();
@@ -2341,7 +2442,7 @@ function videoButton({ stored = {} } = {}) {
 // The qualities' menu (video.js; its plain functions run here): the questions' pace and their
 // minute, a row's text, and what a page can never make it do.
 {
-  const source = readFileSync(new URL("../../extension/video.js", import.meta.url), "utf8");
+  const source = readText("../../extension/video.js");
   // A function's own source (async with its keyword), by its braces.
   const fn = (name) => {
     let start = source.indexOf(`function ${name}(`);
@@ -2560,6 +2661,21 @@ function videoButton({ stored = {} } = {}) {
   assert.equal(pointerTarget(next, null, false), next);
   assert.equal(pointerTarget(null, mine, false), null);
   assert.ok(fn("look").includes("pointerTarget(videoAt(pointer.x, pointer.y), video, menuOpen)"), "look: kept on its video while its menu is open");
+  // #1271: where the background asks the page's player what the click's video is (the window's
+  // message): its middle while it has a box on the screen; a hover preview the page stopped as
+  // the pointer went to the button (taken out, or hidden in a container of no size) is at the
+  // point the click was taken at, never the window's corner (YouTube's main player there names
+  // the video watched last).
+  const middle = make(["middle"], "middle");
+  const shown = (left, top, width, height, isConnected = true) => ({ isConnected, getBoundingClientRect: () => ({ left, top, width, height }) });
+  const was = { x: 660, y: 239 };
+  assert.deepEqual(middle(shown(100, 50, 640, 360), was), { x: 420, y: 230 }, "a video on the screen: its middle now");
+  assert.deepEqual(middle(shown(0, 0, 0, 0), was), was, "a stopped preview, hidden");
+  assert.deepEqual(middle(shown(476, 135, 369, 0), was), was, "no height");
+  assert.deepEqual(middle(shown(476, 135, 369, 208, false), was), was, "taken out of the page");
+  assert.equal(middle(shown(0, 0, 0, 0), undefined), undefined, "nowhere known: no point");
+  assert.ok(fn("useWindow").includes("at: middle(j.video, j.asked.at)"), "useWindow: the point the click was taken at, for a video gone");
+  assert.ok(/const d = held \? held\.d : describe\(/.test(fn("download")), "download: a held video's own (#503), its point with it");
   // What a page can never make it do: the menu's rows and keys take only the user's own clicks
   // and keys; rows are text (markup only for the fixed parts); a pick sends the token and the
   // row's number alone; nothing is asked on a timer of its own, nor before a click.
@@ -2604,7 +2720,9 @@ function videoButton({ stored = {} } = {}) {
       const render = () => {};
       const fillMenu = () => {};
       const within = (p) => p;
-      ${["pollDelay", "followLookup", "replyState", "lookOf", "startLook", "restWait"].map(fn).join("\n")}
+      // #1092: what the tab played, never asked for here.
+      const playedLook = async () => null;
+      ${["pollDelay", "followLookup", "replyState", "playedWanted", "lookOf", "startLook", "restWait"].map(fn).join("\n")}
       return { REST_MS, looks, usable, lookOf, startLook, restWait };`,
     );
     const asked = [];
@@ -2692,7 +2810,7 @@ function videoButton({ stored = {} } = {}) {
   assert.ok(source.includes('if (!t.matches(":focus-visible")) return;'), "focusin: the keyboard's focus only");
   assert.ok(/const IDLE_MS = 1500;/.test(source), "fades 1.5 s after the pointer rests");
   // Its texts: English's, kept as the fallback too.
-  const english = JSON.parse(readFileSync(new URL("../../extension/_locales/en/messages.json", import.meta.url), "utf8"));
+  const english = JSON.parse(readText("../../extension/_locales/en/messages.json"));
   for (const key of ["video_looking", "video_all_qualities", "video_no_choices", "video_playlist", "video_no_ytdlp", "video_too_long", "video_busy", "video_queued", "video_failed_lookup",
     "video_off", "video_drm", "video_cant_save", "video_open_post", "video_open_post_button", "video_drag_dots", "video_tip_best", "video_sending", "video_added", "video_show",
     "video_no_answer", "video_get_mdm", "video_retry", "video_turn_on", "video_download_best", "video_best", "video_original"]) {
@@ -2701,8 +2819,8 @@ function videoButton({ stored = {} } = {}) {
     assert.ok(source.includes(`t("${key}")`), `video.js uses ${key}`);
   }
   {
-    const w = make(["sizeText", "choiceSize", "qualityName", "qualityMeta", "bestOf", "chipFor", "tipFor", "durationText", "headerLine", "moveIn", "fitsWords"],
-      "{ choiceSize, qualityName, qualityMeta, bestOf, chipFor, tipFor, durationText, headerLine, moveIn, fitsWords }");
+    const w = make(["sizeText", "choiceSize", "qualityName", "qualityMeta", "bestOf", "chipFor", "tipFor", "durationText", "headerLine", "moveIn", "fitsWords", "compactFor"],
+      "{ choiceSize, qualityName, qualityMeta, bestOf, chipFor, tipFor, durationText, headerLine, moveIn, fitsWords, compactFor }");
     const tt = (k, ...a) => (a.length ? `${k}(${a.join(",")})` : k);
     const hd = { label: "1080p 60fps MP4", ext: "mp4", size: 412000000, audio: false, height: 1080, fps: 60 };
     const k4 = { label: "2160p MP4", ext: "mp4", height: 2160 };
@@ -2758,6 +2876,22 @@ function videoButton({ stored = {} } = {}) {
     assert.equal(w.fitsWords(640, 240, 14), true);
     assert.equal(w.fitsWords(359, 100, 14), false, "under 360 px: the round button only");
     assert.equal(w.fitsWords(400, 380, 14), false, "a long language that wouldn't fit");
+    // #1278: Options → Download panels → Button size. Full (the default): the words where they
+    // fit, the round button on a small video or for a long language; Compact: round on every video.
+    const english = 240;
+    const german = 380; // the same button's width with longer words
+    assert.equal(w.compactFor(false, 1280, english, 14), false, "Full on a large video: the words");
+    assert.equal(w.compactFor(false, 1280, german, 14), false, "Full, a long language on a large video: the words");
+    assert.equal(w.compactFor(false, 320, english, 14), true, "Full on a small video: round");
+    assert.equal(w.compactFor(false, 400, german, 14), true, "Full, a long language that wouldn't fit: round");
+    for (const [width, full] of [[1920, english], [1280, german], [640, english], [400, german], [200, english]]) {
+      assert.equal(w.compactFor(true, width, full, 14), true, `Compact: round at ${width} px whatever the language`);
+    }
+    assert.equal(w.compactFor(undefined, 1280, english, 14), false, "not said (an older app): Full");
+    // The answer to `panel` sets it, and position() decides from it.
+    const ask = fn("ask");
+    assert.ok(ask.includes("compactAlways = Boolean(r && r.compact);"), "ask: the size comes with the app's answer");
+    assert.ok(fn("position").includes('pill.classList.toggle("compact", compactFor(compactAlways, vr.width, fullWidth, INSET));'), "position: compact from the setting and the video's width");
   }
   ok("video.js: the qualities' menu follows a lookup one question at a time for a minute; rows as text, the user's own clicks and keys; its words, #703's early look-up, #741's moves");
 }
@@ -2766,7 +2900,7 @@ function videoButton({ stored = {} } = {}) {
 {
   for (const file of readdirSync(new URL("../../extension/", import.meta.url))) {
     if (!/\.(js|html|css|json)$/.test(file)) continue;
-    const text = readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    const text = readText(`../../extension/${file}`);
     assert.ok(!/\bIDM\b|Internet Download Manager|notes\//.test(text), `${file} names IDM or the private notes`);
   }
   ok("nothing of IDM's in the extension");
@@ -2781,18 +2915,18 @@ function videoButton({ stored = {} } = {}) {
   const item = calls.find((c) => c[0] === "menu-item")[1];
   assert.equal(item.title, "Mit Mister Download Manager herunterladen");
   const dir = new URL("../../extension/_locales/", import.meta.url);
-  const english = JSON.parse(readFileSync(new URL("en/messages.json", dir), "utf8"));
+  const english = JSON.parse(readText(new URL("en/messages.json", dir)));
   for (const locale of readdirSync(dir)) {
-    const m = JSON.parse(readFileSync(new URL(`${locale}/messages.json`, dir), "utf8"));
+    const m = JSON.parse(readText(new URL(`${locale}/messages.json`, dir)));
     assert.deepEqual(Object.keys(m).sort(), Object.keys(english).sort(), `${locale} has every text`);
   }
   for (const name of ["manifest.json", "manifest.firefox.json"]) {
-    const text = readFileSync(new URL(`../../extension/${name}`, import.meta.url), "utf8");
+    const text = readText(`../../extension/${name}`);
     for (const [, key] of text.matchAll(/__MSG_(\w+)__/g)) assert.ok(english[key], `${name}: ${key}`);
   }
   // Every key the scripts use exists in English.
   for (const file of ["background.js", "popup.js", "popup.html", "video.js"]) {
-    const text = readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    const text = readText(`../../extension/${file}`);
     for (const [, key] of text.matchAll(/(?:t\(|data-i18n=)"((?:menu|status|popup|video)_\w+)"/g)) assert.ok(english[key], `${file}: ${key}`);
   }
   for (const why of ["not_installed", "forbidden", "not_running", "host_failed", "too_large", "update_app"]) {
@@ -3156,7 +3290,7 @@ for (const firefox of [false, true]) {
 }
 {
   // Safari's page.js holds no .torrent link then (its stored rules say so).
-  const page = readFileSync(new URL("../../extension/page.js", import.meta.url), "utf8");
+  const page = readText("../../extension/page.js");
   assert.ok(/noTorrents = Boolean\(rules && rules\.torrents === false\)/.test(page) && page.includes("!(noTorrents && /^torrent$/i.test(type))"));
 }
 ok("#1058: a torrent stays with the browser while the app's Torrent settings leave torrents alone");
@@ -3164,11 +3298,11 @@ ok("#1058: a torrent stays with the browser while the app's Torrent settings lea
 // The codes agree end to end: the app's (mdm_ipc::capture::Declined::code), the extension's own
 // ("site-access"), and a popup text for each.
 {
-  const rust = readFileSync(new URL("../../crates/ipc/src/capture.rs", import.meta.url), "utf8");
+  const rust = readText("../../crates/ipc/src/capture.rs");
   const body = /pub fn code\(self\)[\s\S]*?\n    \}\n/.exec(rust)[0];
   const codes = [...body.matchAll(/=> "([a-z-]+)"/g)].map((m) => m[1]);
   assert.deepEqual(codes, ["integration-off", "browser", "file-type", "site", "address", "small", "torrents"]);
-  const en = JSON.parse(readFileSync(new URL("../../extension/_locales/en/messages.json", import.meta.url), "utf8"));
+  const en = JSON.parse(readText("../../extension/_locales/en/messages.json"));
   for (const c of [...codes, "site-access"]) assert.ok(en[`declined_${c.replace(/-/g, "_")}`], `a popup text for ${c}`);
   assert.ok(en.popup_declined && en.popup_declined_unnamed);
   const bg = code;
@@ -3659,28 +3793,28 @@ const ask = (listeners) => (m, sender) => new Promise((r) => listeners.message(m
 // The manifests (#42): "proxy" optional in Firefox's, required in Chrome's (it can't be optional
 // there); the popup's switch: the permission in Firefox, the extension's own setting in Chrome.
 {
-  const chrome = JSON.parse(readFileSync(new URL("../../extension/manifest.json", import.meta.url), "utf8"));
-  const firefox = JSON.parse(readFileSync(new URL("../../extension/manifest.firefox.json", import.meta.url), "utf8"));
+  const chrome = JSON.parse(readText("../../extension/manifest.json"));
+  const firefox = JSON.parse(readText("../../extension/manifest.firefox.json"));
   assert.ok((chrome.permissions || []).includes("proxy") && !(chrome.optional_permissions || []).includes("proxy"), "Chrome: proxy required");
   assert.ok(!(firefox.permissions || []).includes("proxy"), "Firefox: proxy not required");
   assert.deepEqual(firefox.optional_permissions, ["proxy"], "Firefox: proxy optional");
-  const popup = readFileSync(new URL("../../extension/popup.js", import.meta.url), "utf8");
+  const popup = readText("../../extension/popup.js");
   assert.ok(/optional_permissions \|\| \[\]\)\.includes\("proxy"\)/.test(popup), "Firefox's switch where proxy is optional");
   assert.ok(/permissions\.request\(PROXY\)/.test(popup) && /permissions\.remove\(PROXY\)/.test(popup), "asked for and taken back on the switch");
   assert.ok(/storage\.local\s*\.get\(\{ proxyOn: false \}\)/.test(popup) && /storage\.local\.set\(\{ proxyOn: box\.checked \}\)/.test(popup), "Chrome's switch: its own setting");
   assert.ok(/const PROXY_SWITCH = "proxyOn"/.test(code), "the same setting in background.js");
-  const en = JSON.parse(readFileSync(new URL("../../extension/_locales/en/messages.json", import.meta.url), "utf8"));
+  const en = JSON.parse(readText("../../extension/_locales/en/messages.json"));
   assert.ok(en.popup_proxy && en.popup_proxy_title && en.popup_proxy_title_chromium, "the switch's texts");
   ok("manifests: proxy optional in Firefox, required in Chrome; the popup's switch in each");
 }
 // Another MDM (#157): the file types caught for it are the app's defaults, and every message
 // the pairing can end with is there.
 {
-  const capture = readFileSync(new URL("../../crates/ipc/src/capture.rs", import.meta.url), "utf8");
+  const capture = readText("../../crates/ipc/src/capture.rs");
   const app = /pub const DEFAULT_AUTO_TYPES: &str = "([^"]+)"/.exec(capture)[1];
   const ours = /const DEFAULT_TYPES =\s*"([^"]+)"/.exec(code)[1];
   assert.equal(ours, app, "DEFAULT_TYPES is the app's DEFAULT_AUTO_TYPES");
-  const english = JSON.parse(readFileSync(new URL("../../extension/_locales/en/messages.json", import.meta.url), "utf8"));
+  const english = JSON.parse(readText("../../extension/_locales/en/messages.json"));
   for (const why of ["address", "unreachable", "wrong_code", "no_code", "too_soon", "failed", "device_name"]) {
     assert.ok(english[`remote_${why}`], `remote_${why}`);
   }
@@ -3741,7 +3875,7 @@ const ask = (listeners) => (m, sender) => new Promise((r) => listeners.message(m
 // page.js, in a page: Safari holds a plain click on a link to a listed file type, tells the app,
 // and (when it isn't taken) clicks again; Alt and other types are never held.
 {
-  const pageCode = readFileSync(new URL("../../extension/page.js", import.meta.url), "utf8");
+  const pageCode = readText("../../extension/page.js");
   const run = async ({ safari, firefox, taken, types = "ZIP ISO R0*", capture = true }) => {
     const sent = [];
     const handlers = {};
@@ -3870,6 +4004,272 @@ const ask = (listeners) => (m, sender) => new Promise((r) => listeners.message(m
   await t.settle();
   assert.ok(!e.defaultPrevented && a.clicks === 0);
   ok("Safari: page.js holds a click on a listed file type, never Alt or other types; #332: Alt said at the press, Firefox follows the link");
+}
+
+// #1092: what the tab played, offered when the page's look-up finds nothing (a feed, a post
+// yt-dlp can't read, a site it doesn't know). A file's header (MP4) says its length and its
+// tracks; the video under the button is the one whose length is its own, never a feed's next
+// video, a picture or a sound alone, nor a guess between several.
+const MP4 = (() => {
+  const cat = (...parts) => {
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const p of parts) {
+      out.set(p, at);
+      at += p.length;
+    }
+    return out;
+  };
+  const u32 = (n) => new Uint8Array([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]);
+  const text = (s) => new TextEncoder().encode(s);
+  const box = (type, ...parts) => {
+    const body = cat(...parts);
+    return cat(u32(8 + body.length), text(type), body);
+  };
+  const zeros = (n) => new Uint8Array(n);
+  // A movie of `seconds` (timescale 1000; 0: unknown, as a fragmented file's mvhd may say), its
+  // tracks ("vide" with a picture `height`, "soun"), `pad` bytes of sample tables in each track
+  // (a long file's header), the movie after its data when `atEnd`, a fragmented one's length in
+  // its mehd (`fragments`).
+  return ({ seconds, tracks = ["soun", "vide"], height = 720, pad = 100, atEnd = false, fragments = 0, data = 2000 }) => {
+    const mvhd = box("mvhd", zeros(4), zeros(8), u32(1000), u32(Math.round(seconds * 1000)), zeros(80));
+    const trak = (kind) =>
+      box(
+        "trak",
+        box("tkhd", zeros(4), zeros(72), u32(kind === "vide" ? (height * 2) << 15 : 0), u32(kind === "vide" ? height << 16 : 0)),
+        box("mdia", box("mdhd", zeros(24)), box("hdlr", zeros(8), text(kind), zeros(13)), box("minf", zeros(pad))),
+      );
+    const mvex = fragments ? [box("mvex", box("mehd", zeros(4), u32(fragments * 1000)))] : [];
+    const moov = box("moov", mvhd, ...tracks.map(trak), ...mvex);
+    const ftyp = box("ftyp", text("isomiso2avc1mp41"));
+    const mdat = box("mdat", zeros(data));
+    return atEnd ? cat(ftyp, mdat, moov) : cat(ftyp, moov, mdat);
+  };
+})();
+{
+  const ctx = load(fakeApi({ firefox: false }).api, false);
+  // The header, read from bytes in memory as the background reads a file's (a few small reads).
+  const head = async (bytes) => {
+    const reads = [];
+    const info = await ctx.mp4Head(async (start, len) => {
+      reads.push(start);
+      return start < bytes.length ? bytes.slice(start, start + len) : null;
+    });
+    return { info: info && JSON.parse(JSON.stringify(info)), reads };
+  };
+  let h = await head(MP4({ seconds: 10.007 }));
+  assert.deepEqual(h.info, { duration: 10.007, video: true, audio: true, height: 720 });
+  assert.equal(h.reads.length, 1, "a short file's header in one read");
+  // A long file: its first track's tables are large, the second track is read where it starts.
+  h = await head(MP4({ seconds: 1501.8, height: 1080, pad: 300_000 }));
+  assert.deepEqual(h.info, { duration: 1501.8, video: true, audio: true, height: 1080 });
+  assert.ok(h.reads.length >= 2 && h.reads.length <= 6, `${h.reads.length} reads`);
+  // The movie after its data (not made for the web): found past it.
+  h = await head(MP4({ seconds: 33, atEnd: true, data: 5_000_000 }));
+  assert.deepEqual([h.info.duration, h.info.video, h.info.audio], [33, true, true]);
+  // One of a video's tracks alone (Douyin's long videos: a picture and a sound, apart).
+  assert.deepEqual((await head(MP4({ seconds: 796.5, tracks: ["vide"] }))).info, { duration: 796.5, video: true, audio: false, height: 720 });
+  assert.deepEqual((await head(MP4({ seconds: 796.5, tracks: ["soun"] }))).info, { duration: 796.5, video: false, audio: true, height: 0 });
+  // A fragmented file: its length in the mehd.
+  assert.equal((await head(MP4({ seconds: 0, fragments: 42 }))).info.duration, 42);
+  // Tracks past the reads it may make: not known (never a picture alone by mistake).
+  h = await head(MP4({ seconds: 60, tracks: ["soun", "soun", "soun", "soun", "soun", "soun", "vide"], pad: 50_000 }));
+  assert.deepEqual([h.info.duration, h.info.video, h.info.audio], [60, null, null]);
+  // Not an MP4: a WebM, a page, nothing.
+  assert.equal((await head(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 1, 0x42, 0xf7, 0x81]))).info, null);
+  assert.equal((await head(new TextEncoder().encode("<!doctype html><title>x</title>"))).info, null);
+  assert.equal((await head(new Uint8Array(0))).info, null);
+  ok("#1092: an MP4's header read for its length, its tracks and its picture's height, in a few small reads");
+
+  // The choice (playedChoice), each candidate as playedCandidates makes it.
+  const file = (url, duration, more = {}) => ({
+    url,
+    kind: "video",
+    stream: false,
+    at: 0,
+    size: 2e6,
+    duration,
+    live: false,
+    tracks: { video: true, audio: true },
+    height: 720,
+    drm: false,
+    ...more,
+  });
+  const stream = (url, duration, more = {}) => ({ ...file(url, duration), kind: "hls", stream: true, size: 0, tracks: null, ...more });
+  const choose = (cands, v) => {
+    const r = JSON.parse(JSON.stringify(ctx.playedChoice(cands, { duration: 0, live: false, height: 720, audio: false, began: 0, nextBegan: 0, alone: false, ...v })));
+    return r.pick ? r.pick.url : r.several ? `several ${r.several}` : "none";
+  };
+  // Douyin's feed: the video playing (10 s), the next one preloaded (5.6 s), the page's own clip.
+  const feed = [file("https://v.test/clip-a/", 10.007), file("https://v.test/clip-b/", 5.617), file("https://s.test/bg.mp4", 2.6, { size: 199164 })];
+  assert.equal(choose(feed, { duration: 10.167 }), "https://v.test/clip-a/", "its length (the player says a little more)");
+  assert.equal(choose(feed, { duration: 5.757 }), "https://v.test/clip-b/");
+  assert.equal(choose(feed, { duration: 31 }), "none", "nothing of its length");
+  // A picture and a sound apart: neither is the video.
+  const split = [
+    file("https://v.test/a/media-video-hvc1/", 796.5, { tracks: { video: true, audio: false } }),
+    file("https://v.test/a/media-audio-und-mp4a/", 796.5, { tracks: { video: false, audio: true }, height: 0 }),
+  ];
+  assert.equal(choose(split, { duration: 796.5 }), "none");
+  assert.equal(choose([...split, ...feed], { duration: 10 }), "https://v.test/clip-a/");
+  // Two of its length: the one with the player's picture height, else said, never guessed.
+  const two = [file("https://v.test/hd.mp4", 30, { height: 1080 }), file("https://v.test/sd.mp4", 30, { height: 480 })];
+  assert.equal(choose(two, { duration: 30, height: 480 }), "https://v.test/sd.mp4");
+  assert.equal(choose(two, { duration: 30, height: 720 }), "several 2");
+  // A stream of its length is the video, its files beside it its pieces; a protected one never.
+  assert.equal(choose([stream("https://v.test/m.m3u8", 12), file("https://v.test/init.mp4", 12)], { duration: 12 }), "https://v.test/m.m3u8");
+  assert.equal(choose([stream("https://v.test/m.m3u8", 12, { drm: true })], { duration: 12 }), "none");
+  // A live video: a live stream; never a file.
+  const live = stream("https://v.test/live.m3u8", 0, { live: true });
+  assert.equal(choose([live, file("https://v.test/x.mp4", 30)], { live: true }), "https://v.test/live.m3u8");
+  assert.equal(choose([live], { duration: 30 }), "none");
+  // A sound player: a sound.
+  const m4a = file("https://v.test/x.m4a", 30, { kind: "audio", tracks: { video: false, audio: true } });
+  assert.equal(choose([file("https://v.test/x.mp4", 30), m4a], { duration: 30, audio: true }), "https://v.test/x.m4a");
+  // Lengths not known (a WebM, a manifest the extension can't read): the frame's only video's,
+  // or what came while this video loaded before the next one began to; else said.
+  const webm = (url, at) => file(url, 0, { at, tracks: null });
+  assert.equal(choose([webm("https://v.test/a.webm", 5000)], { duration: 30, alone: true }), "https://v.test/a.webm");
+  const loaded = [webm("https://v.test/a.webm", 5000), webm("https://v.test/b.webm", 9000)];
+  assert.equal(choose(loaded, { duration: 30, began: 4000, nextBegan: 8000 }), "https://v.test/a.webm");
+  assert.equal(choose(loaded, { duration: 30, began: 8000 }), "https://v.test/b.webm");
+  assert.equal(choose(loaded, { duration: 30 }), "several 2", "when it began isn't known");
+  assert.equal(choose(loaded, { duration: 30, began: 1000, nextBegan: 2000 }), "several 2");
+  // A known length beats an unknown one.
+  assert.equal(choose([...loaded, file("https://v.test/c.mp4", 30)], { duration: 30, alone: true }), "https://v.test/c.mp4");
+  ok("#1092: what the tab played is offered for the video of its length, never the next one, a track alone or a guess");
+}
+
+// #1092, from the button's question to the app: a feed's player fetched files in ranges (kept
+// apart, never in the media list), the button asks what the tab played for its video, the file of
+// its length goes to the app as the video's own (its page as Referer, its title, its type); a
+// stream goes to the look-up instead of the feed. An address the tab didn't load is never taken.
+{
+  const A = "https://v3.douyinvod.test/video/tos/cn/a/?mime_type=video_mp4&sig=1";
+  const B = "https://v3.douyinvod.test/video/tos/cn/b/?mime_type=video_mp4&sig=2";
+  const V = "https://v3.douyinvod.test/video/tos/cn/c/media-video-hvc1/?sig=3";
+  const S = "https://v3.douyinvod.test/video/tos/cn/c/media-audio-und-mp4a/?sig=4";
+  const M = "https://cdn.test/f/master.m3u8";
+  const M720 = "https://cdn.test/f/720p/index.m3u8";
+  served = {
+    [A]: { bytes: MP4({ seconds: 10.007, data: 300_000 }) },
+    [B]: { bytes: MP4({ seconds: 5.617, data: 200_000 }) },
+    [V]: { bytes: MP4({ seconds: 796.5, tracks: ["vide"] }) },
+    [S]: { bytes: MP4({ seconds: 796.5, tracks: ["soun"] }) },
+    [M]: { body: "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1280000,RESOLUTION=1280x720\n720p/index.m3u8\n" },
+    [M720]: { body: "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\na.ts\n#EXTINF:4.0,\nb.ts\n#EXTINF:4.0,\nc.ts\n#EXT-X-ENDLIST\n" },
+  };
+  const page = "https://www.douyin.test/?recommend=1";
+  const tabs = { 4: { id: 4, url: page, title: "抖音-记录美好生活", incognito: false } };
+  const { api, calls, listeners } = fakeApi({
+    firefox: false,
+    tabs,
+    rules: { videoLookup: true },
+    lookup: () => ({ ok: true, lookup: { state: "pending", token: "t9" } }),
+  });
+  load(api, false);
+  listeners.tabUpdated(4, { url: page });
+  await settle();
+  const ranged = (url, total) => res(url, "xmlhttprequest", H("video/mp4", { "Content-Range": `bytes 0-1023/${total}` }), { statusCode: 206, tabId: 4 });
+  for (const d of [
+    ranged(A, 2304964),
+    ranged(B, 1981590),
+    ranged(V, 76408983),
+    ranged(S, 19271821),
+    // Too small to be a video's file; a piece named by its address.
+    ranged("https://v3.douyinvod.test/tiny.mp4", 40000),
+    res("https://v3.douyinvod.test/x.mp4?range=0-99", "xmlhttprequest", H("video/mp4", { "Content-Range": "bytes 0-99/900000" }), { statusCode: 206, tabId: 4 }),
+  ]) {
+    listeners.responseStarted(d);
+  }
+  await settle();
+  assert.deepEqual((await popupAsk(listeners, { type: "media", tab: 4 })).media, [], "never in the media list");
+  const message = (m, frameId = 0) =>
+    new Promise((r) => listeners.message(m, { id: "ours", url: page, frameId, tab: tabs[4] }, (x) => r(JSON.parse(JSON.stringify(x)))));
+  fetched.length = 0;
+  const answer = await message({ type: "video-played", duration: 10.167, height: 720, began: 0, nextBegan: 0, alone: false });
+  assert.deepEqual(answer, { played: { url: A, stream: false, ext: "mp4", size: 2304964, height: 720, duration: 10.007 } });
+  assert.ok(
+    fetched.every(([, c, r]) => c === "include" && /^bytes=\d+-\d+$/.test(r)),
+    "each header read in ranges, with the site's cookies",
+  );
+  assert.ok(fetched.length <= 8, `${fetched.length} reads`);
+  assert.deepEqual(served[A].ranges, ["bytes=0-4095"]);
+  // Asked again: each header read once.
+  const reads = fetched.length;
+  assert.deepEqual(await message({ type: "video-played", duration: 5.7, height: 720 }), {
+    played: { url: B, stream: false, ext: "mp4", size: 1981590, height: 720, duration: 5.617 },
+  });
+  assert.equal(fetched.length, reads);
+  // The feed moving to another address of the site (Douyin's /jingxuan to /?recommend=1, after its
+  // player fetched the first video): its files stay; another site's page: they go.
+  listeners.tabUpdated(4, { url: "https://www.douyin.test/jingxuan?from=feed" });
+  await settle();
+  assert.equal((await message({ type: "video-played", duration: 10.167, height: 720 })).played.url, A);
+  listeners.tabUpdated(4, { url: page });
+  await settle();
+  // The long video, a picture and a sound apart: nothing (its post, if any, is the way).
+  assert.deepEqual(await message({ type: "video-played", duration: 796.5, height: 1080 }), {});
+  // Another frame played none of these.
+  assert.deepEqual(await message({ type: "video-played", duration: 10.167, height: 720 }, 3), {});
+  // The click: the file as the video's own, the feed as its page and Referer, the page's title,
+  // the type the server said.
+  assert.equal((await message({ type: "video", url: null, src: A, played: A, direct: true, title: "抖音-记录美好生活" })).ok, true);
+  const sent = natives(calls).filter((x) => x.video).at(-1);
+  assert.deepEqual([sent.url, sent.src, sent.direct, sent.mime, sent.title, sent.referrer], [page, A, true, "video/mp4", "抖音-记录美好生活", ""]);
+  // A post's (Douyin's /video/<id>, #707 names it): the same file, with its title.
+  const post = "https://www.douyin.test/video/7677883232318323279";
+  await message({ type: "video", url: post, src: A, played: A, direct: true, title: "抖音" });
+  const fromPost = natives(calls).filter((x) => x.video).at(-1);
+  assert.deepEqual([fromPost.src, fromPost.direct, fromPost.title], [A, true, "抖音"]);
+  // A stream the frame played: its master stands for its variants and goes to the look-up.
+  listeners.responseStarted(res(M, "xmlhttprequest", H("application/vnd.apple.mpegurl"), { tabId: 4, frameId: 2 }));
+  listeners.responseStarted(res(M720, "xmlhttprequest", H("application/vnd.apple.mpegurl"), { tabId: 4, frameId: 2 }));
+  await settle();
+  assert.deepEqual(await message({ type: "video-played", duration: 12, height: 720 }, 2), {
+    played: { url: M, stream: true, ext: "", size: 0, height: 720, duration: 12 },
+  });
+  const looked = await message({ type: "video-lookup", url: null, src: "", played: M, title: "Feed" }, 2);
+  assert.deepEqual(looked, { lookup: { state: "pending", token: "t9" }, show: M });
+  // Named after the tab, as a frame's player is (#1075), not after its frame's own title.
+  assert.deepEqual(natives(calls).filter((x) => x.videoLookup).at(-1).videoLookup, { page, src: M, title: "抖音-记录美好生活" });
+  // Without it (or with an address the tab didn't load, or another frame's): the feed, as before.
+  for (const [played, frame] of [
+    [undefined, 2],
+    ["https://evil.test/x.m3u8", 2],
+    [M, 0],
+  ]) {
+    assert.deepEqual(await message({ type: "video-lookup", url: null, src: "", played, title: "Feed" }, frame), { ok: false, why: "feed" }, String(played));
+  }
+  listeners.tabUpdated(4, { url: "https://elsewhere.test/" });
+  await settle();
+  assert.deepEqual(await message({ type: "video-played", duration: 10.167, height: 720 }), {}, "another site: its files gone");
+  ok("#1092: a feed's file of the video's length goes as its own (kept while the tab stays on its site), its stream to the look-up; ranged files never listed");
+}
+
+// #1092: Douyin names its posts (a slide's data-e2e-vid, ?modal_id=), and the button asks what the
+// tab played only after a look-up found nothing.
+{
+  const source = readText("../../extension/video.js");
+  const start = source.indexOf("  function playedWanted(");
+  const playedWanted = new Function(`${source.slice(start, source.indexOf("\n  }\n", start) + 4)}\nreturn playedWanted;`)();
+  for (const s of [{ state: "feed" }, { state: "failed", reason: "error" }, { state: "failed", reason: "no-ytdlp" }, { state: "ready", choices: [] }, { state: "failed", reason: "no-choices" }]) {
+    assert.equal(playedWanted(s), true, JSON.stringify(s));
+  }
+  for (const s of [{ state: "ready", choices: [{ label: "720p" }] }, { state: "list" }, { state: "busy" }, { state: "off" }, { state: "late" }, { state: "unnamed" }, { state: "use-window" }, { state: "gone" }, null]) {
+    assert.equal(playedWanted(s), false, JSON.stringify(s));
+  }
+  // Douyin's own pages, and one opened over a profile's (videoPage).
+  const named = (href) =>
+    videoPageOn(new URL(href), { querySelector: () => null, querySelectorAll: () => [] })({ parentElement: null, getAttribute: () => null, querySelectorAll: () => [] });
+  assert.equal(named("https://www.douyin.com/video/7692732464107719962"), "https://www.douyin.com/video/7692732464107719962");
+  assert.equal(
+    named("https://www.douyin.com/user/self?modal_id=7704568510928004170&showSubTab=video&showTab=favorite_collection"),
+    "https://www.douyin.com/video/7704568510928004170",
+  );
+  assert.equal(named("https://www.douyin.com/?recommend=1"), null);
+  assert.equal(named("https://www.douyin.com/jingxuan?modal_id=12"), null);
+  ok("#1092: Douyin's posts named; what the tab played asked only after a look-up found nothing");
 }
 assert.deepEqual(complaints, [], "nothing written to the console as an error or warning");
 

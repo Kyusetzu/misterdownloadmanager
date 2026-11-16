@@ -571,7 +571,8 @@ mod tests {
     #[test]
     fn a_large_list_is_searched_in_linear_time() {
         // Addresses and as much text that only looks like them: the search goes through it
-        // once, 8 times the list costing about 8 times as long (not 64), on any machine.
+        // once, a list 16 times as long costing about as much as 16 short lists (a square: 16
+        // times as much), on any machine.
         let list = |n: usize| {
             let mut text = String::new();
             for i in 0..n {
@@ -581,6 +582,6 @@ mod tests {
             text
         };
         assert_eq!(import(&list(1_000)).len(), 1_000);
-        mdm_labserver::growth::assert_linear(5_000, list, |text| import(&text));
+        mdm_labserver::growth::assert_linear(2_500, list, |text| import(&text));
     }
 }

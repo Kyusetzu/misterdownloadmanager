@@ -61,10 +61,7 @@ pub fn describe(e: &Error) -> String {
             &[("path", &ltr(&path.display().to_string()))],
         ),
         Error::DriveGone => t("the drive or network share is no longer available").to_owned(),
-        Error::PathTooLong(path) => fmt(
-            t("the path is too long for Windows: {path}"),
-            &[("path", &ltr(&path.display().to_string()))],
-        ),
+        Error::PathTooLong(path) => path_too_long(path),
         // i18n: why a download failed (#701): a file host answered with its own web page (a countdown before the link, a captcha, a sign-in) where the file was expected. The browser gets past it; MDM's browser extension then hands the real file back to MDM
         Error::GotWebPage => t(
             "the site sent a web page instead of the file (a waiting page, a captcha or a sign-in): open the link in your browser, finish there, and the download comes back to MDM",
@@ -110,6 +107,42 @@ pub fn describe(e: &Error) -> String {
                 )
             }
         }
+    }
+}
+
+/// Why a download's path is too long (#1102), with the limit that is passed here: Windows'
+/// 259 characters a path while its long paths are off, else a name's 255 (characters on Windows,
+/// bytes on Linux and macOS). The files saved beside it while it downloads count: a part file, a
+/// video's streams and yt-dlp's own.
+fn path_too_long(path: &std::path::Path) -> String {
+    let limits = mdm_engine::naming::Limits::here();
+    let path = ltr(&path.display().to_string());
+    if cfg!(windows) && !mdm_engine::naming::long_paths() {
+        return fmt(
+            // i18n: why a download failed (#1102): the folder and file name together are longer than Windows allows ({limit} characters, 259), counting the temporary files saved beside the file while it downloads (their names are longer). {path} = the path
+            t(
+                "the path is too long for Windows: at most {limit} characters with the files saved while it downloads. Choose a shorter file name or folder ({path})",
+            ),
+            &[("limit", &ltr(&limits.path.to_string())), ("path", &path)],
+        );
+    }
+    let limit = ltr(&limits.name.to_string());
+    if limits.bytes {
+        fmt(
+            // i18n: why a download failed on Linux or macOS (#1102): the file name is longer than the system allows ({limit} bytes, 255; a letter can take several bytes), counting the temporary files saved beside the file while it downloads. {path} = the path
+            t(
+                "the file name is too long: at most {limit} bytes with the files saved while it downloads. Choose a shorter name ({path})",
+            ),
+            &[("limit", &limit), ("path", &path)],
+        )
+    } else {
+        fmt(
+            // i18n: why a download failed (#1102): the file name is longer than Windows allows ({limit} characters, 255), counting the temporary files saved beside the file while it downloads. {path} = the path
+            t(
+                "the file name is too long: at most {limit} characters with the files saved while it downloads. Choose a shorter name ({path})",
+            ),
+            &[("limit", &limit), ("path", &path)],
+        )
     }
 }
 
@@ -535,6 +568,16 @@ mod tests {
             os_text("Access is denied. (os error 5)"),
             "Access is denied"
         );
+    }
+
+    /// #1102: a path too long says so, with this system's limit and the path.
+    #[test]
+    fn a_path_too_long_says_the_limit() {
+        let path = std::path::PathBuf::from(format!("{}.mp4", "v".repeat(250)));
+        let said = describe(&Error::PathTooLong(path));
+        let limit = if cfg!(windows) { "259" } else { "255" };
+        assert!(said.contains(limit), "{said}");
+        assert!(said.contains(&"v".repeat(250)), "{said}");
     }
 
     /// #762: a refused certificate says it is the certificate, and what is wrong with it.

@@ -185,6 +185,10 @@ pub struct Settings {
     /// sites it stays off (space separated; the native host reads both, mdm_ipc::capture).
     pub video_panel: bool,
     pub video_panel_sites: String,
+    /// General → Download panels → Button size (#1278): Compact shows the button as its round
+    /// form (the logo, the arrow, the ✕) over every video; Full (false, the default) shows its
+    /// words where they fit and the round form only on a small video. The host reads it too.
+    pub video_panel_compact: bool,
     /// General: also take the listed types the browser would open itself (a PDF in its viewer,
     /// an MP3 in its player); holding Alt while clicking leaves one to the browser.
     pub capture_opened: bool,
@@ -458,6 +462,7 @@ impl Default for Settings {
             excluded_addresses: Vec::new(),
             video_panel: true,
             video_panel_sites: String::new(),
+            video_panel_compact: false,
             capture_opened: true,
             capture_min_kb: 0,
             regional: crate::regional::Regional::default(),
@@ -1224,6 +1229,28 @@ mod tests {
         assert_eq!(s.category_dir(Category::Video, downloads), chosen);
         assert_ne!(s.category_dir(Category::Music, downloads), chosen);
         assert!(!s.keep_category_dir(Category::Video, chosen, downloads));
+    }
+
+    /// #1278: the video button's size is Full unless Compact was chosen, kept across a save,
+    /// and read by the native host under the same name (mdm_ipc::capture::CaptureRules).
+    #[test]
+    fn the_video_buttons_size_is_saved_and_read_by_the_host() {
+        use super::Settings;
+        assert!(!Settings::default().video_panel_compact, "Full by default");
+        let old: Settings = serde_json::from_value(serde_json::json!({})).unwrap();
+        assert!(!old.video_panel_compact, "settings saved before it: Full");
+        let s = Settings {
+            video_panel_compact: true,
+            ..Settings::default()
+        };
+        let saved = serde_json::to_value(&s).unwrap();
+        let again: Settings = serde_json::from_value(saved.clone()).unwrap();
+        assert!(again.video_panel_compact);
+        let rules: mdm_ipc::capture::CaptureRules = serde_json::from_value(saved).unwrap();
+        assert!(rules.video_panel_compact);
+        let rules: mdm_ipc::capture::CaptureRules =
+            serde_json::from_value(serde_json::to_value(Settings::default()).unwrap()).unwrap();
+        assert!(!rules.video_panel_compact);
     }
 
     #[test]

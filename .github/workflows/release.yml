@@ -401,6 +401,8 @@ jobs:
       actions: write # rebuilding the website
       issues: read # the release notes' Thanks to (tools/contributors.py)
       pull-requests: read
+      id-token: write # build provenance: signs the attestation (Sigstore, keyless)
+      attestations: write # build provenance: stores it on the repository
     # x64 Windows is checked below by its files: the Windows job's result says failure when any
     # processor's build failed, and only x64's must be there.
     if: >-
@@ -417,6 +419,14 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+
+      # Build provenance: a signed record that each file was built here, by this workflow, from
+      # this tag. Anyone can check a download with
+      #   gh attestation verify <file> --repo ${{ github.repository }}
+      # (Windows, Linux, macOS and the extension: everything the release ships but the checksums.)
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/MisterDownloadManager-*
 
       - name: Publish release
         env:

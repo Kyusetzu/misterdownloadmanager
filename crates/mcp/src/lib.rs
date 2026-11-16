@@ -27,9 +27,12 @@ const API_OFF: &str = "Mister Download Manager's automation API is off. Ask the 
 const INSTRUCTIONS: &str = "Controls Mister Download Manager, the download manager running on \
     this computer. list_downloads shows its downloads with their ids; pause_downloads, \
     resume_downloads and remove_downloads act on those ids; add_download adds an address \
-    (http, https, ftp, ftps or a magnet link); start_queue starts the main download queue. \
-    Listing and acting on downloads needs the app's automation API, which the user turns on \
-    with `misterdownloadmanager-cli api on`. Sizes and speeds are in bytes and bytes per second.";
+    (http, https, ftp, ftps or a magnet link); start_queue starts a download queue (the main \
+    queue by default, or by name); stop_queue stops a download queue (the main queue by \
+    default, or by name). \
+    Listing and acting on downloads, stopping a queue, and starting a named queue need \
+    the app's automation API, which the user turns on with `misterdownloadmanager-cli api on`. \
+    Sizes and speeds are in bytes and bytes per second.";
 
 #[derive(Deserialize, JsonSchema, Default)]
 pub struct ListArgs {
@@ -50,9 +53,20 @@ pub struct AddArgs {
     pub folder: Option<String>,
     /// The file name to save it as (default: from the address or the server).
     pub file_name: Option<String>,
-    /// true: only add it to the main queue, without starting it now.
+    /// A category for the download (key in the app's categories: "General", "Compressed",
+    /// "Documents", "Music", "Programs", "Video", or a custom category; default: by file type).
+    pub category: Option<String>,
+    /// A queue by name: where the download waits (with `later`; default: main queue).
+    pub queue: Option<String>,
+    /// true: only add it to the download queue, without starting it now.
     #[serde(default)]
     pub later: bool,
+}
+
+#[derive(Deserialize, JsonSchema, Default)]
+pub struct QueueArgs {
+    /// The name of the download queue to start or stop (default: main queue).
+    pub queue: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -148,17 +162,28 @@ impl Server {
                  https, ftp and ftps addresses and magnet links."
             ));
         }
+        let queue = args.queue.filter(|q| !q.trim().is_empty());
+        let category = args.category.filter(|c| !c.trim().is_empty());
         self.call(Command {
             url: Some(url.clone()),
             dir: args.folder.filter(|d| !d.trim().is_empty()),
             name: args.file_name.filter(|n| !n.trim().is_empty()),
+            category: category.clone(),
+            queue: queue.clone(),
             later: args.later,
             silent: true,
             ..Default::default()
         })
         .await?;
         Ok(if args.later {
-            format!("Added {url} to the main queue (not started). list_downloads shows it.")
+            match queue {
+                Some(q) => {
+                    format!("Added {url} to queue \"{q}\" (not started). list_downloads shows it.")
+                }
+                None => {
+                    format!("Added {url} to the main queue (not started). list_downloads shows it.")
+                }
+            }
         } else {
             format!("Added {url} and started it. list_downloads shows its progress.")
         })
@@ -220,20 +245,58 @@ impl Server {
     }
 
     #[tool(
-        description = "Starts Mister Download Manager's main download queue.",
+        description = "Starts Mister Download Manager's download queue (starts the main queue \
+                       if omitted, or a queue by name).",
         annotations(
             read_only_hint = false,
             destructive_hint = false,
             idempotent_hint = true
         )
     )]
-    async fn start_queue(&self) -> Result<String, String> {
+    async fn start_queue(&self, Parameters(args): Parameters<QueueArgs>) -> Result<String, String> {
+        let queue = args.queue.filter(|q| !q.trim().is_empty());
+        match queue {
+            Some(ref q) => {
+                self.call(Command {
+                    action: Some("start_queue".into()),
+                    queue: Some(q.clone()),
+                    ..Default::default()
+                })
+                .await?;
+                Ok(format!("Started download queue \"{q}\"."))
+            }
+            None => {
+                self.call(Command {
+                    start_queue: true,
+                    ..Default::default()
+                })
+                .await?;
+                Ok("Started the main download queue.".into())
+            }
+        }
+    }
+
+    #[tool(
+        description = "Stops Mister Download Manager's download queue (stops the main queue \
+                       if omitted, or a queue by name).",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true
+        )
+    )]
+    async fn stop_queue(&self, Parameters(args): Parameters<QueueArgs>) -> Result<String, String> {
+        let queue = args.queue.filter(|q| !q.trim().is_empty());
         self.call(Command {
-            start_queue: true,
+            action: Some("stop_queue".into()),
+            queue: queue.clone(),
             ..Default::default()
         })
         .await?;
-        Ok("Started the main download queue.".into())
+        Ok(match queue {
+            Some(q) => format!("Stopped download queue \"{q}\"."),
+            None => "Stopped the main download queue.".into(),
+        })
     }
 }
 

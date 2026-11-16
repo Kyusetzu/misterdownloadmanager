@@ -39,7 +39,7 @@ pub struct Helpers {
 }
 
 /// Whether to offer the helpers at this start: never asked, and one of them is missing (ffmpeg
-/// counts only where MDM installs it; elsewhere the system's is used).
+/// counts only where MDM can install one, Windows; elsewhere the system's is used).
 pub fn worth_asking() -> bool {
     let Some(dir) = mdm_tools::tools_dir() else {
         return false;
@@ -66,7 +66,7 @@ impl Helpers {
         if mdm_tools::installed(&dir).is_none() {
             list.push("yt-dlp");
         }
-        // ffmpeg: MDM's own on Windows; elsewhere the system's.
+        // ffmpeg: MDM's own on Windows (it has no build elsewhere, where the system's is used).
         if cfg!(windows) && mdm_tools::ffmpeg::installed(&dir).is_none() {
             list.push("ffmpeg");
         }
@@ -185,12 +185,11 @@ impl Helpers {
         // Everything below it moves down with a taller banner.
         let o = o + egui::vec2(0.0, extra);
 
-        let ffmpeg_here = !cfg!(windows)
-            && self
-                .dir
-                .as_deref()
-                .and_then(mdm_tools::ffmpeg::installed)
-                .is_some();
+        let ffmpeg_here = self
+            .dir
+            .as_deref()
+            .and_then(mdm_tools::ffmpeg::installed)
+            .is_some();
         let rows: [(Icon, &str, String); 3] = [
             (
                 Icon::HelperVideo,
@@ -528,9 +527,12 @@ impl Programs {
         let (out, wake) = (slot.clone(), ctx.clone());
         let net = crate::settings::own_net();
         rt.spawn(async move {
-            let res = match h {
-                Helper::GalleryDl => mdm_tools::gallery::install_latest(&dir, &net, None).await,
-                _ => mdm_tools::install_latest(&dir, &net, None).await,
+            let res = if h == Helper::GalleryDl {
+                mdm_tools::gallery::install_latest(&dir, &net, None).await
+            } else if h == Helper::Ffmpeg {
+                mdm_tools::ffmpeg::install_latest(&dir, &net, None).await
+            } else {
+                mdm_tools::install_latest(&dir, &net, None).await
             };
             *out.lock().unwrap() = Some(res.map(|_| ()).map_err(|e| crate::errors::tools(&e)));
             wake.request_repaint();
@@ -620,9 +622,9 @@ impl Programs {
                 Helper::GalleryDl => mdm_tools::gallery::asset().is_some(),
                 Helper::Ffmpeg => mdm_tools::ffmpeg::available(),
             };
-            // The system's yt-dlp or gallery-dl may be old: MDM's own copy can replace it (#452,
-            // #571), where MDM has one for this system.
-            let replaceable = has_own && h != Helper::Ffmpeg;
+            // The system's copy may be the person's to keep up to date: MDM's own can replace it
+            // (#452, #571), where MDM has one for this system and processor.
+            let replaceable = has_own;
             let system = replaceable && found.is_some_and(mdm_tools::Installed::is_system);
             let status = match (too_old, found) {
                 _ if downloading => {
@@ -652,7 +654,7 @@ impl Programs {
                     ],
                 ),
                 (None, Some(i)) if i.is_system() => crate::i18n::fmt(
-                    // i18n: Video helpers (macOS, Linux): {path} = the system's ffmpeg
+                    // i18n: Video helpers: {path} = the system's yt-dlp, ffmpeg or gallery-dl
                     crate::i18n::t("Your system's: {path}"),
                     &[("path", &crate::i18n::ltr(&i.exe.display().to_string()))],
                 ),

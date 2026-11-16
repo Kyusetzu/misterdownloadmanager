@@ -37,15 +37,17 @@ enum Sub {
     Login(Option<usize>, String, String, String),
     /// Connection → New / Edit exception: (row, server, number).
     Exception(Option<usize>, String, String),
-    /// General → Download panels → Edit...: (the button over videos on, the sites it stays off).
-    Panels(bool, String, String),
+    /// General → Download panels → Edit...: (the button over videos on, its size Compact
+    /// (#1278), the sites it stays off, what Export / Import said).
+    Panels(bool, bool, String, String),
     /// General → Keys...: (also take the files the browser would open).
     Keys(bool),
     /// Downloads → Customize "Download progress" dialog → Edit... (#1041): (show it when a
     /// download starts).
     Progress(bool),
-    /// General → Test browser integration...: the checks, as found when it opened.
-    Test(Vec<crate::extension::Check>),
+    /// General → Test browser integration...: the checks, read beside the window (#1218) when it
+    /// opened, and again once a Set it up finished.
+    Test(crate::extension::Tester),
     /// File types → "Don't start downloading automatically from the following addresses" →
     /// Edit list...: one address pattern per line.
     Addresses(String),
@@ -225,8 +227,6 @@ pub struct OptionsDialog {
     remote: Option<mdm_remote::Remote>,
     port: String,
     device_rows: winui::RowList,
-    /// Test browser integration → Set it up's runs seen finished (crate::extension).
-    set_up_seen: u64,
     /// Sites Logins → Cookies for video sites (#229): the browser in the list (an index into
     /// `mdm_tools::proc::cookie_browsers`), kept while Off is chosen.
     cookie_browser: usize,
@@ -284,6 +284,7 @@ impl OptionsDialog {
     pub fn with_panels(mut self) -> Self {
         self.sub = Some(Sub::Panels(
             self.s.video_panel,
+            self.s.video_panel_compact,
             self.s.video_panel_sites.clone(),
             String::new(),
         ));
@@ -295,7 +296,11 @@ impl OptionsDialog {
     /// `options:account`, `options:progress`: screenshots, #192, #1041).
     pub fn with_window(mut self, name: &str) -> Self {
         match name {
-            "test" => self.sub = Some(Sub::Test(crate::extension::checks(&self.s))),
+            "test" => {
+                self.sub = Some(Sub::Test(crate::extension::Tester::new(
+                    self.s.advanced_integration,
+                )))
+            }
             "account" => self.sub = Some(Sub::Account(AccountEdit::default())),
             "progress" => self.sub = Some(Sub::Progress(self.s.show_progress)),
             _ => {}
@@ -325,7 +330,6 @@ impl OptionsDialog {
             account_rows: Default::default(),
             sound_rows: Default::default(),
             sub: None,
-            set_up_seen: 0,
             cat_edit: None,
             restore_ask: None,
             learned,
@@ -787,7 +791,9 @@ impl OptionsDialog {
         )
         .clicked()
         {
-            self.sub = Some(Sub::Test(crate::extension::checks(&self.s)));
+            self.sub = Some(Sub::Test(crate::extension::Tester::new(
+                self.s.advanced_integration,
+            )));
         }
         winui::etched_h(&p, o.x + 34.0, o.y + 356.0, 357.0);
         // The buttons at the right as wide as their labels in this language (#192), their
@@ -851,6 +857,7 @@ impl OptionsDialog {
         {
             self.sub = Some(Sub::Panels(
                 self.s.video_panel,
+                self.s.video_panel_compact,
                 self.s.video_panel_sites.clone(),
                 String::new(),
             ));
@@ -3497,13 +3504,13 @@ impl OptionsDialog {
                     Outcome::Closed => {}
                 }
             }
-            Sub::Panels(mut on, mut sites, mut said) => {
+            Sub::Panels(mut on, mut compact, mut sites, mut said) => {
                 let out = window(
                     ctx,
                     "opt-panels",
                     // i18n: window title: the download button the extension shows over videos
                     "Download panels",
-                    [380.0, 190.0],
+                    [380.0, 241.0],
                     false,
                     LIGHT_BG(),
                     |ui, o| {
@@ -3515,30 +3522,72 @@ impl OptionsDialog {
                             "Show a download button over videos in browsers",
                             true,
                         );
+                        // Its size (#1278): Full, its words where they fit; Compact, the round
+                        // button over every video.
+                        let shade = if on { LIGHT_TEXT() } else { LIGHT_DISABLED() };
+                        // i18n: Options → Download panels: the size of the download button over videos, chosen after it (Full / Compact)
+                        let size_label = crate::i18n::t("Button size:");
+                        winui::text_in_window(ui, &p, o.x + 30.0, o.y + 52.0, size_label, shade);
+                        // i18n: Options → Download panels → Button size: the button with its words ("Download video", the quality) where they fit (the default)
+                        let full_caption = crate::i18n::mark("Full");
+                        let full_x = (30.0 + winui::text_width(&p, size_label) + 12.0).max(110.0);
+                        let compact_x = full_x
+                            + 16.0
+                            + winui::text_width(&p, crate::i18n::t(full_caption))
+                            + 20.0;
+                        let full = winui::radio_light(
+                            ui,
+                            o + vec2(full_x, 42.0),
+                            !compact,
+                            full_caption,
+                            on,
+                        );
+                        let small = winui::radio_light(
+                            ui,
+                            o + vec2(compact_x, 42.0),
+                            compact,
+                            // i18n: Options → Download panels → Button size: only the round button (the logo, the arrow, the close mark) over every video
+                            "Compact",
+                            on,
+                        );
+                        match winui::radio_keys(ui, &[full.clone(), small.clone()]) {
+                            Some(i) => compact = i == 1,
+                            None if full.clicked() => compact = false,
+                            None if small.clicked() => compact = true,
+                            None => {}
+                        }
                         winui::text_in_window(
                             ui,
                             &p,
                             o.x + 14.0,
-                            o.y + 55.0,
+                            o.y + 83.0,
                             crate::i18n::t("Never show it on these sites:"),
-                            if on { LIGHT_TEXT() } else { LIGHT_DISABLED() },
+                            shade,
                         );
                         multiline(
                             ui,
-                            r(o, 14.0, 62.0, 352.0, 55.0),
+                            r(o, 14.0, 90.0, 352.0, 55.0),
                             &mut sites,
                             "panel-sites",
                             on,
                         );
-                        winui::text_in_window(
-                            ui,
+                        // On a row of its own, the list's width: beside Export... and Import... it
+                        // ran under them (English already, German further).
+                        let hint = crate::i18n::t(
+                            // i18n: under Download panels site exclusions list
+                            "(separate by spaces; * matches anything)",
+                        );
+                        let (rect, cut) = winui::text_fit(
                             &p,
                             o.x + 14.0,
-                            o.y + 133.0,
-                            // i18n: under Download panels site exclusions list
-                            crate::i18n::t("(separate by spaces; * matches anything)"),
+                            o.y + 161.0,
+                            hint,
                             LIGHT_TEXT(),
+                            o.x + 366.0,
                         );
+                        if cut {
+                            winui::full_on_hover(ui, rect, "opt-panels-hint", hint);
+                        }
                         // The list as a file, to keep or carry to a new installation (#424).
                         let [export_at, import_at] = winui::button_row(
                             &p,
@@ -3551,7 +3600,7 @@ impl OptionsDialog {
                         };
                         if winui::button_light(
                             ui,
-                            r(o, export_at.0, 128.0, export_at.1, 21.0),
+                            r(o, export_at.0, 172.0, export_at.1, 21.0),
                             "Export...",
                             ButtonKind::Normal,
                             false,
@@ -3568,7 +3617,7 @@ impl OptionsDialog {
                         }
                         if winui::button_light(
                             ui,
-                            r(o, import_at.0, 128.0, import_at.1, 21.0),
+                            r(o, import_at.0, 172.0, import_at.1, 21.0),
                             "Import...",
                             ButtonKind::Normal,
                             false,
@@ -3620,7 +3669,7 @@ impl OptionsDialog {
                             let (rect, cut) = winui::text_fit(
                                 &p,
                                 o.x + 14.0,
-                                o.y + 163.0,
+                                o.y + 187.0,
                                 &said,
                                 LIGHT_TEXT(),
                                 o.x + 205.0,
@@ -3629,13 +3678,14 @@ impl OptionsDialog {
                                 winui::full_on_hover(ui, rect, "opt-panels-said", &said);
                             }
                         }
-                        ok_cancel(ui, o, 212.0, 157.0, true)
+                        ok_cancel(ui, o, 212.0, 208.0, true)
                     },
                 );
                 match out {
-                    Outcome::Open => self.sub = Some(Sub::Panels(on, sites, said)),
+                    Outcome::Open => self.sub = Some(Sub::Panels(on, compact, sites, said)),
                     Outcome::Done(()) => {
                         self.s.video_panel = on;
+                        self.s.video_panel_compact = compact;
                         self.s.video_panel_sites =
                             sites.split_whitespace().collect::<Vec<_>>().join(" ");
                     }
@@ -3834,10 +3884,20 @@ impl OptionsDialog {
                     Outcome::Closed => {}
                 }
             }
-            Sub::Test(mut checks) => {
-                // A check's path takes a line of its own (#818).
+            Sub::Test(tester) => {
+                // Read beside the window (#1218): the last checks while new ones are read (Set it
+                // up finished), "Checking..." before the first.
+                let found = tester.checks(Some(ctx));
+                let checking = found.is_none();
+                let checks = found.unwrap_or_default();
+                // A check's path takes a line of its own (#818), what to do about it a paragraph
+                // (#1218), as tall as it was last drawn.
                 let details = checks.iter().filter(|c| c.detail.is_some()).count();
-                let h = 120.0 + checks.len() as f32 * 22.0 + details as f32 * DETAIL_H;
+                let rows = checks.len().max(usize::from(checking));
+                let h = 120.0
+                    + rows as f32 * 22.0
+                    + details as f32 * DETAIL_H
+                    + crate::dialogs::grow_extra(ctx, "opt-test-how");
                 let mut set_up = false;
                 let out = window(
                     ctx,
@@ -3850,6 +3910,18 @@ impl OptionsDialog {
                     |ui, o| {
                         let p = ui.painter().clone();
                         let mut y = o.y + 22.0;
+                        let mut how_h = 0.0;
+                        if checking {
+                            winui::text_in_window(
+                                ui,
+                                &p,
+                                o.x + 34.0,
+                                y,
+                                // i18n: Test browser integration, while it reads where browser integration stands (a moment, usually)
+                                crate::i18n::t("Checking..."),
+                                LIGHT_TEXT(),
+                            );
+                        }
                         for (k, c) in checks.iter().enumerate() {
                             let (mark, color) = if c.ok {
                                 ("\u{2714}", winui::SUCCESS())
@@ -3860,19 +3932,35 @@ impl OptionsDialog {
                             winui::text_in_window(ui, &p, o.x + 34.0, y, &c.text, LIGHT_TEXT());
                             if let Some(path) = &c.detail {
                                 y += DETAIL_H;
+                                // A path reads left to right in a right-to-left language too.
                                 winui::fit_middle(
                                     ui,
                                     &p,
                                     o.x + 34.0,
                                     y,
-                                    path,
+                                    &crate::i18n::ltr(path),
                                     LIGHT_TEXT(),
                                     o.x + 440.0 - 14.0,
                                     ("test-detail", k),
                                 );
                             }
+                            if let Some(how) = &c.how {
+                                let lines = winui::paragraph(
+                                    &p,
+                                    o.x + 34.0,
+                                    y + DETAIL_H,
+                                    how,
+                                    LIGHT_TEXT(),
+                                    o.x + 440.0 - 14.0,
+                                    14.0,
+                                );
+                                let more = DETAIL_H + 14.0 * lines.saturating_sub(1) as f32;
+                                y += more;
+                                how_h += more;
+                            }
                             y += 22.0;
                         }
+                        crate::dialogs::grow_px(ui.ctx(), "opt-test-how", how_h);
                         let first = checks.iter().find(|c| !c.ok);
                         let y = h - 46.0;
                         // As wide as their labels in this language (#192), short of Close.
@@ -3936,11 +4024,8 @@ impl OptionsDialog {
                 if set_up {
                     crate::extension::set_up(ctx);
                 }
-                if crate::extension::set_up_finished(&mut self.set_up_seen) {
-                    checks = crate::extension::checks(&self.s);
-                }
                 if matches!(out, Outcome::Open) {
-                    self.sub = Some(Sub::Test(checks));
+                    self.sub = Some(Sub::Test(tester));
                 }
             }
         }

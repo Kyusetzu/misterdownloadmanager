@@ -9,6 +9,10 @@ use mdm_engine::{Destination, Download, Options, Request};
 use mdm_labserver::{Config, Faults, LabServer, LogEntry, content, mediafire};
 use url::Url;
 
+#[path = "support/resume.rs"]
+mod resume;
+use resume::on_disk;
+
 async fn server(faults: &str) -> LabServer {
     LabServer::start(Config {
         faults: Faults::parse(faults).unwrap(),
@@ -54,9 +58,11 @@ fn check(path: &std::path::Path, key: &str, size: usize) {
     assert!(data == want, "content mismatch: {}", path.display());
 }
 
-/// The log once the server has logged the bodies the client dropped.
+/// The log once the server has logged every request, the bodies the client dropped too.
 async fn log(s: &LabServer) -> Vec<LogEntry> {
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    tokio::time::timeout(Duration::from_secs(20), s.settled())
+        .await
+        .expect("the lab server settles");
     s.log()
 }
 
@@ -201,13 +207,23 @@ async fn a_download_resumed_after_its_address_expired_goes_on() {
             .any(|e| on(e, mediafire::WWW) && e.path == format!("/file/{key}")),
         "today's address asked of the file's page"
     );
-    let from_file_host: u64 = log
+    // Only what was missing is asked again of today's address: of what was on disk before the
+    // refresh, a request takes at most the few bytes each part re-reads to check the file is the
+    // same (`verify_overlap`; the refresh's look at the new address, `bytes=0-0`, fits too).
+    // Not a total of what the server sent: a part split between two connections while its bytes
+    // are on their way comes twice, and on a busy machine more of them are (#1034).
+    let overlap = opts().verify_overlap;
+    let asked: Vec<&LogEntry> = log
         .iter()
-        .filter(|e| on(e, mediafire::FILES) && e.status == 206)
-        .map(|e| e.bytes_sent)
-        .sum();
-    assert!(
-        from_file_host <= size as u64 - kept + (1 << 20),
-        "only what was missing asked again: {from_file_host} of {size}, {kept} kept"
-    );
+        .filter(|e| on(e, mediafire::FILES) && matches!(e.status, 200 | 206))
+        .collect();
+    assert!(!asked.is_empty(), "the file asked of today's address");
+    for e in asked {
+        let again = on_disk(e.range.as_deref(), &saved);
+        assert!(
+            again <= overlap,
+            "asked again for {again} bytes it had kept: {:?}, {kept} kept",
+            e.range
+        );
+    }
 }

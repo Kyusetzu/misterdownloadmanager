@@ -66,7 +66,7 @@ A distribution's yt-dlp can also be too old for YouTube: if the list stays short
    - **Audio only OPUS**: an `.opus` file. When the site's sound is Opus already (YouTube's usually is), it's only moved into that file, not converted, so nothing is lost.
    - **Audio only FLAC**: a lossless `.flac` file, for a library or a program that wants FLAC. It can't add quality: the site's sound is already compressed with losses, and FLAC keeps it exactly as it came, in a file several times bigger. The window says so when you choose it.
 2. Pick one. Without ffmpeg, only the qualities that come with their sound are listed, and no MP3, Opus or FLAC (ffmpeg makes them).
-3. Check **Save to** (the Video category's folder by default) and **File name**, which comes from the video's title.
+3. Check **Save to** (the Video category's folder by default) and **File name**, which comes from the video's title. A long title is shortened, at the end of a word, so that the files saved beside the video while it downloads fit the system's limit on a path's length; a name you type is kept as you typed it.
 4. Choose **Subtitles** if you want them (see below). **Embed chapters** is ticked: see [Chapters](#chapters).
 5. Click **Download Now**, or **Later** to add it to the list without starting.
 
@@ -211,6 +211,7 @@ Some sites, YouTube among them, send each viewer to a nearby video server, somet
 - **No video this can download on that page** means yt-dlp found nothing on the page. Check that the address is the video's own page.
 - **This video needs you to be signed in**, or the site wants you signed in: see [Sites that want you signed in](#sites-that-want-you-signed-in).
 - Sites change often, and a newer yt-dlp usually fixes it. MDM doesn't update yt-dlp on its own yet. To get the newest one: quit MDM (**Tasks → Exit**), delete the `tools\yt-dlp` folder in MDM's data folder (`%APPDATA%\misterdownloadmanager`, or the `data` folder of a portable copy), start MDM, open the video window and click **Install yt-dlp**.
+- **The path is too long for Windows** (or **the file name is too long**) means the folder and the file name together, with the files saved beside the video while it downloads, are longer than the system allows: 259 characters on Windows unless long paths are turned on there, 255 a name (255 bytes on Linux and macOS). MDM shortens a title by itself, so this comes from a name you typed or a very deep **Save to** folder: add the video again with a shorter name, or a folder nearer the top of the drive.
 - Videos protected with DRM (most paid streaming services) can't be downloaded, and MDM doesn't try. The browser extension's [Media on this page](browser-integration.md#media-on-this-page) shows such a stream as **Protected** and doesn't send it.
 - A page whose video the window can't find: play the video in your browser, then use the extension's [Media on this page](browser-integration.md#media-on-this-page) to send the stream the page loaded.
 - Downloading may be against some sites' terms. Checking that is up to you.

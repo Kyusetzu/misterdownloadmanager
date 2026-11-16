@@ -488,9 +488,18 @@ pub struct Item {
     /// Its name was given without waiting for its folder to be looked at (Download File Info:
     /// a sleeping drive or a network folder can take seconds to answer, #743): nothing of its
     /// own is on the disk yet, and it starts under that name or the next free numbered one, as
-    /// the engine finds as it starts (`Destination::Free`). Cleared once the file is made.
+    /// the engine finds as it starts (`Destination::Free`). Cleared once the file is made. A
+    /// video's (Download video's name, given before its folder was read) is numbered on past the
+    /// files there beside the window, before it starts (videoplace.rs); cleared then.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub number_at_start: bool,
+    /// The file the user chose to replace with this download (#1088: Download File Info's Save
+    /// dialog asked "Replace?" and was answered Yes). While the download's place is that file
+    /// ([`Item::replaces`]), the engine replaces it as the download completes, never before
+    /// (`Options::replace_existing`): one that fails or is cancelled leaves it as it was. Cleared
+    /// once complete.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replace_file: Option<PathBuf>,
     /// The Link grabber package it came in (#37): its archives are extracted together once
     /// every volume is there.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -560,24 +569,37 @@ pub struct Item {
     /// (taken then); memory only, never written (its links are signed).
     #[serde(skip)]
     pub preloaded: Option<mdm_tools::video::Preloaded>,
-    /// Finished video / subtitle / gallery paths waiting to be marked as downloaded from the
-    /// web once any deferred rename in `App::poll` has moved them to their final names.
+    /// A finished video's subtitles saved beside it (#68): a rename on completion takes them
+    /// along (#655). Memory only.
     #[serde(skip)]
-    pub(crate) pending_mark: Option<PendingMark>,
+    pub(crate) side_files: Vec<PathBuf>,
     /// Files known to belong to a finished gallery or debrid folder download, kept across
     /// restarts so a requeued or resumed folder rename still checks for untracked files.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) written_files: Option<Vec<PathBuf>>,
+    /// Whether its resume state is at its place, as read beside the window at start
+    /// (resumeread.rs): the place read and the answer. Until that read comes it is taken as there
+    /// (the safe side: the row keeps its place, and no other row takes it), and it is forgotten as
+    /// the row starts (its run makes or removes the state). Memory only.
+    #[serde(skip)]
+    pub(crate) state_here: Option<(PathBuf, bool)>,
+    /// A copy ([`Item::place_copy`]) of a row that was running: it holds its place as the row
+    /// does ([`Item::holds_place`]). Memory only.
+    #[serde(skip)]
+    pub(crate) live_copy: bool,
 }
 
-/// Files saved by `yt-dlp` or `gallery-dl` waiting for Mark-of-the-Web after deferred rename.
-#[derive(Clone, Debug)]
-pub(crate) struct PendingMark {
-    pub main_file: Option<PathBuf>,
-    pub side_files: Vec<PathBuf>,
-    pub gallery_files: Vec<PathBuf>,
-    pub url: String,
-    pub referer: Option<String>,
+/// Adds `more` to a download's `written_files`, each path once, in order. A gallery lists up to
+/// 100 000 files: each told from those listed at once, not searched for among them (time
+/// squared, on the window's thread).
+fn add_written(list: &mut Vec<PathBuf>, more: Vec<PathBuf>) {
+    let mut listed: std::collections::HashSet<PathBuf> = list.iter().cloned().collect();
+    for p in more {
+        if !listed.contains(&p) {
+            listed.insert(p.clone());
+            list.push(p);
+        }
+    }
 }
 
 /// A Link grabber package, as each of its downloads keeps it (#37).
@@ -662,6 +684,36 @@ fn merge_failure(error: &str, kept: &[PathBuf]) -> String {
     )
 }
 
+/// `text` with every web address in it cut before its query and fragment (`?…`, `#…`): what a
+/// log may keep of a download's failure (#1262), since a log is attached to reports and an
+/// address's query often carries a token.
+fn without_queries(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = ["https://", "http://"]
+        .iter()
+        .filter_map(|p| rest.find(p))
+        .min()
+    {
+        out.push_str(&rest[..at]);
+        let addr = &rest[at..];
+        let end = addr
+            .find(|c: char| c.is_whitespace() || matches!(c, ')' | '"' | '\'' | '>' | ']'))
+            .unwrap_or(addr.len());
+        let (url, after) = addr.split_at(end);
+        match url.find(['?', '#']) {
+            Some(q) => {
+                out.push_str(&url[..q]);
+                out.push_str("?…");
+            }
+            None => out.push_str(url),
+        }
+        rest = after;
+    }
+    out.push_str(rest);
+    out
+}
+
 /// A helper's progress (yt-dlp's, gallery-dl's) as the engine's view: one segment when its size
 /// is known, one connection (theirs: neither opens more), its notes as events. A video whose
 /// streams MDM's engine downloads (#769) shows the engine's own: the streams' segments one after
@@ -679,7 +731,12 @@ fn tool_snapshot(p: mdm_tools::video::Progress, url: &Url) -> mdm_engine::Snapsh
             None,
             Some(match &p.merge_failed {
                 Some(kept) => merge_failure(&e, kept),
-                None => e,
+                // A path yt-dlp couldn't make, too long for the system (#1102): said as such,
+                // not as Python's "No such file or directory".
+                None => match mdm_tools::video::too_long(&e) {
+                    Some(path) => crate::errors::describe(&mdm_engine::Error::PathTooLong(path)),
+                    None => e,
+                },
             }),
         ),
         V::Stopped => (State::Cancelled, None, None),
@@ -793,7 +850,7 @@ impl Job {
             Job::Torrent(t) => t.speed_limit(),
             Job::Video { job, .. } => job.speed_limit(),
             Job::Gallery { job, .. } => job.speed_limit(),
-            Job::Remote(_) => None,
+            Job::Remote(r) => r.speed_limit(),
         }
     }
 }
@@ -840,13 +897,17 @@ pub struct VideoSpec {
     /// whatever yt-dlp named them (`Talk.faud-English.mp4`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub parts: Vec<PathBuf>,
+    /// The user typed its file name (#1102): kept as typed, never shortened to fit the path
+    /// limits; one too long for its folder says so when it starts. A name MDM gave (the page's
+    /// title) is shortened instead.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub named: bool,
 }
 
 /// A running download and its speed measurement.
 pub struct Live {
     pub dl: Job,
-    pub rate: f64,
-    sample: (Instant, u64),
+    pub speed: Speed,
     /// The engine's last event already copied into the item's log.
     seen: u64,
     /// A video's first stream address of this run is in `Item::file_url` (#795).
@@ -859,9 +920,143 @@ impl Live {
             dl,
             seen: 0,
             addressed: false,
-            rate: 0.0,
-            sample: (Instant::now(), downloaded),
+            speed: Speed::new(Instant::now(), downloaded),
         }
+    }
+}
+
+/// How long the speed shown takes to settle on a new pace (seconds): its average follows the
+/// bytes with this time constant (#1176), about two thirds of the way in 3 s.
+pub const SPEED_TAU: f64 = 3.0;
+/// The same for the global limiter's split between files and torrents (app.rs).
+pub const SPLIT_TAU: f64 = 2.0;
+/// How often the speed shown changes (seconds), with its time left: every download's on the
+/// same clock, so the list's rows and the total beside them change together (#1176).
+pub const SHOWN_EVERY: f64 = 0.5;
+/// No byte for this long (seconds): the speed is 0, not what is left of the average.
+const STILL: f64 = 5.0;
+
+/// `avg` (bytes a second) after `bytes` came in `dt` seconds: an exponential average whose
+/// weight is the time that passed (1 − e^(−dt/τ), `tau` seconds), so it is the same whatever
+/// the frame rate that reads the bytes.
+pub fn average(avg: f64, bytes: u64, dt: f64, tau: f64) -> f64 {
+    if dt <= 0.0 {
+        return avg;
+    }
+    let k = 1.0 - (-dt / tau).exp();
+    avg + (bytes as f64 / dt - avg) * k
+}
+
+/// The clock the shown speeds change on ([`SHOWN_EVERY`]).
+fn shown_epoch() -> Instant {
+    static EPOCH: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+    *EPOCH.get_or_init(Instant::now)
+}
+
+/// The tick of the shown speeds' clock that `now` is in.
+fn shown_tick(now: Instant) -> u64 {
+    (now.saturating_duration_since(shown_epoch()).as_secs_f64() / SHOWN_EVERY) as u64
+}
+
+/// How long from `now` to the next change of the shown speeds, a few milliseconds past it so the
+/// frame lands in the new tick.
+pub fn until_shown(now: Instant) -> std::time::Duration {
+    let t = now.saturating_duration_since(shown_epoch()).as_secs_f64();
+    let next = ((t / SHOWN_EVERY).floor() + 1.0) * SHOWN_EVERY;
+    std::time::Duration::from_secs_f64(next - t + 0.005)
+}
+
+/// A download's speed (#1176): an average of the bytes over time ([`average`]), whatever the
+/// frames that read them, and the figure shown from it, which changes on a steady clock
+/// ([`SHOWN_EVERY`]) so its digits can be read. The time left goes with the figure shown.
+#[derive(Clone, Debug)]
+pub struct Speed {
+    /// The average (bytes a second) and how much of it is measured (0 to 1): until the
+    /// average has had a few seconds, it is the bytes over the time measured, not pulled
+    /// towards the 0 it began at.
+    avg: f64,
+    weight: f64,
+    /// The bytes last read and when.
+    last: (Instant, u64),
+    /// When a byte last came.
+    moved: Instant,
+    /// The figures shown: the speed, the bytes done when it was read, and its tick.
+    shown: f64,
+    shown_done: u64,
+    tick: Option<u64>,
+}
+
+impl Speed {
+    pub fn new(now: Instant, done: u64) -> Self {
+        Speed {
+            avg: 0.0,
+            weight: 0.0,
+            last: (now, done),
+            moved: now,
+            shown: 0.0,
+            shown_done: done,
+            tick: None,
+        }
+    }
+
+    /// The average now (bytes a second).
+    pub fn average(&self) -> f64 {
+        if self.weight > 0.0 {
+            self.avg / self.weight
+        } else {
+            0.0
+        }
+    }
+
+    /// The bytes done read at `now`.
+    pub fn read(&mut self, now: Instant, done: u64) {
+        let (at, before) = self.last;
+        let dt = now.saturating_duration_since(at).as_secs_f64();
+        if done < before {
+            // Fewer bytes than read before: bytes a dropped connection had counted, a video's
+            // next stream, a file started over. The average goes on from here (it says how
+            // fast the bytes come); a fresh one over a moment would jump.
+            self.last = (now, done);
+        } else if self.weight == 0.0 && done == before {
+            // Nothing yet: the wait for the first byte isn't averaged in.
+            self.last = (now, done);
+            self.moved = now;
+        } else if dt > 0.0 {
+            let k = 1.0 - (-dt / SPEED_TAU).exp();
+            self.avg = average(self.avg, done - before, dt, SPEED_TAU);
+            self.weight += (1.0 - self.weight) * k;
+            self.last = (now, done);
+            if done > before {
+                self.moved = now;
+            } else if now.saturating_duration_since(self.moved).as_secs_f64() >= STILL {
+                self.avg = 0.0;
+            }
+        }
+        let tick = shown_tick(now);
+        if self.tick != Some(tick) {
+            self.tick = Some(tick);
+            self.shown = self.average();
+            self.shown_done = self.last.1;
+        }
+    }
+
+    /// Every byte is in (#736): no speed any more, at once; measured afresh from `done`.
+    pub fn clear(&mut self, now: Instant, done: u64) {
+        *self = Speed {
+            tick: self.tick,
+            ..Speed::new(now, done)
+        };
+    }
+
+    /// The speed shown (bytes a second).
+    pub fn shown(&self) -> f64 {
+        self.shown
+    }
+
+    /// The time left (seconds) to `size` at the speed shown, from the bytes done when it was
+    /// read; None without a speed.
+    pub fn seconds_left(&self, size: u64) -> Option<f64> {
+        (self.shown > 1.0).then(|| size.saturating_sub(self.shown_done) as f64 / self.shown)
     }
 }
 
@@ -918,6 +1113,12 @@ impl Item {
             .join("\n")
     }
 
+    /// The file at its place is the one the user chose to replace (`replace_file`): the engine
+    /// replaces it as the download completes. Its place moved since (renamed, numbered): no.
+    pub fn replaces(&self) -> bool {
+        self.replace_file.as_ref() == Some(&self.dest)
+    }
+
     /// What tells where this row's files are (its place, its kind, the files it wrote), for a
     /// look at the disk on a thread other than the window's (#743): no live download, no log.
     pub fn place_copy(&self) -> Item {
@@ -931,6 +1132,9 @@ impl Item {
         c.remote.clone_from(&self.remote);
         c.preexisting_folder = self.preexisting_folder;
         c.written_files.clone_from(&self.written_files);
+        c.number_at_start = self.number_at_start;
+        c.state_here.clone_from(&self.state_here);
+        c.live_copy = self.live.is_some() || self.live_copy;
         c
     }
 
@@ -961,6 +1165,7 @@ impl Item {
             log: Vec::new(),
             name_from_url: false,
             number_at_start: false,
+            replace_file: None,
             package: None,
             group: None,
             server: None,
@@ -979,13 +1184,21 @@ impl Item {
             context: Default::default(),
             notices: Vec::new(),
             preloaded: None,
-            pending_mark: None,
+            side_files: Vec::new(),
             written_files: None,
+            state_here: None,
+            live_copy: false,
         }
     }
     /// This row's resume state is at its place. `downloaded` can't say: after a crash the list
-    /// holds what it held at its last save, often nothing.
+    /// holds what it held at its last save, often nothing. As read beside the window at start
+    /// while that holds (`state_here`), else from the disk.
     pub fn owns_resume_state(&self) -> bool {
+        if let Some((at, here)) = &self.state_here
+            && *at == self.dest
+        {
+            return *here;
+        }
         let state = mdm_engine::state::state_path(&self.dest);
         mdm_engine::state::ResumeState::load(&state).is_ok_and(|s| s.url == self.url)
     }
@@ -995,6 +1208,7 @@ impl Item {
     /// nothing: several may wait under one name, and the first to start keeps it.
     pub fn holds_place(&self) -> bool {
         self.live.is_some()
+            || self.live_copy
             || if self.status == Status::Complete {
                 self.dest.exists()
             } else {
@@ -1043,20 +1257,12 @@ impl Item {
                 }
             }
         }
-        let dt = live.sample.0.elapsed().as_secs_f64();
         if self.torrent.is_none() && every_byte_in(&s) {
             // Every byte in (#736): nothing comes in while the last of it is written out, the
             // file checked, joined or named; the rate the download ended on isn't one any more.
-            live.rate = 0.0;
-            live.sample = (Instant::now(), s.downloaded);
-        } else if dt >= 0.5 {
-            let inst = s.downloaded.saturating_sub(live.sample.1) as f64 / dt;
-            live.rate = if live.rate == 0.0 {
-                inst
-            } else {
-                0.6 * live.rate + 0.4 * inst
-            };
-            live.sample = (Instant::now(), s.downloaded);
+            live.speed.clear(Instant::now(), s.downloaded);
+        } else {
+            live.speed.read(Instant::now(), s.downloaded);
         }
         let seen = live.seen;
         for e in s.events.iter().filter(|e| e.seq > seen) {
@@ -1079,9 +1285,34 @@ impl Item {
         };
         match ended {
             Some(status) => {
+                let failed_now = status == Status::Error && self.status != Status::Error;
+                // The reason in English, for the log: the engine's failure, else the helper's.
+                let reason = failed_now.then(|| {
+                    s.failure
+                        .as_ref()
+                        .map(ToString::to_string)
+                        .or_else(|| s.error.clone())
+                        .map_or_else(|| "no reason given".to_owned(), |r| without_queries(&r))
+                });
                 self.status = status;
                 // In the interface language; the engine's English when it gave no failure.
                 self.error = s.failure.as_ref().map(crate::errors::describe).or(s.error);
+                // Why it failed, in the log too, once (#1262: 0.5.2's log said nothing of a
+                // video yt-dlp couldn't download, only the progress window did). The site's
+                // name, not its address: a log is attached to reports, and addresses carry
+                // tokens.
+                if let Some(reason) = reason {
+                    tracing::warn!(
+                        "download {} failed ({}{}): {reason}",
+                        self.id,
+                        if self.video.is_some() {
+                            "a video, "
+                        } else {
+                            ""
+                        },
+                        self.url.host_str().unwrap_or("no host"),
+                    );
+                }
                 // A video's streams kept after its merge failed: its own, for Delete.
                 if let Some(Live {
                     dl: Job::Video { job, .. },
@@ -1093,58 +1324,40 @@ impl Item {
                 }
                 if status == Status::Complete {
                     self.downloaded = self.size.unwrap_or(self.downloaded);
+                    // Replaced (or kept, when it couldn't be): the file there now is its own.
+                    self.replace_file = None;
                 }
-                // A video and its subtitles (#68), marked as downloaded from the web once
-                // yt-dlp has saved them (and after any deferred rename in `App::poll`).
+                // A video and its subtitles (#68), already marked as downloaded from the web by
+                // its job, before it said it was done (#1103).
                 let mut notices = Vec::new();
                 if status == Status::Complete
                     && let Some(Live {
                         dl: Job::Video { job, url },
                         ..
                     }) = &self.live
-                    && matches!(url.scheme(), "http" | "https")
                 {
                     let done = job.progress();
                     // The subtitles the site wouldn't give: said in the log and the Download
                     // complete window (the video is saved all the same).
-                    let site = url.host_str().unwrap_or("").trim_start_matches("www.");
-                    notices = done
-                        .sub_problems
-                        .iter()
-                        .map(|p| sub_notice(p, site))
-                        .collect();
-                    self.pending_mark = Some(PendingMark {
-                        main_file: s.file.clone(),
-                        side_files: done.side_files,
-                        gallery_files: Vec::new(),
-                        url: url.to_string(),
-                        referer: self.context.referer.clone(),
-                    });
+                    if matches!(url.scheme(), "http" | "https") {
+                        let site = url.host_str().unwrap_or("").trim_start_matches("www.");
+                        notices = done
+                            .sub_problems
+                            .iter()
+                            .map(|p| sub_notice(p, site))
+                            .collect();
+                    }
+                    self.side_files = done.side_files;
                 }
-                // A gallery's files (#58), each marked as downloaded from the web after any
-                // deferred folder rename in `App::poll`.
+                // A gallery's files (#58), already marked by its job as the video's are.
                 if status == Status::Complete
                     && let Some(Live {
-                        dl: Job::Gallery { job, url },
+                        dl: Job::Gallery { job, .. },
                         ..
                     }) = &self.live
                 {
                     let known = job.known_files();
-                    let list = self.written_files.get_or_insert_with(Vec::new);
-                    for p in known {
-                        if !list.contains(&p) {
-                            list.push(p);
-                        }
-                    }
-                    if matches!(url.scheme(), "http" | "https") {
-                        self.pending_mark = Some(PendingMark {
-                            main_file: None,
-                            side_files: Vec::new(),
-                            gallery_files: job.saved(),
-                            url: url.to_string(),
-                            referer: None,
-                        });
-                    }
+                    add_written(self.written_files.get_or_insert_with(Vec::new), known);
                 }
                 if status == Status::Complete
                     && let Some(Live {
@@ -1155,12 +1368,7 @@ impl Item {
                         self.preexisting_folder = true;
                     }
                     let saved = r.saved_files();
-                    let list = self.written_files.get_or_insert_with(Vec::new);
-                    for p in saved {
-                        if !list.contains(&p) {
-                            list.push(p);
-                        }
-                    }
+                    add_written(self.written_files.get_or_insert_with(Vec::new), saved);
                 }
                 for n in &notices {
                     self.note(n.clone());
@@ -1251,8 +1459,19 @@ impl Item {
             ) || (self.status == Status::Complete && self.gallery.is_some()))
     }
 
+    /// The speed shown (bytes a second): the list's Transfer rate, the progress window's, the
+    /// total in the status strip and the tray's tip all show this one ([`Speed`]).
     pub fn rate(&self) -> f64 {
-        self.live.as_ref().map_or(0.0, |l| l.rate)
+        self.live.as_ref().map_or(0.0, |l| l.speed.shown())
+    }
+
+    /// The time left (seconds) at the speed shown, while it downloads with a known size.
+    pub fn seconds_left(&self) -> Option<f64> {
+        if self.status != Status::Downloading || self.past_last_byte() {
+            return None;
+        }
+        let size = self.size?;
+        self.live.as_ref()?.speed.seconds_left(size)
     }
 
     /// How much has come, 0 to 1, or None without a size to take a share of (a live stream,
@@ -1399,12 +1618,7 @@ impl Item {
     }
 
     pub fn time_left(&self) -> String {
-        match (self.status, self.size) {
-            (Status::Downloading, Some(t)) if self.rate() > 1.0 && !self.past_last_byte() => {
-                time((t.saturating_sub(self.downloaded)) as f64 / self.rate())
-            }
-            _ => String::new(),
-        }
+        self.seconds_left().map_or(String::new(), time)
     }
 }
 
@@ -1578,6 +1792,114 @@ pub fn rate(bps: f64) -> String {
     }
 }
 
+/// A speed limit as the user typed it, in whole KBytes/sec: `512 KB/sec`, `2048 KB/sec` (the
+/// Speed Limiter's boxes take KBytes/sec).
+pub fn limit_rate(bps: u64) -> String {
+    let kb = (bps / 1024).max(1);
+    if english() {
+        format!("{kb} KB/sec") // not translated: English path
+    } else {
+        unit(kb as f64, 0, "{n} KB/sec")
+    }
+}
+
+/// The speed limit that holds a running download back (#1191): what its Transfer rate says
+/// beside the speed, so a limiter left on is not forgotten.
+///
+/// It names the limit, not that the download is "limited": the speed measured goes a little
+/// above and below a limit it runs at, and a download slower than its limit (a slow server) is
+/// under that limit all the same, so comparing the two would flicker or claim too much.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Limit {
+    /// At most this many bytes a second for this download: its own limit (its progress
+    /// window's Speed Limiter tab, or remembered for the file), else the Speed Limiter's for one
+    /// file.
+    One(u64),
+    /// This many bytes a second for all downloads together (Speed Limiter settings, beyond
+    /// IDM), the tighter one for this download.
+    All(u64),
+}
+
+impl Limit {
+    /// The limit that binds a download whose own limit is `one`, while the limit for all
+    /// downloads together is `all` (both bytes/s, None: off) and `running` downloads share it
+    /// (this one among them). Its own binds unless that many downloads, each at it, would go
+    /// over the shared one: then each gets less than its own, and the shared one binds.
+    pub fn binding(one: Option<u64>, all: Option<u64>, running: usize) -> Option<Limit> {
+        match (one, all) {
+            (None, None) => None,
+            (Some(one), None) => Some(Limit::One(one)),
+            (None, Some(all)) => Some(Limit::All(all)),
+            (Some(one), Some(all)) => {
+                let together = one.saturating_mul(running.max(1) as u64);
+                Some(if together <= all {
+                    Limit::One(one)
+                } else {
+                    Limit::All(all)
+                })
+            }
+        }
+    }
+
+    /// Bytes a second.
+    pub fn rate(self) -> u64 {
+        match self {
+            Limit::One(r) | Limit::All(r) => r,
+        }
+    }
+
+    /// The progress window's Transfer rate with the limit after the speed `shown` (a
+    /// [`rate`]): `512.000 KB/sec (limit: 512 KB/sec)`.
+    pub fn after(self, shown: &str) -> String {
+        let limit = limit_rate(self.rate());
+        let template = match self {
+            // i18n: the progress window's Transfer rate row while a speed limit applies: {rate} is the download's speed now ("512.000 KB/sec"), {limit} the most this download may take ("512 KB/sec"). The row is narrow: keep it short
+            Limit::One(_) => crate::i18n::t("{rate} (limit: {limit})"),
+            // i18n: the progress window's Transfer rate row while the limit for all downloads together applies: {rate} is this download's speed now ("512.000 KB/sec"), {limit} the most all downloads together may take ("1024 KB/sec"). The row is narrow: keep it short
+            Limit::All(_) => crate::i18n::t("{rate} (limit for all downloads: {limit})"),
+        };
+        crate::i18n::fmt(template, &[("rate", shown), ("limit", &limit)])
+    }
+
+    /// The tip of a download's Transfer rate cell in the list (the column is too narrow for
+    /// the limit beside the speed).
+    pub fn tip(self) -> String {
+        let limit = limit_rate(self.rate());
+        let template = match self {
+            // i18n: tip of a download's Transfer rate in the list: {limit} is the most this download may take ("512 KB/sec"), set with the Speed Limiter
+            Limit::One(_) => crate::i18n::t("Speed Limiter: at most {limit} for this download"),
+            // i18n: tip of a download's Transfer rate in the list: {limit} is the most all downloads together may take ("1024 KB/sec"), set in the Speed Limiter's settings
+            Limit::All(_) => crate::i18n::t("Speed Limiter: {limit} for all downloads together"),
+        };
+        crate::i18n::fmt(template, &[("limit", &limit)])
+    }
+}
+
+/// The status strip's and the tray tip's word that the Speed Limiter is on (#1191), whatever
+/// runs: the limit for one download (`one`, Downloads → Speed Limiter → Turn on) and the limit
+/// for all downloads together (`all`, while it applies), bytes/s. None while both are off.
+pub fn limiter_hint(one: Option<u64>, all: Option<u64>) -> Option<String> {
+    let t = crate::i18n::t;
+    Some(match (one, all) {
+        (None, None) => return None,
+        (Some(one), None) => crate::i18n::fmt(
+            // i18n: the status bar and the tray icon's tip while Downloads → Speed Limiter is turned on: {limit} is the most each download may take ("512 KB/sec")
+            t("Speed Limiter: {limit} per download"),
+            &[("limit", &limit_rate(one))],
+        ),
+        (None, Some(all)) => crate::i18n::fmt(
+            // i18n: the status bar and the tray icon's tip while the Speed Limiter's limit for all downloads together is on: {limit} is the most they may take together ("1024 KB/sec")
+            t("Speed Limiter: {limit} for all downloads"),
+            &[("limit", &limit_rate(all))],
+        ),
+        (Some(one), Some(all)) => crate::i18n::fmt(
+            // i18n: the status bar and the tray icon's tip while both Speed Limiter limits are on: {one} is the most each download may take ("512 KB/sec"), {all} the most all of them together may take ("1024 KB/sec")
+            t("Speed Limiter: {one} per download, {all} for all"),
+            &[("one", &limit_rate(one)), ("all", &limit_rate(all))],
+        ),
+    })
+}
+
 /// The list's Size column: IDM puts two spaces before the unit (`200.00  MB`).
 pub fn size_list(b: u64) -> String {
     if english() {
@@ -1625,6 +1947,7 @@ mod file_address_tests {
             selector: "best".into(),
             subs: Default::default(),
             parts: Vec::new(),
+            named: false,
         });
         i
     }
@@ -1748,7 +2071,77 @@ mod size_tests {
 
 #[cfg(test)]
 mod tests {
+    /// #1262: a failure's reason goes to the log without the queries of the addresses in it.
+    #[test]
+    fn a_failure_is_logged_without_tokens() {
+        assert_eq!(
+            super::without_queries(
+                "error sending request for url (https://cdn.example/v/1.m3u8?vid=9&dt=abc): 414"
+            ),
+            "error sending request for url (https://cdn.example/v/1.m3u8?…): 414"
+        );
+        assert_eq!(
+            super::without_queries("http://a.example/x#frag and https://b.example/y"),
+            "http://a.example/x?… and https://b.example/y"
+        );
+        assert_eq!(
+            super::without_queries("HTTP Error 414: URI Too Long"),
+            "HTTP Error 414: URI Too Long"
+        );
+    }
+
     use super::*;
+
+    /// #1088: a download replaces the file chosen in the Save dialog only while its place is that
+    /// file; the choice is kept with the list (a download queued with Later, MDM restarted).
+    #[test]
+    fn a_download_replaces_only_the_file_chosen_while_it_is_its_place() {
+        let url = Url::parse("http://127.0.0.1:9/a.7z").unwrap();
+        let taken = PathBuf::from("dl").join("taken.7z");
+        let mut it = Item::new(1, url, taken.clone(), Category::Compressed);
+        assert!(!it.replaces());
+        it.replace_file = Some(taken.clone());
+        assert!(it.replaces());
+        let back: Item = serde_json::from_str(&serde_json::to_string(&it).unwrap()).unwrap();
+        assert_eq!(back.replace_file.as_deref(), Some(taken.as_path()));
+        assert!(back.replaces());
+        // Its place moved (another row's, a rename): nothing replaced there.
+        it.dest = PathBuf::from("dl").join("taken (1).7z");
+        assert!(!it.replaces());
+        // Never written for a download without one.
+        let none = Item::new(
+            2,
+            Url::parse("http://127.0.0.1:9/b.7z").unwrap(),
+            PathBuf::from("b.7z"),
+            Category::Compressed,
+        );
+        assert!(
+            !serde_json::to_string(&none)
+                .unwrap()
+                .contains("replace_file")
+        );
+    }
+
+    /// A finished gallery's files join its written files in time linear in them, each once.
+    #[test]
+    fn written_files_join_in_linear_time() {
+        let paths = |from: usize, n: usize| -> Vec<PathBuf> {
+            (from..from + n)
+                .map(|i| PathBuf::from(format!("/gallery/image-{i:09}.jpg")))
+                .collect()
+        };
+        mdm_labserver::growth::assert_linear(
+            2_000,
+            |n| (paths(0, n / 2), paths(n / 4, n)),
+            |(mut list, more)| {
+                add_written(&mut list, more);
+                list.len()
+            },
+        );
+        let mut list = paths(0, 3);
+        add_written(&mut list, paths(2, 3));
+        assert_eq!(list, paths(0, 5));
+    }
 
     fn video_item(size: Option<u64>, downloaded: u64, status: Status) -> Item {
         let url = Url::parse("https://example.org/a.mp4").unwrap();
@@ -1760,6 +2153,7 @@ mod tests {
             selector: "18".into(),
             subs: Default::default(),
             parts: Vec::new(),
+            named: false,
         });
         it
     }
@@ -2051,5 +2445,271 @@ mod helper_connection_tests {
         p.engine = None;
         p.state = mdm_tools::video::State::Done("Clip.mp4".into());
         assert!(tool_snapshot(p, &page).connections.is_empty());
+    }
+}
+
+/// The speed's average and the figure shown (#1176).
+#[cfg(test)]
+mod speed_tests {
+    use super::{SHOWN_EVERY, STILL, Speed, shown_epoch, shown_tick, until_shown};
+    use std::time::{Duration, Instant};
+
+    const MB: f64 = 1_048_576.0;
+
+    fn at(t: f64) -> Instant {
+        shown_epoch() + Duration::from_secs_f64(t)
+    }
+
+    /// Reads `bytes(t)` at each moment of `times`: the average after each, and the figure shown.
+    fn run(times: &[f64], bytes: impl Fn(f64) -> u64) -> (Speed, Vec<(f64, f64, f64)>) {
+        let mut s = Speed::new(at(0.0), 0);
+        let mut seen = Vec::new();
+        for &t in times {
+            s.read(at(t), bytes(t));
+            seen.push((t, s.average(), s.shown()));
+        }
+        (s, seen)
+    }
+
+    /// 1 MB/s for 5 s, then 3 MB/s.
+    fn step(t: f64) -> u64 {
+        if t < 5.0 {
+            (t * MB) as u64
+        } else {
+            (5.0 * MB + (t - 5.0) * 3.0 * MB) as u64
+        }
+    }
+
+    fn every(gap: f64, until: f64) -> Vec<f64> {
+        (1..)
+            .map(|n| n as f64 * gap)
+            .take_while(|t| *t <= until + 1e-9)
+            .collect()
+    }
+
+    /// Frames 25 a second, four a second, twice a second, or uneven: the same bytes make the
+    /// same average (the old fixed weight settled in 0.5 s at one and in 6 s at another).
+    #[test]
+    fn the_same_bytes_make_the_same_average_whatever_the_frames() {
+        let uneven: Vec<f64> = (1..)
+            .scan(0.0, |t, n: u32| {
+                *t += [0.25, 0.31, 0.19, 0.27, 0.42, 0.04][n as usize % 6];
+                Some(*t)
+            })
+            .take_while(|t| *t <= 10.0)
+            .chain([10.0])
+            .collect();
+        let gaps = [
+            every(0.04, 10.0),
+            every(0.25, 10.0),
+            every(0.5, 10.0),
+            uneven,
+        ];
+        for check in [6.5, 10.0] {
+            let averages: Vec<f64> = gaps
+                .iter()
+                .map(|times| {
+                    let upto: Vec<f64> = times.iter().copied().filter(|t| *t <= check).collect();
+                    run(&upto, step).0.average()
+                })
+                .collect();
+            let (lo, hi) = averages
+                .iter()
+                .fold((f64::MAX, 0.0f64), |(lo, hi), a| (lo.min(*a), hi.max(*a)));
+            assert!(hi / lo < 1.04, "at {check} s: {averages:?}");
+        }
+    }
+
+    /// It settles on a new pace: about two thirds of the way in three seconds, all of it in 15.
+    #[test]
+    fn it_settles_on_a_new_pace() {
+        let (s, seen) = run(&every(0.25, 20.0), step);
+        assert!(
+            (s.average() / (3.0 * MB) - 1.0).abs() < 0.01,
+            "{}",
+            s.average()
+        );
+        let after_3 = seen.iter().find(|(t, ..)| *t >= 8.0).unwrap().1 / MB;
+        assert!((2.1..2.5).contains(&after_3), "{after_3}");
+    }
+
+    /// From the first figure on, the average is the speed, not a climb from 0; the wait for the
+    /// first byte isn't counted in it.
+    #[test]
+    fn it_starts_at_the_speed() {
+        let (s, _) = run(&every(0.25, 0.5), |t| (t * MB) as u64);
+        assert!((s.average() / MB - 1.0).abs() < 1e-6, "{}", s.average());
+        let (s, _) = run(&every(0.25, 2.5), |t| ((t - 2.0).max(0.0) * MB) as u64);
+        assert!((s.average() / MB - 1.0).abs() < 0.15, "{}", s.average());
+    }
+
+    /// A steady download whose bytes come in bursts (64 KB at a time, read at uneven frames)
+    /// shows a steady figure: within 3 % of its speed once it has had three seconds.
+    #[test]
+    fn steady_bytes_show_a_steady_figure() {
+        let chunk = 64 * 1024;
+        let bursts = |t: f64| ((t * 2.0 * MB) as u64 / chunk) * chunk;
+        let times: Vec<f64> = (1..)
+            .scan(0.0, |t, n: u32| {
+                *t += [0.25, 0.21, 0.3, 0.04, 0.33][n as usize % 5];
+                Some(*t)
+            })
+            .take_while(|t| *t <= 20.0)
+            .collect();
+        let (_, seen) = run(&times, bursts);
+        for (t, _, shown) in seen.iter().filter(|(t, ..)| *t >= 3.0) {
+            assert!((shown / (2.0 * MB) - 1.0).abs() < 0.03, "{shown} at {t}");
+        }
+    }
+
+    /// The figure shown changes on the clock's ticks, twice a second, however often it is read;
+    /// the average moves under it meanwhile.
+    #[test]
+    fn the_figure_shown_changes_twice_a_second() {
+        // A speed that wobbles about 1 MB/s.
+        let wobble = |t: f64| ((t + 0.5 * (1.0 - t.cos())) * MB) as u64;
+        let (_, seen) = run(&every(0.04, 5.0), wobble);
+        let changes: Vec<_> = seen.windows(2).filter(|w| w[0].2 != w[1].2).collect();
+        // One each tick after the first.
+        let ticks = (5.0 / SHOWN_EVERY) as usize;
+        assert!((ticks - 1..=ticks).contains(&changes.len()), "{changes:?}");
+        for w in &changes {
+            assert_ne!(shown_tick(at(w[0].0)), shown_tick(at(w[1].0)), "{w:?}");
+        }
+        // Between ticks the figure stays as it is.
+        let within: Vec<_> = seen
+            .iter()
+            .filter(|(t, ..)| (2.1..2.45).contains(t))
+            .collect();
+        assert!(within.iter().all(|x| x.2 == within[0].2));
+        assert!(within.first().unwrap().1 != within.last().unwrap().1);
+        // The next frame is asked for as the clock ticks.
+        let wait = until_shown(at(2.3)).as_secs_f64();
+        assert!((0.2..0.21).contains(&wait), "{wait}");
+        assert_eq!(
+            shown_tick(at(2.3) + until_shown(at(2.3))),
+            shown_tick(at(2.6))
+        );
+    }
+
+    /// The time left goes with the figure shown: from the bytes done when it was read.
+    #[test]
+    fn the_time_left_goes_with_the_figure_shown() {
+        let (s, _) = run(&every(0.04, 4.02), |t| (t * MB) as u64);
+        let left = s.seconds_left((10.0 * MB) as u64).unwrap();
+        assert!((left - 6.0).abs() < 0.05, "{left}");
+        assert_eq!(Speed::new(at(0.0), 0).seconds_left(100), None);
+    }
+
+    /// Nothing for a while: 0, not what is left of the average. Every byte in (#736): 0 at once.
+    /// Fewer bytes than before (a connection's dropped, a file started over): the average goes
+    /// on, no jump.
+    #[test]
+    fn a_stall_an_end_and_a_start_over() {
+        let mut times = every(0.25, 3.0);
+        times.extend(every(0.25, STILL + 1.0).into_iter().map(|t| t + 3.0));
+        let (s, _) = run(&times, |t| (t.min(3.0) * MB) as u64);
+        assert_eq!((s.average(), s.shown()), (0.0, 0.0));
+
+        let (mut s, _) = run(&every(0.25, 3.0), |t| (t * MB) as u64);
+        s.clear(at(3.1), (3.1 * MB) as u64);
+        assert_eq!((s.average(), s.shown()), (0.0, 0.0));
+
+        let (mut s, _) = run(&every(0.25, 3.0), |t| (t * MB) as u64);
+        s.read(at(3.25), 1000);
+        assert!((s.average() / MB - 1.0).abs() < 1e-6, "{}", s.average());
+        s.read(at(3.5), 1000 + MB as u64 / 4);
+        assert!((s.average() / MB - 1.0).abs() < 1e-6, "{}", s.average());
+    }
+}
+
+/// Which speed limit a download's Transfer rate names, and how (#1191).
+#[cfg(test)]
+mod limit_tests {
+    use super::{Limit, limit_rate, limiter_hint};
+
+    const KB: u64 = 1024;
+
+    #[test]
+    fn its_own_limit_binds_until_the_shared_one_is_tighter() {
+        assert_eq!(Limit::binding(None, None, 1), None);
+        assert_eq!(
+            Limit::binding(Some(10 * KB), None, 3),
+            Some(Limit::One(10 * KB))
+        );
+        assert_eq!(
+            Limit::binding(None, Some(500 * KB), 3),
+            Some(Limit::All(500 * KB))
+        );
+        // One download at 10 KB/s under 500 KB/s for all: its own limit holds it.
+        assert_eq!(
+            Limit::binding(Some(10 * KB), Some(500 * KB), 1),
+            Some(Limit::One(10 * KB))
+        );
+        // 50 of them at 10 KB/s fill 500 KB/s exactly: still their own.
+        assert_eq!(
+            Limit::binding(Some(10 * KB), Some(500 * KB), 50),
+            Some(Limit::One(10 * KB))
+        );
+        // 51 would take more than 500 KB/s together: the shared limit holds them.
+        assert_eq!(
+            Limit::binding(Some(10 * KB), Some(500 * KB), 51),
+            Some(Limit::All(500 * KB))
+        );
+        // Its own above the shared one: the shared one, even alone.
+        assert_eq!(
+            Limit::binding(Some(800 * KB), Some(500 * KB), 1),
+            Some(Limit::All(500 * KB))
+        );
+        // No count (asked before it runs) counts it alone; no overflow at the top.
+        assert_eq!(
+            Limit::binding(Some(10 * KB), Some(500 * KB), 0),
+            Some(Limit::One(10 * KB))
+        );
+        assert_eq!(
+            Limit::binding(Some(u64::MAX), Some(500 * KB), 2),
+            Some(Limit::All(500 * KB))
+        );
+    }
+
+    #[test]
+    fn limits_read_as_typed() {
+        assert_eq!(limit_rate(512 * KB), "512 KB/sec");
+        assert_eq!(limit_rate(2048 * KB), "2048 KB/sec");
+        // Below a kilobyte (a share of the limit for all): never "0 KB/sec".
+        assert_eq!(limit_rate(100), "1 KB/sec");
+    }
+
+    #[test]
+    fn transfer_rate_tip_and_hint() {
+        assert_eq!(
+            Limit::One(512 * KB).after("511.998 KB/sec"),
+            "511.998 KB/sec (limit: 512 KB/sec)"
+        );
+        assert_eq!(
+            Limit::All(1024 * KB).after("340.112 KB/sec"),
+            "340.112 KB/sec (limit for all downloads: 1024 KB/sec)"
+        );
+        assert_eq!(
+            Limit::One(10 * KB).tip(),
+            "Speed Limiter: at most 10 KB/sec for this download"
+        );
+        assert_eq!(
+            Limit::All(500 * KB).tip(),
+            "Speed Limiter: 500 KB/sec for all downloads together"
+        );
+        assert_eq!(limiter_hint(None, None), None);
+        assert_eq!(
+            limiter_hint(Some(10 * KB), None).as_deref(),
+            Some("Speed Limiter: 10 KB/sec per download")
+        );
+        assert_eq!(
+            limiter_hint(None, Some(500 * KB)).as_deref(),
+            Some("Speed Limiter: 500 KB/sec for all downloads")
+        );
+        assert_eq!(
+            limiter_hint(Some(10 * KB), Some(500 * KB)).as_deref(),
+            Some("Speed Limiter: 10 KB/sec per download, 500 KB/sec for all")
+        );
     }
 }

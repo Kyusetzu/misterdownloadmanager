@@ -69,7 +69,11 @@ toolbar, key and IPC commands into actions. Each dialog is its own module and re
 `Outcome` (open, closed, done with a value). Windows-only calls are confined to `win32.rs` and
 their Linux and macOS counterparts to `unix.rs` (starting with the session, the browsers' host,
 sounds, show in folder, the crash handler); every other file is safe, portable Rust. Fonts come from the system:
-Windows' Fonts folder, macOS's system fonts, fontconfig on Linux (`theme.rs`). On Windows, Latin,
+Windows' Fonts folder, macOS's system fonts, fontconfig on Linux (`theme.rs`). The interface language's
+script fonts load at start; text in another script gets its font the first time it shows: from MDM's
+lists of the system's fonts for each script, then, on Windows and macOS, from the system's own fallback
+(DirectWrite's, CoreText's, through fontique: `egui_system_font_provider`) for what the lists don't
+name; Linux asks fontconfig for any letter. On Windows, Latin,
 Greek, Cyrillic and single-codepoint CJK text is drawn by DirectWrite (`win32.rs`, through egui's glyph rasterizer hook):
 View → Text → Smooth in its natural mode, anti-aliased at the size asked for and placed at quarter
 pixels with the font's own advances; Classic (the default) in GDI-classic mode, so each letter's

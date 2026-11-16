@@ -706,6 +706,7 @@ fn supervise(
     retry: Option<&SubsRetry>,
     preloaded: Option<Preloaded>,
     engine: Option<&ByEngine>,
+    saved: Option<&mdm_engine::FileHook>,
 ) {
     // The first run only: a run after it looks the page up afresh (links expire).
     let mut preloaded = preloaded;
@@ -750,14 +751,21 @@ fn supervise(
                 }
                 // The saved file's own size: a merged video or a converted MP3 isn't the size
                 // of what came down.
-                let saved = std::fs::metadata(&f).ok().map(|m| m.len());
+                let size = std::fs::metadata(&f).ok().map(|m| m.len());
                 let side = side_files(&f);
+                // Before Done, with the progress unlocked: a disk slow to take the mark keeps
+                // this thread waiting, never a window reading the progress (#1103).
+                if let Some(hook) = saved {
+                    for file in std::iter::once(&f).chain(&side).filter(|p| p.is_file()) {
+                        (hook.0)(file);
+                    }
+                }
                 let mut p = progress.lock().unwrap();
                 if p.state != State::Stopped {
                     p.speed = 0.0;
                     p.side_files = side;
                     p.sub_problems = problems;
-                    if let Some(len) = saved {
+                    if let Some(len) = size {
                         p.total = Some(len);
                         p.downloaded = len;
                     }
@@ -1466,7 +1474,12 @@ fn attempt(
     // MDM's engine downloads the streams (#769); yt-dlp then finds them in place.
     let mut by_engine = false;
     if let Some(e) = engine {
-        match e.fetch(exe, url, browser, &file, progress, dead, reroute, cookies) {
+        // With the run's selector: the nearest quality once the chosen one wasn't offered
+        // (#94), or the engine would ask for that one again (#1240).
+        let selector = selector_of(ours);
+        match e.fetch(
+            exe, url, browser, selector, &file, progress, dead, reroute, cookies,
+        ) {
             Engined::Ready => by_engine = true,
             Engined::Helper(why) => {
                 note(
@@ -1678,20 +1691,26 @@ impl ByEngine {
     /// Choose the formats on the page looked up into `file` and download their streams with the
     /// engine; a stream's address that dies is asked for again with a new look-up (`url`, as
     /// the browser asked, `browser`; servers moved as this run moved them; with the browser's
-    /// cookies or without them, as `cookies` decided).
+    /// cookies or without them, as `cookies` decided). `selector`: the run's own format
+    /// selector, when the download moved to another (the nearest quality, #94).
     #[allow(clippy::too_many_arguments)]
     fn fetch(
         &self,
         exe: &Path,
         url: &str,
         browser: &[String],
+        selector: Option<&str>,
         file: &Path,
         progress: &Mutex<Progress>,
         dead: &std::collections::BTreeSet<String>,
         reroute: bool,
         cookies: &Cookies,
     ) -> Engined {
-        let choose_args = cookies.args(&self.choose);
+        let args = match selector {
+            Some(s) => with_selector(&self.choose, s),
+            None => self.choose.clone(),
+        };
+        let choose_args = cookies.args(&args);
         let chosen = match choose(exe, &choose_args, file) {
             Ok(c) => c,
             Err(e) => return Engined::Failed(e),
@@ -1793,6 +1812,47 @@ impl Drop for Remove {
     }
 }
 
+/// The path a failure of yt-dlp's says it couldn't make because it is too long for the system
+/// (#1102), from Python's own words: `[WinError 206] The filename or extension is too long`,
+/// `[Errno 36] File name too long` (Linux; 63 on macOS), and `[Errno 2] No such file or
+/// directory` or `[Errno 22] Invalid argument` for a path past the limits: Windows' `MAX_PATH`
+/// while long paths are off makes a path too long look like a missing folder, and a name past
+/// 255 like a wrong one. None for anything else (a folder really missing).
+pub fn too_long(error: &str) -> Option<PathBuf> {
+    const SAID: [(&str, bool); 5] = [
+        ("[WinError 206] ", true),
+        ("[Errno 36] ", true),
+        ("[Errno 63] ", true),
+        ("[Errno 2] ", false),
+        // Windows: a name past 255 characters.
+        ("[Errno 22] ", false),
+    ];
+    SAID.iter().find_map(|(said, always)| {
+        let (_, rest) = error.split_once(said)?;
+        let path = python_quoted(rest.split_once(": ")?.1)?;
+        (*always || !mdm_engine::naming::fits(&path)).then_some(path)
+    })
+}
+
+/// The string Python's `repr` quoted at the start of `s` (`'C:\\a'`, or `"He'd"` when it holds
+/// a `'`), unescaped.
+fn python_quoted(s: &str) -> Option<PathBuf> {
+    let mut chars = s.chars();
+    let quote = chars.next().filter(|q| matches!(q, '\'' | '"'))?;
+    let mut out = String::new();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => match chars.next()? {
+                e @ ('\\' | '\'' | '"') => out.push(e),
+                e => out.extend(['\\', e]),
+            },
+            c if c == quote => return Some(PathBuf::from(out)),
+            c => out.push(c),
+        }
+    }
+    None
+}
+
 /// `%` would be read as a template field by yt-dlp.
 fn template_text(s: &str) -> String {
     s.replace('%', "%%")
@@ -1841,11 +1901,15 @@ impl VideoJob {
     ) -> Result<VideoJob, ProcError> {
         Self::start_with(
             exe, url, selector, dir, stem, rate, ffmpeg, expected, browser, subs, None, engine,
+            None,
         )
     }
 
     /// [`VideoJob::start`], the first run taking the quality menu's look-up (`preloaded`) when
-    /// it is for this very choice.
+    /// it is for this very choice. `saved` is shown the video and the files saved beside it
+    /// (subtitles) on the job's own thread before the job says it is done (#1103): the app's
+    /// mark that they came from the internet, written before the file is announced, opened or
+    /// renamed (a rename keeps the mark), and never on the window's thread.
     #[allow(clippy::too_many_arguments)]
     pub fn start_with(
         exe: &Path,
@@ -1860,11 +1924,18 @@ impl VideoJob {
         subs: &Subs,
         preloaded: Option<Preloaded>,
         engine: Option<crate::streams::Engine>,
+        saved: Option<mdm_engine::FileHook>,
     ) -> Result<VideoJob, ProcError> {
         proc::safe(url)?;
         let preloaded = preloaded.filter(|p| p.selector == selector);
         // A full path: yt-dlp runs in a folder of its own (#834).
-        let output = crate::workdir::absolute(dir).join(format!("{}.%(ext)s", template_text(stem)));
+        let folder = crate::workdir::absolute(dir);
+        // Every file of the video within the path limits (#1102), or the download says so now:
+        // yt-dlp would only say `[Errno 2] No such file or directory` once it has the page.
+        if !mdm_engine::naming::stem_fits(&folder, stem) {
+            return Err(ProcError::PathTooLong(folder.join(stem)));
+        }
+        let output = folder.join(format!("{}.%(ext)s", template_text(stem)));
         // An MP3, Opus or FLAC choice (#32, #70): the best sound, converted by ffmpeg.
         let convert = crate::resolve::audio_conversion(selector);
         let format = if convert.is_some() {
@@ -2030,6 +2101,7 @@ impl VideoJob {
                         retry.as_ref(),
                         preloaded,
                         by_engine.as_ref(),
+                        saved.as_ref(),
                     )
                 });
                 if std::panic::catch_unwind(run).is_err() {
@@ -3043,5 +3115,68 @@ mod tests {
         assert!(f[6] > 0.85 && f[6] < 0.9, "{f:?}");
         // The time left counts down from a size that is not just what came.
         assert!(got[5].1.unwrap() > got[5].0 * 3, "{got:?}");
+    }
+
+    /// #1102: yt-dlp's `[Errno 2]` for a path past the limits is the path too long, named; one for
+    /// a folder that really isn't there, or another error, is not.
+    #[test]
+    fn a_path_too_long_is_named() {
+        let stem = "x".repeat(240);
+        let far = format!(r"D:\Downloads\Video\{stem}.faudio-128000-Audio.mp4.ytdl");
+        let repr = far.replace('\\', r"\\");
+        // As the report has it: `He'd` in the name, so Python quotes it with `"`.
+        let said = format!(
+            "yt-dlp failed: Unable to download video: [Errno 2] No such file or directory: \"{}He'd.mp4.part\"",
+            repr.trim_end_matches(".faudio-128000-Audio.mp4.ytdl")
+        );
+        assert_eq!(
+            too_long(&said),
+            Some(PathBuf::from(format!(
+                r"D:\Downloads\Video\{stem}He'd.mp4.part"
+            )))
+        );
+        let said = format!(
+            "ERROR: Unable to download video: [Errno 2] No such file or directory: '{repr}'"
+        );
+        assert_eq!(too_long(&said), Some(PathBuf::from(&far)));
+        let missing =
+            r"yt-dlp failed: [Errno 2] No such file or directory: 'D:\\Gone\\Talk.mp4.part'";
+        assert_eq!(too_long(missing), None);
+        let linux = "ERROR: unable to open for writing: [Errno 36] File name too long: '/home/a/Talk.f1.mp4.part'";
+        assert_eq!(
+            too_long(linux),
+            Some(PathBuf::from("/home/a/Talk.f1.mp4.part"))
+        );
+        let windows =
+            r"ERROR: [WinError 206] The filename or extension is too long: 'C:\\v\\Talk.mp4'";
+        assert_eq!(too_long(windows), Some(PathBuf::from(r"C:\v\Talk.mp4")));
+        assert_eq!(too_long("yt-dlp failed: Video unavailable"), None);
+    }
+
+    /// #1102: a video whose files wouldn't fit its folder is refused as it starts, the path
+    /// named, before yt-dlp is asked anything.
+    #[test]
+    fn a_stem_too_long_is_refused_at_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let stem = "s".repeat(240);
+        let refused = VideoJob::start(
+            Path::new("yt-dlp-is-not-run"),
+            "https://video.example/talk",
+            "b",
+            dir.path(),
+            &stem,
+            None,
+            None,
+            None,
+            &Default::default(),
+            &Subs::default(),
+            None,
+        );
+        match refused {
+            Err(ProcError::PathTooLong(p)) => {
+                assert_eq!(p, crate::workdir::absolute(dir.path()).join(&stem))
+            }
+            other => panic!("{:?}", other.map(|_| ())),
+        }
     }
 }

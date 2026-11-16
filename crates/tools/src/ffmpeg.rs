@@ -80,14 +80,11 @@ fn best_build<'a>(release: &'a Release, build: &str) -> Option<&'a Asset> {
 }
 
 /// The ffmpeg to use: the person's own (`chosen`, #51), else MDM's install in `dir`
-/// (`dir/ffmpeg/current.json`), if any and still there; on Linux and macOS, else the system's
-/// own. Its `exe` is `ffmpeg(.exe)`; yt-dlp is given its folder.
+/// (`dir/ffmpeg/current.json`), if any and still there; else the system's own. Its `exe` is
+/// `ffmpeg(.exe)`; yt-dlp is given its folder.
 pub fn installed(dir: &Path) -> Option<Installed> {
     let own = crate::chosen::chosen(dir, crate::chosen::Helper::Ffmpeg).or_else(|| own(dir));
-    #[cfg(unix)]
-    return own.or_else(|| crate::system::installed("ffmpeg"));
-    #[cfg(not(unix))]
-    own
+    own.or_else(|| crate::system::installed("ffmpeg"))
 }
 
 /// MDM's own install in `dir`.

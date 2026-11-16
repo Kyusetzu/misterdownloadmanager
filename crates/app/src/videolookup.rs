@@ -526,6 +526,8 @@ pub fn video_add(
             label: p.choice.label,
             merge: p.merge,
         }),
+        // The page's title, shortened to fit (#1102).
+        named: false,
     })
 }
 

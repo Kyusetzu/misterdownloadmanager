@@ -46,8 +46,11 @@ pub enum LinkState {
     NeedsLogin,
     /// The server asked to wait (429, 503).
     Busy,
-    /// Anything else, in the interface language.
-    Failed(String),
+    /// Anything else: what the row says, and the whole sentence, which the cell shows on hover.
+    Failed {
+        short: String,
+        full: String,
+    },
 }
 
 /// Which package a link goes in: a split archive's volumes together, else the links of one page,
@@ -847,7 +850,19 @@ impl Grabber {
             head.bottom() - 1.0,
             LIST_LINE(),
         );
-        let (size_x, state_x) = (head.right() - 132.0, head.right() - 124.0);
+        // The Status column is as wide as the longest remedy it can show; a failure's whole
+        // sentence is the cell's hover tip, so it needn't fit. Never past the room the Name
+        // column can spare: a row's name starts about 78 px in, and its right edge leaves 70 px
+        // before the Size column.
+        const NAME_LEDGE: f32 = 78.0;
+        const NAME_FLOOR: f32 = 220.0;
+        let widest = REMEDIES
+            .iter()
+            .map(|source| winui::text_width(&p, crate::i18n::t(source)))
+            .fold(0.0_f32, f32::max);
+        let room = head.width() - NAME_LEDGE - NAME_FLOOR - 70.0 - 14.0;
+        let state_w = (widest + 10.0).clamp(118.0, 260.0).min(room.max(118.0));
+        let (size_x, state_x) = (head.right() - state_w - 14.0, head.right() - state_w - 6.0);
         // i18n: column title: file name
         text(
             &p,
@@ -1000,7 +1015,11 @@ impl Grabber {
                             } else {
                                 state_text(&l.state)
                             };
-                            look.name = [l.name.as_str(), &size, &state]
+                            let state_full = match &l.state {
+                                LinkState::Failed { full, .. } => full.as_str(),
+                                _ => state.as_str(),
+                            };
+                            look.name = [l.name.as_str(), &size, state_full]
                                 .iter()
                                 .filter(|s| !s.is_empty())
                                 .copied()
@@ -1041,16 +1060,19 @@ impl Grabber {
                             } else {
                                 match l.state {
                                     LinkState::Online => winui::SUCCESS(),
-                                    LinkState::Offline(_) | LinkState::Failed(_) => winui::ERROR(),
+                                    LinkState::Offline(_) | LinkState::Failed { .. } => {
+                                        winui::ERROR()
+                                    }
                                     _ => winui::MUTED(),
                                 }
                             };
-                            winui::fit(
+                            winui::fit_whole(
                                 ui,
                                 clip,
                                 state_x,
                                 top + 13.0,
                                 &state,
+                                state_full,
                                 ink,
                                 row.right() - 6.0,
                                 ("grabber-state", i),
@@ -1291,9 +1313,19 @@ fn state_text(s: &LinkState) -> String {
         LinkState::NeedsLogin => crate::i18n::t("Needs a login").to_owned(),
         // i18n: Link grabber, a link's status: the server asked to try later (429, 503)
         LinkState::Busy => crate::i18n::t("Busy, try later").to_owned(),
-        LinkState::Failed(why) => why.clone(),
+        LinkState::Failed { short, .. } => short.clone(),
     }
 }
+
+/// The words `state_of` puts in the Status column for a failure whose sentence ends in advice,
+/// so the column can be as wide as the longest of them (a test keeps the two in step).
+const REMEDIES: [&str; 5] = [
+    "Alt+click the link",
+    "Open in browser",
+    "Refresh the address",
+    "Download it again",
+    "Can't resume",
+];
 
 /// A look-up's failure as a link's status.
 pub fn state_of(e: &mdm_engine::Error) -> LinkState {
@@ -1302,10 +1334,36 @@ pub fn state_of(e: &mdm_engine::Error) -> LinkState {
             404 | 410 => LinkState::Offline(s.as_u16()),
             401 | 403 => LinkState::NeedsLogin,
             429 | 503 => LinkState::Busy,
-            _ => LinkState::Failed(crate::errors::describe(e)),
+            _ => failed(e, None),
         },
         mdm_engine::Error::Throttled(..) => LinkState::Busy,
-        _ => LinkState::Failed(crate::errors::describe(e)),
+        // i18n: Link grabber, a link's status: the remedy from the failure's sentence, for a site whose bot check lets only browsers through. The sentence, with the same advice, is the cell's hover tip
+        mdm_engine::Error::BotCheck => failed(e, Some(crate::i18n::t("Alt+click the link"))),
+        mdm_engine::Error::Refused(mdm_engine::Refusal::NeedsBrowser { .. }) => {
+            // i18n: Link grabber, a link's status: the remedy from the failure's sentence, for a site link that is a web page, not the file (and a server that sent a web page instead of it). The sentence is the cell's hover tip
+            failed(e, Some(crate::i18n::t("Open in browser")))
+        }
+        // i18n: Link grabber, a link's status: the remedy from the failure's sentence, for a server that sent a web page instead of the file. The sentence is the cell's hover tip
+        mdm_engine::Error::GotWebPage => failed(e, Some(crate::i18n::t("Open in browser"))),
+        // i18n: Link grabber, a link's status: the remedy from the failure's sentence, for a download link that expired. The sentence is the cell's hover tip
+        mdm_engine::Error::LinkExpired => failed(e, Some(crate::i18n::t("Refresh the address"))),
+        mdm_engine::Error::ChecksumMismatch(_) => {
+            // i18n: Link grabber, a link's status: the remedy from the failure's sentence, for a file whose checksum didn't match. The sentence is the cell's hover tip
+            failed(e, Some(crate::i18n::t("Download it again")))
+        }
+        // i18n: Link grabber, a link's status: a server that can't send parts of a file, so the download can't resume; there is nothing to do here. The sentence is the cell's hover tip
+        mdm_engine::Error::NoRanges => failed(e, Some(crate::i18n::t("Can't resume"))),
+        _ => failed(e, None),
+    }
+}
+
+/// A failure as a link's status: the words the row shows (`short` when the sentence's remedy
+/// fits a narrow column, else the sentence), and the whole sentence for the cell's hover tip.
+fn failed(e: &mdm_engine::Error, short: Option<&str>) -> LinkState {
+    let full = crate::errors::describe(e);
+    LinkState::Failed {
+        short: short.map_or_else(|| full.clone(), str::to_owned),
+        full,
     }
 }
 
@@ -1389,7 +1447,8 @@ mod tests {
             g.add(again, "list.txt".into(), |_| false);
             g
         };
-        // Each link compared once: 8 times the links cost about 8 times as long (not 64).
+        // Each link compared once: a list 16 times as long costs about as much as 16 short
+        // lists (a square: 16 times as much), on any machine.
         mdm_labserver::growth::assert_linear(1_000, &lists, &add);
         let g = add(lists(20_000));
         assert_eq!(g.links.len(), 20_000);
@@ -1665,9 +1724,11 @@ mod tests {
         post.push_str("Mirror of the first: https://media.example.org/s1/ep01.mp4.\n");
         post.push_str("Or the torrent: magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Season%201\n");
         let text = post.clone();
-        let reader: &'static crate::clipboard::Reader = Box::leak(Box::new(
-            crate::clipboard::Reader::new(move || Some(text.clone()), || {}),
-        ));
+        let reader: &'static crate::clipboard::Reader =
+            Box::leak(Box::new(crate::clipboard::Reader::new(
+                move || crate::clipboard::Read::Text(text.clone()),
+                || {},
+            )));
         let mut asked = crate::clipboard::Prefill::ask_of(reader);
         let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
         let got = loop {
@@ -1903,5 +1964,71 @@ mod tests {
                 ms(answers),
             );
         }
+    }
+
+    /// #1110: the Status column names the remedy in words that fit, and keeps the whole
+    /// sentence, remedy included, as the cell's hover tip.
+    #[test]
+    fn a_failure_says_its_remedy_and_keeps_its_sentence() {
+        let cases = [
+            (mdm_engine::Error::BotCheck, "Alt+click the link"),
+            (
+                mdm_engine::Error::Refused(mdm_engine::Refusal::NeedsBrowser {
+                    site: "gofile".into(),
+                }),
+                "Open in browser",
+            ),
+            (mdm_engine::Error::GotWebPage, "Open in browser"),
+            (mdm_engine::Error::LinkExpired, "Refresh the address"),
+            (
+                mdm_engine::Error::ChecksumMismatch("SHA-256"),
+                "Download it again",
+            ),
+            (mdm_engine::Error::NoRanges, "Can't resume"),
+        ];
+        for (e, remedy) in cases {
+            let LinkState::Failed { short, full } = state_of(&e) else {
+                panic!("{e:?} is not a failure");
+            };
+            assert_eq!(short, remedy, "{e:?}");
+            assert_eq!(full, crate::errors::describe(&e), "{e:?}");
+            assert!(short.len() < full.len(), "{e:?}: {short} / {full}");
+        }
+        // A failure that offers no remedy keeps the sentence it had, cut as before.
+        let LinkState::Failed { short, full } = state_of(&mdm_engine::Error::ShortBody) else {
+            panic!("ShortBody is not a failure");
+        };
+        assert_eq!(short, full);
+    }
+
+    /// #1110: the column is sized from `REMEDIES`, so it must list exactly the words
+    /// `state_of` shows, or a new remedy would be cut again.
+    #[test]
+    fn the_column_is_sized_for_every_remedy_it_shows() {
+        let cases = [
+            mdm_engine::Error::BotCheck,
+            mdm_engine::Error::Refused(mdm_engine::Refusal::NeedsBrowser {
+                site: "gofile".into(),
+            }),
+            mdm_engine::Error::GotWebPage,
+            mdm_engine::Error::LinkExpired,
+            mdm_engine::Error::ChecksumMismatch("SHA-256"),
+            mdm_engine::Error::NoRanges,
+        ];
+        let mut shown: Vec<String> = cases
+            .iter()
+            .map(|e| match state_of(e) {
+                LinkState::Failed { short, .. } => short,
+                other => panic!("{e:?} is not a failure: {other:?}"),
+            })
+            .collect();
+        let mut listed: Vec<String> = REMEDIES
+            .iter()
+            .map(|source| crate::i18n::t(source).to_owned())
+            .collect();
+        shown.sort();
+        shown.dedup();
+        listed.sort();
+        assert_eq!(shown, listed);
     }
 }

@@ -338,9 +338,10 @@ mod tests {
             sh.entries[3].title, "Video 4",
             "the giant line skipped, order kept"
         );
-        // 8 times the lines cost about 8 times as long (not 64), on any machine.
+        // A list 16 times as long costs about as much as 16 short lists (a square: 16 times as
+        // much), on any machine; the long one under the cap, read to its end.
         mdm_labserver::growth::assert_linear(
-            MAX_ENTRIES / 10,
+            (MAX_ENTRIES - 1) / mdm_labserver::growth::SCALE,
             |n| (lines(n, false), Mutex::new(Shared::default())),
             |(text, shared)| read(text.as_bytes(), &shared, 1),
         );

@@ -43,6 +43,9 @@ pub struct VideoAdd {
     /// The browser's quality menu's look-up the choice was made from, for the download's first
     /// run (videolookup.rs); none from this window, whose download looks the page up itself.
     pub preloaded: Option<mdm_tools::video::Preloaded>,
+    /// The user typed the file name (#1102): kept as typed; else it is the page's title, which
+    /// is shortened to fit the path limits.
+    pub named: bool,
 }
 
 /// Which helper is being installed.
@@ -267,7 +270,8 @@ impl VideoDialog {
         }
         let merge = self.tools.get_or_insert_with(tools).2.is_some();
         let choices = mdm_tools::resolve::choices(&v, merge);
-        self.chosen = 0;
+        // The best, as `video-get` takes it by default (#1240).
+        self.chosen = mdm_tools::resolve::pick(&choices, None).map_or(0, |p| p.index);
         self.rows = Default::default();
         self.error = choices
             .is_empty()
@@ -486,6 +490,9 @@ impl VideoDialog {
         };
         let c = choices.get(self.chosen.min(choices.len().checked_sub(1)?))?;
         let name = mdm_engine::naming::sanitize(self.name.trim());
+        // Not the name the choice gave it (the page's title): the user's (#1102).
+        let named = name
+            != mdm_engine::naming::sanitize(file_name(&self.video.as_ref()?.0.title, c).trim());
         let chosen = self.chosen_subs();
         // The video the page declares (#1076): its address, the page as its Referer.
         let declared = self
@@ -508,6 +515,7 @@ impl VideoDialog {
             subs: subs_for_choice(c, &chosen),
             remember: (!self.subs.is_empty()).then_some(chosen),
             preloaded: None,
+            named,
         }))
     }
 

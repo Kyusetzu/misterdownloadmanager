@@ -126,13 +126,11 @@
 #. count in the main window
 #. event log entry: trackers were added to the torrent
 #. {n} = a number (keep the braces as they are)
-#, machine
-@plural	{n} tracker added|{n} trackers added	{n} traqueur ajouté|{n} traqueurs ajoutés
+@plural	{n} tracker added|{n} trackers added	{n} tracker ajouté|{n} trackers ajoutés
 #. count in the Add torrent window
 #. where a magnet's peers came from: {n} = trackers asked; {peers} = "3 peers"
 #. {n} = a number (keep the braces as they are)
-#, machine
-@plural	{n} tracker: {peers}|{n} trackers: {peers}	{n} traqueur : {peers}|{n} traqueurs : {peers}
+@plural	{n} tracker: {peers}|{n} trackers: {peers}	{n} tracker : {peers}|{n} trackers : {peers}
 #. count in playlistdlg.rs
 #. in Download video: a playlist title then how many videos it has ({count})
 #. {count} = a number (keep the braces as they are)
@@ -262,8 +260,7 @@
 	A single-file torrent keeps its name	Un torrent à fichier unique conserve son nom
 #. text in the Add torrent window
 #. Add trackers: MDM never contacts a tracker on this computer or the local network
-#, machine
-	A tracker on this computer or the local network is never contacted: {line}	Un traqueur sur cet ordinateur ou le réseau local n’est jamais contacté : {line}
+	A tracker on this computer or the local network is never contacted: {line}	Un tracker sur cet ordinateur ou le réseau local n’est jamais contacté : {line}
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
@@ -370,8 +367,7 @@
 #, machine
 	Add torrent	Ajouter un torrent
 #. window title in the Add torrent window
-#, machine
-	Add trackers	Ajouter des traqueurs
+	Add trackers	Ajouter des trackers
 #. text in playlistdlg.rs
 #. asked before a playlist adds many downloads at once; {n} is how many
 #. {n} = a number (keep the braces as they are)
@@ -590,8 +586,7 @@
 	Ask it with:	Interroger avec :
 #. message or event log entry in the main window
 #. event log entry: the torrent's trackers were asked for peers again (Reannounce)
-#, machine
-	Asked the trackers for peers again	Demande de pairs aux traqueurs à nouveau
+	Asked the trackers for peers again	Nouvelle demande de pairs aux trackers
 #. text in the Options window
 #. Options → Add an account: the sign-in is starting or being checked
 #. the trailing ... means it is still going on: keep it
@@ -1547,8 +1542,7 @@
 	Enter a name for the new queue that will be	Entrez un nom pour la nouvelle file d’attente qui sera
 #. text in the Add torrent window
 #. Add trackers: OK with an empty box
-#, machine
-	Enter a tracker's address, one a line	Entrez l’adresse d’un traqueur, une par ligne
+	Enter a tracker's address, one a line	Entrez l’adresse d’un tracker, une par ligne
 #. window title in a dialog box
 #, machine
 	Enter new address to download	Entrer une nouvelle adresse à télécharger
@@ -2354,8 +2348,7 @@
 	Kenya	Kenya
 #. text in the Add torrent window
 #. Add trackers: under the box
-#, machine
-	Kept with the torrent, after the trackers it has.	Conservé avec le torrent, après les traqueurs qu’il possède.
+	Kept with the torrent, after the trackers it has.	Conservés avec le torrent, après les trackers qu’il a.
 #. window title in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #, machine
 	Keyboard shortcuts	Raccourcis clavier
@@ -2911,8 +2904,7 @@
 	Name:	Nom :
 #. text in the Options window
 #. Options → DNS settings: what the DNS choice covers and what it doesn't
-#, machine
-	Names in your hosts file and local names (single words, .local, .lan) stay with the system's DNS. Video pages and torrent trackers use the system's DNS for now.	Les noms dans votre fichier hosts et les noms locaux (mots uniques, .local, .lan) restent avec le DNS du système. Les pages vidéo et les traqueurs de torrent utilisent le DNS du système pour l'instant.
+	Names in your hosts file and local names (single words, .local, .lan) stay with the system's DNS. Video pages and torrent trackers use the system's DNS for now.	Les noms dans votre fichier hosts et les noms locaux (mots uniques, .local, .lan) restent avec le DNS du système. Les pages vidéo et les trackers de torrents utilisent le DNS du système pour l’instant.
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -3074,12 +3066,10 @@
 	No system keyring answered, so sign-ins and passwords are kept in MDM's settings, which only you can read.	Aucun trousseau système n’a répondu. Les identifiants et mots de passe sont donc conservés dans les paramètres de MDM, que vous seul pouvez lire.
 #. message or event log entry in the main window
 #. event log entry: Add trackers changed nothing, the torrent had them all
-#, machine
-	No tracker added: it has them already	Aucun traqueur ajouté : il les possède déjà
+	No tracker added: it has them already	Aucun tracker ajouté : il les a déjà
 #. text in the Add torrent window
 #. the magnet link names no tracker (a server that lists a torrent's peers)
-#, machine
-	No trackers	Aucun traqueur
+	No trackers	Aucun tracker
 #. text in the Download video window
 #. the Download video window: yt-dlp found no video on the page
 #, machine
@@ -3135,8 +3125,7 @@
 	Not a regular expression: {error}	Pas une expression régulière : {error}
 #. text in the Add torrent window
 #. Add trackers: a line that isn't a tracker's address (http, https or udp)
-#, machine
-	Not a tracker address: {line}	Pas une adresse de traqueur : {line}
+	Not a tracker address: {line}	Pas une adresse de tracker : {line}
 #. text in errors.rs
 #, machine
 	not enough disk space: {needed} needed, {free} free	espace disque insuffisant : {needed} nécessaire, {free} disponible
@@ -4552,8 +4541,7 @@
 	the connection was lost while receiving data	la connexion a été perdue lors de la réception des données
 #. text in the Add torrent window
 #. a magnet link's lookup, after 30 seconds: the DHT got no answer from anyone
-#, machine
-	The DHT reached no one. A firewall, a VPN or the network may be blocking UDP, which the DHT and most trackers use.	Le DHT n’a joint personne. Un pare-feu, un VPN ou le réseau peuvent bloquer l’UDP, que le DHT et la plupart des traqueurs utilisent.
+	The DHT reached no one. A firewall, a VPN or the network may be blocking UDP, which the DHT and most trackers use.	Le DHT n’a joint personne. Un pare-feu, un VPN ou le réseau peuvent bloquer l’UDP, que le DHT et la plupart des trackers utilisent.
 #. text in errors.rs
 #, machine
 	the disk is full	le disque est plein
@@ -4812,8 +4800,7 @@
 	the torrent is no longer there	le torrent n’est plus là
 #. message or event log entry in the main window
 #. {error} = an error message (keep the braces as they are)
-#, machine
-	The trackers could not be added: {error}	Les traqueurs n’ont pas pu être ajoutés : {error}
+	The trackers could not be added: {error}	Les trackers n’ont pas pu être ajoutés : {error}
 #. text in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #. {error} = an error message (keep the braces as they are)
 #, machine
@@ -4939,8 +4926,7 @@
 	This list has no videos	Cette liste ne contient aucune vidéo
 #. text in the Add torrent window
 #. a magnet link's lookup, after 30 seconds: it can't find any peer at all
-#, machine
-	This magnet link names no trackers and the DHT is off, so no peer can be found.	Ce lien magnet ne contient aucun traqueur et le DHT est désactivé, aucun pair n’a donc pu être trouvé.
+	This magnet link names no trackers and the DHT is off, so no peer can be found.	Ce lien magnet ne nomme aucun tracker et le DHT est désactivé, aucun pair ne peut donc être trouvé.
 #. text in a download's progress window
 #. reason shown on the Rename box when the entered name is a reserved device name on Windows (CON, NUL, COM1…)
 #, machine
@@ -6745,8 +6731,7 @@ menu	Add batch download from &clipboard	Ajouter un téléchargement par lot depu
 menu	Add category	Ajouter une catégorie
 #. menu command in the main window
 #. the trailing ... means it opens a window: keep it
-#, machine
-menu	Add trackers...	Ajouter des traqueurs...
+menu	Add trackers...	Ajouter des trackers...
 #. menu command in the main window
 #. View → Theme: a style theme's name (GNOME's look, the Linux desktop), a name: keep "Adwaita" as written
 #, machine

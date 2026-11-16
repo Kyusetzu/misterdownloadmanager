@@ -753,22 +753,28 @@ fn fallback_font(c: char) -> Option<(String, egui::FontData)> {
         .entry(key.clone())
         .or_insert_with(|| {
             let bytes = files.iter().find_map(|f| read_font(f))?;
-            let mut tweak = egui::FontTweak::default();
-            tweak.set_baseline_fallback(true);
-            #[cfg(windows)]
-            {
-                tweak.hinting_target =
-                    egui::epaint::text::HintingTarget::Smooth(egui::epaint::text::SmoothHinting {
-                        light: false,
-                        symmetric_rendering: false,
-                        preserve_linear_metrics: false,
-                    });
-                tweak.subpixel_binning = Some(false);
-            }
-            Some(egui::FontData::from_owned(bytes).tweak(tweak))
+            Some(egui::FontData::from_owned(bytes).tweak(on_demand_tweak()))
         })
         .clone()?;
     Some((key, font))
+}
+
+/// How a font found on demand draws: on the baseline of the family's first font (as the script
+/// fonts loaded up front, [`fonts`]), and on Windows hinted as [`sharp_text`] hints those.
+fn on_demand_tweak() -> egui::FontTweak {
+    let mut tweak = egui::FontTweak::default();
+    tweak.set_baseline_fallback(true);
+    #[cfg(windows)]
+    {
+        tweak.hinting_target =
+            egui::epaint::text::HintingTarget::Smooth(egui::epaint::text::SmoothHinting {
+                light: false,
+                symmetric_rendering: false,
+                preserve_linear_metrics: false,
+            });
+        tweak.subpixel_binning = Some(false);
+    }
+    tweak
 }
 
 /// `fc-match` for one pattern, asked right now (Linux, a character no loaded font has): the font
@@ -841,10 +847,63 @@ impl egui::FontProvider for ScriptFallback {
     }
 }
 
+/// Windows and macOS: the system's own font for a letter neither the interface's fonts nor
+/// [`ScriptFallback`]'s lists have (#1125): a script the lists don't name (Syriac, Thaana,
+/// Mongolian, N'Ko, Tifinagh...), or a letter the font they name lacks (Myanmar and Sinhala
+/// aren't in macOS's Arial Unicode). The system chooses as it does for its own apps
+/// (DirectWrite's font fallback, CoreText's cascade), among every font installed, through
+/// fontique; the font's file is mapped, not read into memory. Asked last, so the lists keep
+/// their faces (a Chinese interface's Chinese glyphs). Made the first time a letter needs it:
+/// listing the system's fonts takes a moment, which a start whose text the lists cover never
+/// spends. Linux has no need: fontconfig is asked for any letter ([`fallback_font`]).
+#[cfg(any(windows, target_os = "macos"))]
+#[derive(Default)]
+struct SystemFallback(std::sync::OnceLock<egui_system_font_provider::SystemFontProvider>);
+
+#[cfg(any(windows, target_os = "macos"))]
+impl egui::FontProvider for SystemFallback {
+    fn font_for(&self, request: &egui::FallbackRequest<'_>) -> Option<egui::FontInsert> {
+        let c = request.cluster.chars().next()?;
+        let started = std::time::Instant::now();
+        let system = self.0.get_or_init(|| {
+            // The interface language picks among a script's fonts (Chinese or Japanese faces).
+            egui_system_font_provider::SystemFontProvider::new()
+                .with_locale(Some(crate::i18n::code()))
+        });
+        let found = system.font_for(request);
+        let ms = started.elapsed().as_millis();
+        match &found {
+            Some(font) => tracing::info!(
+                "fonts: U+{:04X} from the system's {} ({ms} ms)",
+                c as u32,
+                font.name
+            ),
+            None => tracing::info!("fonts: no font on this system has U+{:04X}", c as u32),
+        }
+        let mut font = found?;
+        font.data.tweak = on_demand_tweak();
+        Some(font)
+    }
+}
+
+/// The fonts for text outside the interface language, in the order they are asked: MDM's lists
+/// ([`ScriptFallback`]), then the system's choice ([`SystemFallback`]).
+fn on_demand_fonts() -> Vec<std::sync::Arc<dyn egui::FontProvider>> {
+    vec![
+        std::sync::Arc::new(ScriptFallback),
+        #[cfg(any(windows, target_os = "macos"))]
+        std::sync::Arc::new(SystemFallback::default()),
+    ]
+}
+
 /// Tell the text system where the scripts outside the interface language come from, once.
 fn add_script_fallback(ctx: &egui::Context) {
     static ADDED: std::sync::Once = std::sync::Once::new();
-    ADDED.call_once(|| ctx.add_font_provider(std::sync::Arc::new(ScriptFallback)));
+    ADDED.call_once(|| {
+        for provider in on_demand_fonts() {
+            ctx.add_font_provider(provider);
+        }
+    });
 }
 
 /// The interface font: Segoe UI as IDM has it on Windows, the system's own elsewhere.
@@ -1400,7 +1459,7 @@ mod glyph_tests {
         use egui::epaint::text::{Fonts, TextOptions};
         use egui::{FontFamily, FontId};
         let mut fonts = Fonts::new(TextOptions::default(), egui::FontDefinitions::default())
-            .with_font_providers(vec![std::sync::Arc::new(super::ScriptFallback)]);
+            .with_font_providers(super::on_demand_fonts());
         let id = FontId::new(13.0, FontFamily::Proportional);
         for text in [
             "\u{09AC}\u{09BE}\u{0982}\u{09B2}\u{09BE}", // Bangla
@@ -1410,6 +1469,112 @@ mod glyph_tests {
             "\u{4E2D}\u{6587}",                         // Chinese
         ] {
             assert!(fonts.has_glyphs(&id, text), "no font for {text}");
+        }
+    }
+
+    /// #1125: file names in the scripts the report and the lists name, under an English
+    /// interface, and in scripts MDM's lists don't name, which only the system's own fallback
+    /// finds: before, those stayed boxes. egui's fonts alone have none of them (no Segoe UI here,
+    /// so even Arabic and Hebrew must come from a fallback).
+    /// (Linux asks fontconfig, whose answer depends on the fonts a distribution installs.)
+    #[cfg(any(windows, target_os = "macos"))]
+    const NAMES: [(&str, &str); 10] = [
+        (
+            "Arabic",
+            "\u{062A}\u{0642}\u{0631}\u{064A}\u{0631} \u{0627}\u{0644}\u{0645}\u{0628}\u{064A}\u{0639}\u{0627}\u{062A}",
+        ),
+        (
+            "Hebrew",
+            "\u{05E1}\u{05D9}\u{05DB}\u{05D5}\u{05DD} \u{05D4}\u{05E4}\u{05D2}\u{05D9}\u{05E9}\u{05D4}",
+        ),
+        ("Chinese", "\u{5E74}\u{5EA6}\u{62A5}\u{544A}"),
+        (
+            "Hindi",
+            "\u{0939}\u{093F}\u{0902}\u{0926}\u{0940} \u{0917}\u{093E}\u{0928}\u{0947}",
+        ),
+        ("Thaana", "\u{078B}\u{07A8}\u{0788}\u{07AC}\u{0780}\u{07A8}"),
+        (
+            "Mongolian",
+            "\u{182E}\u{1823}\u{1829}\u{182D}\u{1823}\u{182F}",
+        ),
+        ("N'Ko", "\u{07D2}\u{07DE}\u{07CF}"),
+        (
+            "Tifinagh",
+            "\u{2D5C}\u{2D49}\u{2D3C}\u{2D49}\u{2D4F}\u{2D30}\u{2D56}",
+        ),
+        (
+            "Canadian syllabics",
+            "\u{14C0}\u{1426}\u{1403}\u{152D}\u{140D}\u{140F}\u{1423}",
+        ),
+        ("Yi", "\u{A188}\u{A320}\u{A071}\u{A0B7}"),
+    ];
+
+    #[cfg(windows)]
+    #[test]
+    fn every_script_the_system_has_a_font_for_shows_its_letters() {
+        use egui::epaint::text::{Fonts, TextOptions};
+        use egui::{FontFamily, FontId};
+        let mut fonts = Fonts::new(TextOptions::default(), egui::FontDefinitions::default())
+            .with_font_providers(super::on_demand_fonts());
+        for family in [FontFamily::Proportional, FontFamily::Monospace] {
+            let id = FontId::new(13.0, family);
+            for (script, text) in NAMES {
+                assert!(fonts.has_glyphs(&id, text), "no font for {script}: {text}");
+            }
+        }
+    }
+
+    /// The fallback's choice (#1125): MDM's lists first (Nirmala UI for Hindi, the face the
+    /// classic text and the interface languages that use the script have), the system only for
+    /// what the lists don't name (Thaana), and the system's font never replaces a list's.
+    #[cfg(windows)]
+    #[test]
+    fn the_lists_choose_first_and_the_system_after() {
+        use egui::epaint::text::{Fonts, TextOptions};
+        use egui::{FontFamily, FontId};
+        let mut fonts = Fonts::new(TextOptions::default(), egui::FontDefinitions::default())
+            .with_font_providers(super::on_demand_fonts());
+        let id = FontId::new(13.0, FontFamily::Proportional);
+        let found = |fonts: &Fonts| -> Vec<String> {
+            fonts
+                .discovered_fonts()
+                .iter()
+                .map(|f| f.name.clone())
+                .collect()
+        };
+        assert!(fonts.has_glyphs(&id, NAMES[3].1), "Hindi");
+        assert_eq!(found(&fonts), ["fallback:indic"]);
+        assert!(fonts.has_glyphs(&id, NAMES[4].1), "Thaana");
+        let names = found(&fonts);
+        assert_eq!(names.len(), 2, "{names:?}");
+        assert!(names[1].starts_with("system:"), "{names:?}");
+        // Hindi again, and Bangla (the same list's font): nothing new is looked for.
+        assert!(fonts.has_glyphs(&id, "\u{0915}\u{09AC}"));
+        assert_eq!(found(&fonts).len(), 2);
+    }
+
+    /// macOS (#1125): what Arial Unicode, the list's font for these blocks, lacks comes from the
+    /// system's cascade (Myanmar, Sinhala), as does a script no list names (Mongolian, Yi).
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_finds_what_arial_unicode_lacks() {
+        use egui::epaint::text::{Fonts, TextOptions};
+        use egui::{FontFamily, FontId};
+        let mut fonts = Fonts::new(TextOptions::default(), egui::FontDefinitions::default())
+            .with_font_providers(super::on_demand_fonts());
+        let id = FontId::new(13.0, FontFamily::Proportional);
+        for (script, text) in [
+            (
+                "Myanmar",
+                "\u{1019}\u{103C}\u{1014}\u{103A}\u{1019}\u{102C}",
+            ),
+            ("Sinhala", "\u{0DC3}\u{0DD2}\u{0D82}\u{0DC4}\u{0DBD}"),
+            NAMES[0],
+            NAMES[1],
+            NAMES[2],
+            NAMES[3],
+        ] {
+            assert!(fonts.has_glyphs(&id, text), "no font for {script}: {text}");
         }
     }
 

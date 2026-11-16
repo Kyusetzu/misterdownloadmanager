@@ -4,6 +4,7 @@
 //! list, install it next to earlier versions (`tools/yt-dlp/<version>/`), switch to it
 //! atomically, never downgrade, and keep the previous version for rollback.
 
+pub mod bgutil;
 pub mod chosen;
 pub mod declared;
 pub mod ffmpeg;
@@ -19,8 +20,8 @@ pub mod relay;
 pub mod resolve;
 pub mod servers;
 pub mod streams;
-// System helper discovery is for Linux and macOS; Windows keeps its verified managed copies.
-#[cfg(unix)]
+// System helper discovery, on every system (#452): a copy found on the PATH (a package manager's,
+// Homebrew's, pip's or an installer's), used when MDM has none of its own.
 mod system;
 pub mod update;
 pub mod video;
@@ -111,7 +112,8 @@ pub struct Installed {
     pub exe: PathBuf,
 }
 
-/// `Installed::version` of a program found on the system: its package manager's, not asked (#452).
+/// `Installed::version` of a program found on the system: its package manager's or installer's,
+/// not asked (#452).
 const SYSTEM: &str = "system";
 
 impl Installed {
@@ -291,13 +293,10 @@ pub fn sum_for(sums: &str, name: &str) -> Option<[u8; 32]> {
 }
 
 /// The yt-dlp to use: the person's own (`chosen`), else MDM's install in `dir`
-/// (`dir/yt-dlp/current.json`), if any and still there; on Linux and macOS, else the system's.
+/// (`dir/yt-dlp/current.json`), if any and still there; else the system's.
 pub fn installed(dir: &Path) -> Option<Installed> {
     let own = chosen::chosen(dir, chosen::Helper::YtDlp).or_else(|| own_ytdlp(dir));
-    #[cfg(unix)]
-    return own.or_else(|| system::installed("yt-dlp"));
-    #[cfg(not(unix))]
-    own
+    own.or_else(|| system::installed("yt-dlp"))
 }
 
 fn own_ytdlp(dir: &Path) -> Option<Installed> {

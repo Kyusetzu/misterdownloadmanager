@@ -41,6 +41,10 @@ egui_extras = { version = "0.37.0", features = ["svg", "image"] }
 # The font parser egui reads fonts with, the same version: a system font is checked with it
 # before egui is given it, since egui stops on a configured font it can't read (theme.rs, #931).
 skrifa = { version = "0.44.0", default-features = false, features = ["std"] }
+# A font from the system for a script MDM's own font lists don't name (theme.rs, #1125): the
+# system's own choice (DirectWrite, CoreText) through fontique, in the same egui fork; the font
+# files are mapped, not read into memory.
+egui_system_font_provider = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
 image = { version = "0.25.10", default-features = false, features = ["png"] }
 dirs = "7.0.0"
 # Gzipped IP blocklists, read to convert them for librqbit (crates/torrent blocklist.rs).
@@ -211,36 +215,42 @@ debug = "line-tables-only"
 # by one thread at a time, egui's copy and paste and MDM's own reads (`egui_winit::clipboard::
 # lock_system_clipboard`, #629); a dialog that changes its size is drawn at the window's new size
 # (its size applied before the pass, the Direct3D surface matched to the window before painting,
-# #471, by aniyow07). craft-libs can take the same commits to share one egui again.
+# #471, by aniyow07); an OpenGL window's swap interval is chosen per window, before each swap
+# (`ViewportHooks::swap_waits_for_vsync`, branch mdm-swap-interval: Linux, renderer.rs, #347);
+# an OpenGL window's context is made current again when it is no longer the thread's own (macOS),
+# and a texture OpenGL can't create is kept for a later frame instead of a panic (branch
+# mdm/glow-texture-no-panic, #1173).
+# craft-libs can take the same commits to share one egui again.
 [patch.crates-io]
 # librqbit 9.1.0 with per-torrent rate limits that change while a torrent runs (#39), and a
 # magnet lookup's progress counted (#92), and every socket bound to one address (`bind_ip`,
 # #143), and every HTTP client of a session built through MDM's TLS setup (`configure_http_client`:
 # a system without CA certificates), and a DHT that stops asking a bootstrap node that never
 # answers once another one has, and loads its saved IPv6 nodes (#650), and a piece whose hash
-# check a pause cuts short queued again instead of lost (#706), until upstream has them
+# check a pause cuts short queued again instead of lost (#706), and the peers that others name
+# asked of MDM before they are used (`peer_filter`), until upstream has them
 # (ikatson/rqbit); every crate of that repository from the same commit.
-librqbit = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-bencode = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-buffers = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-clone-to-owned = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-core = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-dht = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-lsd = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-peer-protocol = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-sha1-wrapper = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-tracker-comms = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-librqbit-upnp = { git = "https://github.com/anefzaoui/rqbit.git", rev = "694291b61fcfd6a77fef7762541b0ef25773ae31" }
-ecolor = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-emath = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-epaint = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-epaint_default_fonts = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-egui = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-egui-winit = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-egui_glow = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-egui-wgpu = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-egui_extras = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
-eframe = { git = "https://github.com/anefzaoui/egui.git", rev = "91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d" }
+librqbit = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-bencode = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-buffers = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-clone-to-owned = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-core = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-dht = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-lsd = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-peer-protocol = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-sha1-wrapper = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-tracker-comms = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+librqbit-upnp = { git = "https://github.com/anefzaoui/rqbit.git", rev = "fab046042915709ab160626ebc59cce08de4d779" }
+ecolor = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+emath = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+epaint = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+epaint_default_fonts = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+egui = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+egui-winit = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+egui_glow = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+egui-wgpu = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+egui_extras = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
+eframe = { git = "https://github.com/anefzaoui/egui.git", rev = "268d8e55dae56a536b672bdb75987021931dfcb2" }
 winit = { git = "https://github.com/storytold/winit.git", rev = "a517b3846ee8457d84ee4975110bfda6797c44dc" }
 # wgpu-hal 30.0.1 (the v30.0.1 release commit) with one change: a window's Direct3D 12 swap chain
 # is made with DXGI_SCALING_NONE instead of STRETCH, so while a dialog resizes, Windows shows the

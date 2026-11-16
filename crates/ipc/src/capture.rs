@@ -57,6 +57,9 @@ pub struct CaptureRules {
     pub video_panel: bool,
     /// The sites it stays off (space-separated, `*.example.com` takes subdomains too).
     pub video_panel_sites: String,
+    /// Its size (#1278): Compact, the round form over every video; else Full, its words where
+    /// they fit. Told with the answer to `panel`.
+    pub video_panel_compact: bool,
     /// Options → General: also take the listed types the browser would open itself (a PDF in
     /// its viewer, an MP3 in its player), not only what it downloads.
     pub capture_opened: bool,
@@ -81,6 +84,7 @@ impl Default for CaptureRules {
             excluded_addresses: Vec::new(),
             video_panel: true,
             video_panel_sites: String::new(),
+            video_panel_compact: false,
             capture_opened: true,
             capture_min_kb: 0,
             torrent_handler: None,
@@ -447,7 +451,9 @@ pub fn host_of(url: &str) -> String {
     } else {
         host.split(':').next().unwrap_or(host)
     };
-    host.to_ascii_lowercase()
+    // `example.com.` is the same host as `example.com` (the root's dot): a site listed by one
+    // spelling is listed for both.
+    host.trim_end_matches('.').to_ascii_lowercase()
 }
 
 /// `host` is `pattern` (case-insensitive) or, for `*.example.com`, one of its subdomains.
@@ -472,6 +478,7 @@ pub fn panel_site_matches(host: &str, pattern: &str) -> bool {
         .split_once("://")
         .map_or(pattern.as_str(), |(_, r)| r);
     let pattern = pattern.split('/').next().unwrap_or("");
+    let pattern = pattern.trim_end_matches('.');
     if pattern.is_empty() {
         return false;
     }
@@ -746,6 +753,30 @@ mod tests {
         );
         // host_matches itself stays exact for its other users (debrid, servers' logins).
         assert!(!host_matches("www.example.com", "example.com"));
+    }
+
+    /// `example.com.` (the root's dot) is `example.com`: a listed site is not stepped around
+    /// by writing the same host absolutely.
+    #[test]
+    fn a_listed_site_is_listed_written_with_the_root_dot() {
+        let r = CaptureRules {
+            excluded_sites: "example.com".into(),
+            ..CaptureRules::default()
+        };
+        assert_eq!(
+            r.accepts("https://example.com./a.zip", "a.zip", CHROME, None),
+            Err(Declined::Site)
+        );
+        assert_eq!(host_of("https://EXAMPLE.com.:8443/x"), "example.com");
+        assert_eq!(
+            r.accepts(
+                "https://example.com./a.zip",
+                "a.zip",
+                CHROME,
+                Some("https://example.com./")
+            ),
+            Err(Declined::Site)
+        );
     }
 
     #[test]

@@ -97,6 +97,15 @@ Right-click the list's blank space for **Add new download**, **Select all**, **A
 - On a finished download, double-click shows its **Properties**. To open the file instead, right-click any download and choose **On Double click → Open**.
 - **Alt+Enter** always opens **Properties**.
 
+## Dragging files out of the list
+
+On Windows, drag a finished download from the list onto a folder in Explorer, a program (a
+player, an archive tool) or a chat to drop its file there. Select several to drag them all;
+downloads that haven't finished stay behind. As when you drag files in Explorer, a folder on the
+same drive gets them moved and another drive gets copies (hold **Shift** to move them, **Ctrl**
+to copy them, **Alt** for shortcuts). A download follows its moved file: the list and **Open**
+find it in its new place. On macOS and Linux, use **Open folder** and drag the file from there.
+
 The right-click menu has everything you can do with a download: **Open**, **Open with...**, **Open folder**, **Move/Rename**, **Redownload**, **Resume Download**, **Stop Download**, **Refresh download address**, **Verify checksum...**, **Remove**, **Add to queue** and **Properties**.
 
 ## Properties

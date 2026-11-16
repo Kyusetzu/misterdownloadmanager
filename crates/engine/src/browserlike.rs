@@ -19,9 +19,23 @@
 //! isn't made), speed limits, stop and resume (`download.rs` reads its answers like reqwest's).
 //! It follows redirects itself, as `get` does, so credentials never leave the site.
 //!
+//! A download on it uses as many connections as any other (Options → Connection, the site's
+//! exception), each asking for its part of the file (#668: one connection was slow where the
+//! site takes many). Each request at a time has a connection of its own (`Lease`): over HTTP/2,
+//! which these profiles speak as browsers do, the requests would otherwise share one. The first
+//! part asked for tells whether the site takes ranges on it; one that refuses them (403, its bot
+//! check, 412) or ignores them leaves the download on one connection, as before
+//! (`download::request`).
+//!
+//! A stream's pieces (mdm-tools' `pieces`, #1289) use it through [`Connection`] once a piece was
+//! refused as a program's ([`refuses_programs`]).
+//!
 //! Built with the `browser-connection` feature (on by default; BoringSSL needs CMake, a C
 //! compiler, libclang and, on Windows, NASM to build). Without it, `AVAILABLE` is false and the
 //! bot check's refusal stands.
+
+#[cfg(feature = "browser-connection")]
+use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
 use reqwest::StatusCode;
@@ -51,12 +65,58 @@ pub(crate) struct Browser {
     /// redirects may only lead back here.
     #[cfg_attr(not(feature = "browser-connection"), allow(dead_code))]
     stay_here: bool,
+    /// The connections whose answers are coming in, by number ([`Lease`]).
+    #[cfg(feature = "browser-connection")]
+    in_use: Arc<Mutex<Vec<bool>>>,
+}
+
+/// One connection of a [`Browser`], taken for one request and its answer: the lowest number no
+/// answer coming in holds, given back when its answer is done with (dropped). Requests at the
+/// same time get connections of their own (wreq's `Group`: its pool keeps each number's apart),
+/// as MDM's own connection does (HTTP/1.1, `download::client`), where HTTP/2 would carry them
+/// all on one; one request after another reuses the same, kept open.
+#[cfg(feature = "browser-connection")]
+struct Lease {
+    in_use: Arc<Mutex<Vec<bool>>>,
+    n: usize,
+}
+
+#[cfg(feature = "browser-connection")]
+impl Lease {
+    fn take(in_use: &Arc<Mutex<Vec<bool>>>) -> Lease {
+        let mut taken = in_use.lock().unwrap_or_else(|e| e.into_inner());
+        let n = match taken.iter().position(|t| !t) {
+            Some(n) => n,
+            None => {
+                taken.push(false);
+                taken.len() - 1
+            }
+        };
+        taken[n] = true;
+        Lease {
+            in_use: in_use.clone(),
+            n,
+        }
+    }
+}
+
+#[cfg(feature = "browser-connection")]
+impl Drop for Lease {
+    fn drop(&mut self) {
+        let mut taken = self.in_use.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(t) = taken.get_mut(self.n) {
+            *t = false;
+        }
+    }
 }
 
 /// An answer's body coming in through the browser-like connection.
 pub(crate) struct Stream {
     #[cfg(feature = "browser-connection")]
     inner: std::pin::Pin<Box<dyn futures::Stream<Item = wreq::Result<Bytes>> + Send>>,
+    /// Its connection, held until the body is done with.
+    #[cfg(feature = "browser-connection")]
+    _lease: Lease,
     len: Option<u64>,
 }
 
@@ -102,6 +162,7 @@ impl Browser {
                 agent,
                 route: opts.route.clone(),
                 stay_here,
+                in_use: Default::default(),
             })
         }
         #[cfg(not(feature = "browser-connection"))]
@@ -122,6 +183,18 @@ impl Browser {
         ranged: bool,
         cancel: &CancellationToken,
     ) -> Result<(Head, Body, HeaderMap), Error> {
+        let (head, body, headers) = self.stream(url, headers, ranged, cancel).await?;
+        Ok((head, Body::Browser(body), headers))
+    }
+
+    /// [`Browser::get`], its body as it comes.
+    async fn stream(
+        &self,
+        url: Url,
+        headers: HeaderMap,
+        ranged: bool,
+        cancel: &CancellationToken,
+    ) -> Result<(Head, Stream, HeaderMap), Error> {
         #[cfg(feature = "browser-connection")]
         {
             imp::get(self, url, headers, ranged, cancel).await
@@ -131,6 +204,71 @@ impl Browser {
             let _ = (url, headers, ranged, cancel);
             Err(Error::BotCheck)
         }
+    }
+}
+
+/// A site's refusal of a program's connection (#668): its bot check (Cloudflare's challenge,
+/// Akamai's edge page: `download::is_bot_check`), or 412 Precondition Failed to a request that
+/// carries no precondition (FileHippo's, #630). The browser-like connection may get past it; a
+/// plain 401, 403, 404 or 410 is the address's own refusal (an expired link), not this.
+pub fn refuses_programs(status: StatusCode, headers: &HeaderMap) -> bool {
+    crate::download::is_bot_check(status, headers) || status == StatusCode::PRECONDITION_FAILED
+}
+
+/// The browser-like connection for requests of MDM's other parts (a stream's pieces, #1289):
+/// made for an address with the options and headers its requests go with, as a download's is
+/// (the User-Agent of `headers`, else of the options; the proxy, the DNS and the adapter of the
+/// options). Cloned, it is the same connection: requests at the same time each get a connection
+/// of its own.
+#[derive(Clone)]
+pub struct Connection(std::sync::Arc<Browser>);
+
+impl Connection {
+    /// Refused when this build has none ([`AVAILABLE`]: `Error::BotCheck`), or when the network
+    /// adapter can't hold its connections (#35).
+    pub fn new(opts: &Options, url: &Url, headers: &HeaderMap) -> Result<Connection, Error> {
+        Ok(Connection(std::sync::Arc::new(Browser::new(
+            opts, url, headers,
+        )?)))
+    }
+
+    /// `GET url` with `headers` (a `Range` among them asks for its bytes as they are), its
+    /// redirects followed with the credentials kept on their site.
+    pub async fn get(
+        &self,
+        url: Url,
+        headers: HeaderMap,
+        cancel: &CancellationToken,
+    ) -> Result<Answer, Error> {
+        let ranged = headers.contains_key(reqwest::header::RANGE);
+        let (head, body, _) = self.0.stream(url, headers, ranged, cancel).await?;
+        Ok(Answer {
+            status: head.status,
+            headers: head.headers,
+            url: head.url,
+            body,
+        })
+    }
+}
+
+/// An answer through a [`Connection`].
+pub struct Answer {
+    pub status: StatusCode,
+    pub headers: HeaderMap,
+    /// Where it came from, its redirects followed.
+    pub url: Url,
+    body: Stream,
+}
+
+impl Answer {
+    /// The bytes its body will carry, if the server said.
+    pub fn content_length(&self) -> Option<u64> {
+        self.body.len()
+    }
+
+    /// Its body's next bytes; None at the end.
+    pub async fn chunk(&mut self) -> Result<Option<Bytes>, Error> {
+        self.body.chunk().await
     }
 }
 
@@ -193,9 +331,9 @@ mod imp {
     use url::Url;
     use wreq_util::{Emulation, Platform, Profile};
 
-    use super::{Browser, MAX_REDIRECTS, Stream, net_error};
+    use super::{Browser, Lease, MAX_REDIRECTS, Stream, net_error};
     use crate::download::{
-        Body, Error, Head, Options, Proxy, add_cookies, cancellable, scoped_headers, set_cookies,
+        Error, Head, Options, Proxy, add_cookies, cancellable, scoped_headers, set_cookies,
     };
     use crate::net::{self, NetError, Route};
 
@@ -464,8 +602,11 @@ mod imp {
         headers: HeaderMap,
         range: bool,
         cancel: &CancellationToken,
-    ) -> Result<(Head, Body, HeaderMap), Error> {
+    ) -> Result<(Head, Stream, HeaderMap), Error> {
         let (mut url, mut headers) = (url, headers);
+        // A connection of its own while its answer comes in, its redirects asked on it too.
+        let lease = Lease::take(&b.in_use);
+        let group = wreq::Group::new(lease.n as u64);
         for _ in 0..=MAX_REDIRECTS {
             net::check_url(&b.route, &url)?;
             if b.stay_here && !net::is_this_computer(url.host_str().unwrap_or_default()) {
@@ -477,6 +618,7 @@ mod imp {
             let mut req = b
                 .client
                 .get(url.as_str())
+                .group(group.clone())
                 .headers(headers.clone())
                 .header(header::USER_AGENT, b.agent.clone());
             if range {
@@ -516,10 +658,11 @@ mod imp {
                 len: resp.content_length(),
                 from: resp.remote_addr(),
             };
-            let body = Body::Browser(Stream {
+            let body = Stream {
                 len: head.len,
                 inner: Box::pin(resp.bytes_stream()),
-            });
+                _lease: lease,
+            };
             return Ok((head, body, headers));
         }
         Err(Error::Net {

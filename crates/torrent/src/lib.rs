@@ -727,6 +727,14 @@ impl Torrents {
             // certificates librqbit's own can't be built and the session wouldn't start; with
             // it, plain HTTP trackers work and HTTPS ones fail saying why (mdm_engine::tls).
             configure_http_client: Some(Arc::new(mdm_engine::tls::configure)),
+            // The peers others name (trackers, the DHT, other peers), only at addresses on the
+            // internet: one on this computer or the local network would let a torrent make MDM
+            // connect into the network it sits in, as a tracker there would (`trackers`). The
+            // local network's peers come from local peer discovery, which isn't asked. A test's
+            // session has its peers on loopback.
+            peer_filter: (!cfg.offline).then(|| {
+                Arc::new(|peer: SocketAddr| trackers::public(peer.ip())) as librqbit::PeerFilter
+            }),
             ..Default::default()
         };
         prepare_saved(&cfg.state_dir.join("session"), proxied);
@@ -2600,6 +2608,15 @@ mod tests {
     /// as the nodes it knows (their ids next to the target, so they get asked), and a
     /// `get_peers` with `peer` (BEP 5, enough for librqbit).
     async fn dht_node_with(peer: SocketAddr, gone: Vec<SocketAddr>) -> SocketAddr {
+        dht_node_counting(peer, gone, Default::default()).await
+    }
+
+    /// [`dht_node_with`], counting in `named` the times it answered with `peer`.
+    async fn dht_node_counting(
+        peer: SocketAddr,
+        gone: Vec<SocketAddr>,
+        named: Arc<AtomicUsize>,
+    ) -> SocketAddr {
         let sock = tokio::net::UdpSocket::bind((Ipv4Addr::LOCALHOST, 0))
             .await
             .unwrap();
@@ -2653,6 +2670,7 @@ mod tests {
                     r.extend(b"5:token2:tk6:valuesl6:");
                     r.extend(compact(peer));
                     r.extend(b"e");
+                    named.fetch_add(1, Ordering::Relaxed);
                 }
                 r.extend(format!("e1:t{len}:").as_bytes());
                 r.extend(&rest[colon + 1..colon + 1 + len]);
@@ -2733,6 +2751,74 @@ mod tests {
         eprintln!("#92: the file list through the DHT in {took:?}");
         seeder.stop().await;
         leecher.stop().await;
+    }
+
+    /// A peer on this computer that the DHT names is left alone: like a tracker there
+    /// (`trackers`), it would let a torrent make MDM connect into the network it sits in. A
+    /// test's session (`offline`) is given the same peer by the same node, and asks it.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_peer_on_this_computer_that_the_dht_names_is_not_asked() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("seed").join("set");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("a.bin"), vec![7u8; 100_000]).unwrap();
+        let torrent = make_torrent(&src).await;
+        let seeder = Torrents::start(offline(&tmp.path().join("s1")))
+            .await
+            .unwrap();
+        let hash = seeder
+            .add(&torrent, &src, None, Vec::new(), false)
+            .await
+            .unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(20);
+        while seeder.stats(&hash).unwrap().phase != Phase::Finished {
+            assert!(std::time::Instant::now() < deadline, "seeder never checked");
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        let named = Arc::new(AtomicUsize::new(0));
+        let node = dht_node_counting(
+            seeder.listen_addr().expect("seeder listens"),
+            Vec::new(),
+            named.clone(),
+        )
+        .await;
+        // A session that listens and asks on this computer only, as a test's or as the app's.
+        let session = |offline: bool, dir: &str| {
+            Torrents::start(Config {
+                offline,
+                listen_ip: Some(Ipv4Addr::LOCALHOST.into()),
+                upnp: false,
+                lsd: false,
+                dht_bootstrap: Some(vec![node.to_string()]),
+                ..Config::new(tmp.path().join(dir))
+            })
+        };
+        let magnet = Source::Magnet(format!("magnet:?xt=urn:btih:{hash}"));
+
+        let test = session(true, "s2").await.unwrap();
+        let meta = test
+            .metadata(&magnet, Duration::from_secs(20), None)
+            .await
+            .expect("a test's session asks the peer the DHT names");
+        assert_eq!(meta.info_hash, hash);
+        test.stop().await;
+
+        let before = named.load(Ordering::Relaxed);
+        let app = session(false, "s3").await.unwrap();
+        let lookup = Lookup::default();
+        // A test's session has the file list in well under a second.
+        let got = app
+            .metadata(&magnet, Duration::from_secs(3), Some(&lookup))
+            .await;
+        let s = lookup.status();
+        assert!(
+            named.load(Ordering::Relaxed) > before,
+            "the DHT named the peer to the app's session: {s:?}"
+        );
+        assert!(got.is_err(), "the peer was asked for the file list: {s:?}");
+        assert_eq!((s.from_dht, s.peers), (0, 0), "{s:?}");
+        seeder.stop().await;
+        app.stop().await;
     }
 
     #[tokio::test]

@@ -112,7 +112,12 @@ impl ResumeState {
 
     /// Bytes already on disk.
     pub fn downloaded(&self) -> u64 {
-        self.segments.iter().map(|s| s.cursor - s.start).sum()
+        // A damaged state may hold a cursor before its segment's start (the planner refuses
+        // it): nothing of that segment is on disk, and the count must not wrap or panic first.
+        self.segments
+            .iter()
+            .map(|s| s.cursor.saturating_sub(s.start))
+            .sum()
     }
 }
 
@@ -321,5 +326,29 @@ mod tests {
         assert!(ResumeState::load(&p).is_err());
         std::fs::write(&p, br#"{"version":99}"#).unwrap();
         assert!(ResumeState::load(&p).is_err());
+    }
+
+    /// A damaged state whose segment ends before it starts (the planner refuses it) is counted
+    /// as no bytes: the count is made before that check, and must neither panic nor wrap.
+    #[test]
+    fn a_segment_that_goes_backwards_holds_no_bytes() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("a.bin.mdm.json");
+        std::fs::write(
+            &p,
+            br#"{"version":1,"url":"http://x/a","final_url":"http://x/a","dest":"a.bin",
+                 "size":100,"segments":[{"start":60,"cursor":10,"end":100}]}"#,
+        )
+        .unwrap();
+        let s = ResumeState::load(&p).unwrap();
+        assert_eq!(
+            s.downloaded(),
+            0,
+            "nothing before a segment's start is on disk"
+        );
+        assert!(
+            crate::planner::Planner::resume(s.size, 1, &s.segments).is_err(),
+            "the state is refused, not counted as progress"
+        );
     }
 }

@@ -1981,7 +1981,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 [[package]]
 name = "ecolor"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "bytemuck",
  "emath",
@@ -1990,7 +1990,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -2026,7 +2026,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "accesskit",
  "ahash",
@@ -2045,7 +2045,7 @@ dependencies = [
 [[package]]
 name = "egui-wgpu"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -2064,7 +2064,7 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "accesskit_winit",
  "arboard",
@@ -2089,7 +2089,7 @@ dependencies = [
 [[package]]
 name = "egui_extras"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "ahash",
  "egui",
@@ -2105,7 +2105,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "bytemuck",
  "egui",
@@ -2113,6 +2113,20 @@ dependencies = [
  "log",
  "profiling",
  "winit",
+]
+
+[[package]]
+name = "egui_system_font_provider"
+version = "0.37.0"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
+dependencies = [
+ "epaint",
+ "fontique",
+ "log",
+ "poll-promise",
+ "skrifa",
+ "sys-locale",
+ "unicode-script",
 ]
 
 [[package]]
@@ -2133,7 +2147,7 @@ dependencies = [
 [[package]]
 name = "emath"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "bytemuck",
 ]
@@ -2202,7 +2216,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -2228,7 +2242,7 @@ dependencies = [
 [[package]]
 name = "epaint_default_fonts"
 version = "0.37.0"
-source = "git+https://github.com/anefzaoui/egui.git?rev=91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d#91dd7f70ed2ccfcfd3196a87ceda0d106e22c98d"
+source = "git+https://github.com/anefzaoui/egui.git?rev=268d8e55dae56a536b672bdb75987021931dfcb2#268d8e55dae56a536b672bdb75987021931dfcb2"
 
 [[package]]
 name = "equivalent"
@@ -2414,6 +2428,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "835ae9d781464a79026cde387f9cbc650c9a4909d7cf7e658b127e3c35d2f35d"
 dependencies = [
  "bytemuck",
+]
+
+[[package]]
+name = "fontique"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6688bc1294fe7117d788937b6c53480169b29c566954af490830d4c09da9516a"
+dependencies = [
+ "hashbrown 0.17.1",
+ "linebender_resource_handle",
+ "memmap2",
+ "objc2 0.6.5",
+ "objc2-core-foundation",
+ "objc2-core-text",
+ "objc2-foundation 0.3.2",
+ "parlance",
+ "read-fonts",
+ "roxmltree 0.21.2",
+ "smallvec",
+ "windows 0.62.2",
+ "windows-core 0.62.2",
+ "yeslogic-fontconfig-sys",
 ]
 
 [[package]]
@@ -2843,6 +2879,7 @@ dependencies = [
  "hashbrown 0.17.1",
  "log",
  "peniko",
+ "png 0.18.1",
  "skrifa",
  "smallvec",
  "vello_common",
@@ -3343,7 +3380,9 @@ checksum = "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c"
 dependencies = [
  "atomic-waker",
  "bytes",
+ "futures-channel",
  "futures-core",
+ "h2",
  "http",
  "http-body",
  "httparse",
@@ -4065,7 +4104,7 @@ dependencies = [
 [[package]]
 name = "librqbit"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -4128,7 +4167,7 @@ dependencies = [
 [[package]]
 name = "librqbit-bencode"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -4144,7 +4183,7 @@ dependencies = [
 [[package]]
 name = "librqbit-buffers"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "bytes",
  "librqbit-clone-to-owned",
@@ -4155,7 +4194,7 @@ dependencies = [
 [[package]]
 name = "librqbit-clone-to-owned"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "bytes",
 ]
@@ -4163,7 +4202,7 @@ dependencies = [
 [[package]]
 name = "librqbit-core"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "bytes",
@@ -4192,7 +4231,7 @@ dependencies = [
 [[package]]
 name = "librqbit-dht"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "backon",
@@ -4239,7 +4278,7 @@ dependencies = [
 [[package]]
 name = "librqbit-lsd"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "atoi",
@@ -4258,7 +4297,7 @@ dependencies = [
 [[package]]
 name = "librqbit-peer-protocol"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -4278,7 +4317,7 @@ dependencies = [
 [[package]]
 name = "librqbit-sha1-wrapper"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "assert_cfg",
  "aws-lc-rs",
@@ -4287,7 +4326,7 @@ dependencies = [
 [[package]]
 name = "librqbit-tracker-comms"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -4315,7 +4354,7 @@ dependencies = [
 [[package]]
 name = "librqbit-upnp"
 version = "9.1.0"
-source = "git+https://github.com/anefzaoui/rqbit.git?rev=694291b61fcfd6a77fef7762541b0ef25773ae31#694291b61fcfd6a77fef7762541b0ef25773ae31"
+source = "git+https://github.com/anefzaoui/rqbit.git?rev=fab046042915709ab160626ebc59cce08de4d779#fab046042915709ab160626ebc59cce08de4d779"
 dependencies = [
  "anyhow",
  "bstr",
@@ -4542,6 +4581,7 @@ dependencies = [
  "egui-wgpu",
  "egui-winit",
  "egui_extras",
+ "egui_system_font_provider",
  "image",
  "libc",
  "mdm-cli",
@@ -4566,7 +4606,7 @@ dependencies = [
  "regex",
  "reqwest 0.13.5",
  "rfd",
- "roxmltree",
+ "roxmltree 0.20.0",
  "security-framework",
  "serde",
  "serde_json",
@@ -4586,7 +4626,6 @@ dependencies = [
  "windows-sys 0.61.2",
  "winit",
  "winresource",
- "x11-dl",
  "x11rb",
  "zbus",
 ]
@@ -4710,6 +4749,7 @@ dependencies = [
  "tokio-util",
  "tower-layer",
  "tower-service",
+ "unicode-segmentation",
  "url",
  "webpki-root-certs",
  "windows-sys 0.61.2",
@@ -4832,6 +4872,7 @@ version = "0.5.2"
 dependencies = [
  "aws-lc-rs",
  "base64 0.23.1",
+ "bytes",
  "craft-atomic",
  "futures",
  "hex",
@@ -5585,6 +5626,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "objc2-core-text"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cde0dfb48d25d2b4862161a4d5fcc0e3c24367869ad306b0c9ec0073bfed92d"
+dependencies = [
+ "bitflags 2.13.2",
+ "objc2-core-foundation",
+]
+
+[[package]]
 name = "objc2-encode"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5938,6 +5989,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "parlance"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73072a9470554c8e794778acece2312661218aaabb635600957d952cf01c716e"
+
+[[package]]
 name = "pastey"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6197,6 +6254,16 @@ dependencies = [
  "fdeflate",
  "flate2",
  "miniz_oxide 0.8.9",
+]
+
+[[package]]
+name = "poll-promise"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f6a58fecbf9da8965bcdb20ce4fd29788d1acee68ddbb64f0ba1b81bccdb7df"
+dependencies = [
+ "document-features",
+ "static_assertions",
 ]
 
 [[package]]
@@ -7092,6 +7159,15 @@ name = "roxmltree"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97"
+
+[[package]]
+name = "roxmltree"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9da7f59328b09405b181fee1018925fad50f157afb43c0c0f5c522c256dd5907"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "rquickjs"
@@ -8758,6 +8834,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7df058c713841ad818f1dc5d3fd88063241cc61f49f5fbea4b951e8cf5a8d71d"
 
 [[package]]
+name = "unicode-script"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa04c955db05429d464c74d495c1ee677e1866e783a4c3747f9c0cef7756cabf"
+
+[[package]]
 name = "unicode-segmentation"
 version = "1.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8813,7 +8895,7 @@ dependencies = [
  "kurbo 0.11.3",
  "log",
  "pico-args",
- "roxmltree",
+ "roxmltree 0.20.0",
  "simplecss",
  "siphasher",
  "strict-num",
@@ -8869,6 +8951,7 @@ dependencies = [
  "guillotiere",
  "log",
  "peniko",
+ "png 0.18.1",
  "smallvec",
  "thiserror 2.0.21",
 ]
@@ -8882,6 +8965,7 @@ dependencies = [
  "bytemuck",
  "glifo",
  "hashbrown 0.17.1",
+ "png 0.18.1",
  "vello_common",
 ]
 
@@ -10106,6 +10190,17 @@ dependencies = [
  "serde",
  "serde_derive",
  "yaxpeax-arch",
+]
+
+[[package]]
+name = "yeslogic-fontconfig-sys"
+version = "6.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d8b8abf912b9a29ff112e1671c97c33636903d13a69712037190e6805af4f76"
+dependencies = [
+ "dlib",
+ "once_cell",
+ "pkg-config",
 ]
 
 [[package]]

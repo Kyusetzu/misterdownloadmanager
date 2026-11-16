@@ -171,16 +171,28 @@ pub enum Found {
 
 pub type Slot = Arc<Mutex<Option<Result<Found, String>>>>;
 
-/// Ask GitHub for the latest release in the background; the answer lands in the slot.
+/// Ask GitHub for the latest release in the background; the answer lands in the slot. Whatever
+/// goes wrong, even a panic in the check, lands there as a failed check (#1123): the slot never
+/// stays empty, which would leave Check for updates waiting for good.
 pub fn check(rt: &tokio::runtime::Handle, ctx: &egui::Context) -> Slot {
     let slot: Slot = Arc::new(Mutex::new(None));
     let (out, ctx) = (slot.clone(), ctx.clone());
+    let task = rt.spawn(latest());
     rt.spawn(async move {
-        let res = latest().await;
-        *out.lock().unwrap() = Some(res);
+        let res = settled(task.await);
+        *out.lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(res);
         ctx.request_repaint();
     });
     slot
+}
+
+/// The check's task ended: its answer, or a failed check when it panicked (or was cancelled).
+fn settled(joined: Result<Result<Found, String>, tokio::task::JoinError>) -> Result<Found, String> {
+    joined.unwrap_or_else(|e| {
+        tracing::warn!("the update check stopped: {e}");
+        Err(crate::i18n::t("Mister Download Manager hit an internal error").to_owned())
+    })
 }
 
 async fn latest() -> Result<Found, String> {
@@ -195,6 +207,11 @@ async fn latest() -> Result<Found, String> {
         .timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
+    fetch(&client, &feed, VERSION).await
+}
+
+/// The latest release at `feed` against the running `current` version.
+async fn fetch(client: &reqwest::Client, feed: &str, current: &str) -> Result<Found, String> {
     let resp = client
         .get(feed)
         .header("Accept", "application/vnd.github+json")
@@ -211,7 +228,7 @@ async fn latest() -> Result<Found, String> {
         .text()
         .await
         .map_err(|e| e.to_string())?;
-    parse_release(&text, VERSION)
+    parse_release(&text, current)
 }
 
 /// GitHub's latest-release JSON against the running `current` version.
@@ -219,7 +236,14 @@ fn parse_release(json: &str, current: &str) -> Result<Found, String> {
     let v: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
     let tag = v["tag_name"].as_str().unwrap_or("").trim();
     let version = tag.trim_start_matches(['v', 'V']);
-    if version.is_empty() {
+    // A number MDM can't read ("next", "1.x") would compare as 0 and pass for older: no answer
+    // is better than a wrong one.
+    let numeric = version
+        .split_once('-')
+        .map_or(version, |(main, _)| main)
+        .split('.')
+        .all(|p| p.parse::<u64>().is_ok());
+    if version.is_empty() || !numeric {
         // i18n: why updates could not be checked: the newest release on the site has no number
         return Err(crate::i18n::t("the release has no version").to_owned());
     }
@@ -820,7 +844,7 @@ impl About {
 // Keyboard shortcuts
 
 /// Every shortcut the main window answers (keep in step with `app.rs` and `list.rs`).
-const SHORTCUTS: [(&str, &str); 26] = [
+const SHORTCUTS: [(&str, &str); 29] = [
     ("Ctrl+N", "Add a download (Add URL)"),
     (
         "Ctrl+B",
@@ -857,7 +881,14 @@ const SHORTCUTS: [(&str, &str); 26] = [
         "Jump to the download whose name starts with it",
     ),
     ("Shift+F10", "Open the selected download's menu"),
-    ("Tab", "Move between the categories and the download list"),
+    // #1190: the toolbar is one Tab stop, its buttons along the arrows.
+    (
+        "Tab / Shift+Tab",
+        "Move between the toolbar, the categories and the download list",
+    ),
+    ("Left / Right", "In the toolbar: the previous / next button"),
+    ("Enter / Space", "In the toolbar: press the button"),
+    ("Down / Alt+Down", "In the toolbar: open a button's menu"),
     (
         "Shift+F10 / Menu",
         "In the categories: the selected category's menu",
@@ -1138,6 +1169,126 @@ mod tests {
         );
         assert_eq!(parse_release(json, "0.2.0").unwrap(), Found::Latest);
         assert!(parse_release("{}", "0.1.0").is_err());
+    }
+
+    // #1123: whatever GitHub (or a proxy, or a captive portal) answers, the check fails with a
+    // reason and never panics.
+    #[test]
+    fn a_bad_answer_is_a_failed_check() {
+        let bad = [
+            // Malformed or cut-off JSON, or not JSON at all.
+            r#"{"tag_name":"v0.6.0","assets":["#,
+            "",
+            "<html><body>Sign in to the Wi-Fi</body></html>",
+            // An empty release list, or no release at all.
+            "[]",
+            "null",
+            r#"{"tag_name":""}"#,
+            r#"{"tag_name":"v"}"#,
+            // Version strings that don't parse.
+            r#"{"tag_name":"next"}"#,
+            r#"{"tag_name":"v1.x"}"#,
+            r#"{"tag_name":"v١.٢"}"#,
+            r#"{"tag_name":"v0..6"}"#,
+            r#"{"tag_name":"v99999999999999999999999.0"}"#,
+            r#"{"tag_name":"v0.6.-rc"}"#,
+            r#"{"tag_name":42}"#,
+        ];
+        for json in bad {
+            assert!(parse_release(json, VERSION).is_err(), "{json:?} was taken");
+        }
+        // Odd but readable answers still work: a pre-release, missing fields, a short date,
+        // and text that isn't ASCII where the date is cut.
+        let odd = r#"{"tag_name":"V9.0.0-rc.1","published_at":"2026-ü","assets":{"x":1}}"#;
+        match parse_release(odd, "0.1.0").unwrap() {
+            Found::Newer(r) => {
+                assert_eq!(r.version, "9.0.0-rc.1");
+                assert_eq!(r.date, "2026-ü");
+                assert!(r.assets.is_empty() && r.notes.is_empty() && r.page.is_empty());
+            }
+            f => panic!("{f:?}"),
+        }
+    }
+
+    #[test]
+    fn a_check_that_panics_is_a_failed_check() {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let joined = rt.block_on(async {
+            tokio::spawn(async { panic!("a test panic in the update check") }).await
+        });
+        assert!(settled(joined).is_err());
+        let fine = rt.block_on(async { tokio::spawn(async { Ok(Found::Latest) }).await });
+        assert_eq!(settled(fine), Ok(Found::Latest));
+    }
+
+    /// A local server that answers every request with `status` and `body` (a fixture: the
+    /// tests never ask GitHub).
+    async fn feed(status: &'static str, body: &'static str) -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            while let Ok((mut s, _)) = listener.accept().await {
+                let mut buf = [0u8; 4096];
+                let _ = s.read(&mut buf).await;
+                let reply = format!(
+                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = s.write_all(reply.as_bytes()).await;
+                let _ = s.shutdown().await;
+            }
+        });
+        format!("http://{addr}/repos/x/y/releases/latest")
+    }
+
+    #[test]
+    fn the_check_reads_the_feed_and_fails_softly() {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        rt.block_on(async {
+            let client = reqwest::Client::builder()
+                .no_proxy()
+                .timeout(Duration::from_secs(10))
+                .build()
+                .unwrap();
+            let newer = feed(
+                "200 OK",
+                r#"{"tag_name":"v9.0.0","published_at":"2026-12-01T00:00:00Z"}"#,
+            )
+            .await;
+            assert!(matches!(
+                fetch(&client, &newer, "0.5.2").await,
+                Ok(Found::Newer(r)) if r.version == "9.0.0" && r.date == "2026-12-01"
+            ));
+            let none = feed("404 Not Found", r#"{"message":"Not Found"}"#).await;
+            assert_eq!(fetch(&client, &none, "0.5.2").await, Ok(Found::Latest));
+            for (status, body) in [
+                // GitHub's rate limit.
+                ("403 Forbidden", r#"{"message":"API rate limit exceeded"}"#),
+                ("500 Internal Server Error", ""),
+                ("200 OK", r#"{"tag_name":"v9.0.0","#),
+                ("200 OK", "[]"),
+                ("200 OK", r#"{"tag_name":"latest"}"#),
+            ] {
+                let url = feed(status, body).await;
+                assert!(
+                    fetch(&client, &url, "0.5.2").await.is_err(),
+                    "{status} {body}"
+                );
+            }
+            // Nothing listening: a network error.
+            let closed = {
+                let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+                l.local_addr().unwrap()
+            };
+            let url = format!("http://{closed}/latest");
+            assert!(fetch(&client, &url, "0.5.2").await.is_err());
+        });
     }
 
     #[test]

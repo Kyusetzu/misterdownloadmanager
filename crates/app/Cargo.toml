@@ -86,12 +86,16 @@ wgpu = { version = "30.0", default-features = false, features = ["dx12", "wgsl"]
 raw-window-handle = "0.6"
 # Latin, Greek and Cyrillic text drawn by DirectWrite as Windows' classic controls draw it
 # (win32.rs `text_rasterizer`): its COM interfaces, which windows-sys doesn't have. The windows
-# 0.62 wgpu-hal already builds.
-windows = { version = "0.62", default-features = false, features = ["Win32_Graphics_DirectWrite"] }
+# 0.62 wgpu-hal already builds. DXGI: the graphics drivers' versions, read before Direct3D 12 starts
+# (win32.rs `graphics_drivers`, #1205; wgpu-hal builds it too).
+windows = { version = "0.62", default-features = false, features = ["Win32_Graphics_DirectWrite", "Win32_Graphics_Dxgi"] }
 
 # The notification-area icon and its menu (tray.rs).
 [target.'cfg(not(target_os = "linux"))'.dependencies]
 tray-icon = "0.26.1"
+# Windows and macOS: the system's font for a script MDM's font lists don't name (theme.rs,
+# #1125). Linux asks fontconfig for any script already (`fc-match :charset=`).
+egui_system_font_provider.workspace = true
 
 # Linux: windows on Wayland and X11; the tray over D-Bus (StatusNotifierItem:
 # KDE, and GNOME with its AppIndicator extension), no GTK.
@@ -110,12 +114,12 @@ zbus = { version = "5.19.0", default-features = false, features = ["async-io", "
 # The settings daemon's theme name (XSETTINGS) when the portal can't say dark or light (unix.rs,
 # #156); already in the tree through winit. Its pure-Rust connection, no extension.
 x11rb = { version = "0.13.2", default-features = false }
-# The GLX vendor that will draw on the X display, before the first window (unix.rs glx_vendor,
-# renderer.rs unpaced_swaps); already in the tree through winit and glutin, loaded at run time.
-x11-dl = "2.21.0"
 # Whether a Wayland screen is scaled, for the windows' system MDM chooses (unix.rs x11_fit,
 # #624); already in the tree through winit.
 wayland-client = "0.31.15"
+# The Xlib display winit opened, for Xlib to return from a lost connection (unix.rs
+# on_display_lost); already in the tree through winit.
+raw-window-handle = "0.6"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Finder's file icons (unix.rs file_icon); already in the tree through winit and rfd.

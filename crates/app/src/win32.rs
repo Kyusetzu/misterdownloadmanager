@@ -164,6 +164,182 @@ pub fn set_main_window(cc: &eframe::CreationContext<'_>) {
     }
 }
 
+// ---- The session's end (shut down, restart, sign out; an installer closing MDM) ---------------
+
+/// Why the session ends, as WM_QUERYENDSESSION and WM_ENDSESSION say (their lParam).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SessionEnd {
+    /// The computer shuts down or restarts.
+    ShutDown,
+    /// The user signs out.
+    SignOut,
+    /// A program closes MDM through the Restart Manager (an installer replacing its files).
+    Closed,
+}
+
+impl SessionEnd {
+    fn of(lparam: LPARAM) -> SessionEnd {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{ENDSESSION_CLOSEAPP, ENDSESSION_LOGOFF};
+        let flags = lparam as u32;
+        if flags & ENDSESSION_CLOSEAPP != 0 {
+            SessionEnd::Closed
+        } else if flags & ENDSESSION_LOGOFF != 0 {
+            SessionEnd::SignOut
+        } else {
+            SessionEnd::ShutDown
+        }
+    }
+}
+
+/// The subclass that hears the session's end on the main window.
+const SESSION_SUBCLASS: usize = 0x5e5;
+
+/// What the session's end runs ([`on_session_end`]).
+type OnSessionEnd = Box<dyn FnOnce(SessionEnd)>;
+
+thread_local! {
+    /// Taken when the session's end comes.
+    static SESSION_END: std::cell::RefCell<Option<OnSessionEnd>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// At the session's end, run `end` on the window's thread before Windows is answered: Windows may
+/// end the process as soon as WM_ENDSESSION returns, so whatever must be saved is saved in it.
+/// Heard on the main window ([`set_main_window`]; call this after it, on its thread): Windows
+/// asks every top-level window, hidden in the tray or not. winit answers neither message itself.
+pub fn on_session_end(end: impl FnOnce(SessionEnd) + 'static) {
+    let hwnd = MAIN_WINDOW.load(std::sync::atomic::Ordering::Relaxed);
+    if hwnd == 0 {
+        tracing::warn!("the session's end isn't heard: no main window");
+        return;
+    }
+    // SAFETY: the main window, made on this thread (eframe's creator runs on it).
+    unsafe { watch_session_end(hwnd as HWND, Box::new(end)) };
+}
+
+/// # Safety
+/// `hwnd` is a window of this thread.
+unsafe fn watch_session_end(hwnd: HWND, end: OnSessionEnd) {
+    SESSION_END.with(|s| *s.borrow_mut() = Some(end));
+    // SAFETY: (the caller's) our own window; the proc lives as long as the program.
+    unsafe { SetWindowSubclass(hwnd, Some(session_proc), SESSION_SUBCLASS, 0) };
+}
+
+/// MDM never holds the session up: nothing it does then needs the user (a download stops where
+/// it is and resumes at the next start), so it answers yes at once and does its saving when the
+/// end is certain (WM_ENDSESSION), not when another program could still cancel it.
+unsafe extern "system" fn session_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    _id: usize,
+    _data: usize,
+) -> LRESULT {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{WM_ENDSESSION, WM_QUERYENDSESSION};
+    match msg {
+        WM_QUERYENDSESSION => {
+            let why = SessionEnd::of(lparam);
+            tracing::info!("Windows asks whether the session may end ({why:?}): yes");
+            return 1;
+        }
+        WM_ENDSESSION if wparam != 0 => {
+            let why = SessionEnd::of(lparam);
+            tracing::info!("the session ends ({why:?})");
+            let end = SESSION_END.with(|s| s.try_borrow_mut().ok().and_then(|mut s| s.take()));
+            if let Some(end) = end {
+                end(why);
+            }
+            return 0;
+        }
+        WM_ENDSESSION => {
+            tracing::info!("the session goes on (another program kept it, or it was cancelled)");
+            return 0;
+        }
+        _ => {}
+    }
+    // SAFETY: the subclass's own arguments, passed on.
+    unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
+}
+
+#[cfg(test)]
+mod session_end_tests {
+    use super::*;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        CreateWindowExW, DefWindowProcW, DestroyWindow, ENDSESSION_CLOSEAPP, ENDSESSION_LOGOFF,
+        RegisterClassW, SendMessageW, WM_ENDSESSION, WM_QUERYENDSESSION, WNDCLASSW,
+        WS_OVERLAPPEDWINDOW,
+    };
+
+    #[test]
+    fn the_reason_comes_from_lparam() {
+        assert_eq!(SessionEnd::of(0), SessionEnd::ShutDown);
+        assert_eq!(
+            SessionEnd::of(ENDSESSION_LOGOFF as LPARAM),
+            SessionEnd::SignOut
+        );
+        assert_eq!(
+            SessionEnd::of(ENDSESSION_CLOSEAPP as LPARAM),
+            SessionEnd::Closed
+        );
+        // A critical end (the battery running out) is still a shut down.
+        assert_eq!(SessionEnd::of(0x4000_0000), SessionEnd::ShutDown);
+    }
+
+    /// A real hidden top-level window, sent what Windows sends: asked, it says yes at once
+    /// without running the end; a session that goes on runs nothing; the end runs it, once,
+    /// before WM_ENDSESSION returns.
+    #[test]
+    fn a_window_answers_the_session_s_end_and_saves_before_it_returns() {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        let ran: Rc<RefCell<Vec<SessionEnd>>> = Rc::default();
+        let class: Vec<u16> = "mdm-session-end-test\0".encode_utf16().collect();
+        let title: Vec<u16> = "mdm session end test\0".encode_utf16().collect();
+        // SAFETY: a class with the system's own procedure and a hidden window of it on this
+        // thread, destroyed below; NUL-terminated strings; messages sent to it.
+        unsafe {
+            let mut wc: WNDCLASSW = zeroed();
+            wc.lpfnWndProc = Some(DefWindowProcW);
+            wc.lpszClassName = class.as_ptr();
+            RegisterClassW(&wc);
+            let hwnd = CreateWindowExW(
+                0,
+                class.as_ptr(),
+                title.as_ptr(),
+                WS_OVERLAPPEDWINDOW,
+                -20000,
+                -20000,
+                200,
+                100,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null(),
+            );
+            assert!(!hwnd.is_null());
+            let seen = ran.clone();
+            watch_session_end(hwnd, Box::new(move |why| seen.borrow_mut().push(why)));
+            let logoff = ENDSESSION_LOGOFF as LPARAM;
+            assert_eq!(SendMessageW(hwnd, WM_QUERYENDSESSION, 0, logoff), 1);
+            assert!(
+                ran.borrow().is_empty(),
+                "nothing is done while it may be cancelled"
+            );
+            assert_eq!(SendMessageW(hwnd, WM_ENDSESSION, 0, logoff), 0);
+            assert!(
+                ran.borrow().is_empty(),
+                "a session that goes on ends nothing"
+            );
+            SendMessageW(hwnd, WM_ENDSESSION, 1, logoff);
+            assert_eq!(*ran.borrow(), [SessionEnd::SignOut]);
+            SendMessageW(hwnd, WM_ENDSESSION, 1, logoff);
+            assert_eq!(ran.borrow().len(), 1, "once");
+            DestroyWindow(hwnd);
+        }
+    }
+}
+
 /// This process's top-level window with exactly `title`; the main window by its handle.
 pub(crate) fn find_own_window(title: &str) -> Option<HWND> {
     let known = MAIN_WINDOW.load(std::sync::atomic::Ordering::Relaxed);
@@ -557,11 +733,29 @@ pub fn thin_frame(
     scale: f32,
     hide_item: Option<&str>,
 ) -> Option<isize> {
+    thin_frame_on(find_own_window(title)? as isize, client, scale, hide_item)
+}
+
+/// Reapply a frame to the bound window, even when another download has the same title.
+pub fn thin_frame_on(
+    window: isize,
+    client: [f32; 2],
+    scale: f32,
+    hide_item: Option<&str>,
+) -> Option<isize> {
     use windows_sys::Win32::UI::HiDpi::{AdjustWindowRectExForDpi, GetDpiForWindow};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        AppendMenuW, DeleteMenu, GetSystemMenu, MF_BYCOMMAND, MF_STRING,
+        AppendMenuW, DeleteMenu, GetSystemMenu, IsWindow, MF_BYCOMMAND, MF_STRING,
     };
-    let hwnd = find_own_window(title)?;
+    let hwnd = window as HWND;
+    let mut pid = 0;
+    // SAFETY: queries accepting any handle; pid is a writable local.
+    if unsafe { IsWindow(hwnd) } == 0
+        || unsafe { GetWindowThreadProcessId(hwnd, &mut pid) } == 0
+        || pid != unsafe { GetCurrentProcessId() }
+    {
+        return None;
+    }
     // Windows 11 draws its 1 px border round a window without a caption style; Windows 10 draws
     // none, so there it has the system's own (WS_BORDER).
     let kind = if windows_11() {
@@ -702,6 +896,8 @@ unsafe fn caption_less(hwnd: HWND, kind: Drawn) {
         DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND, DwmSetWindowAttribute,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::SWP_NOSIZE;
+    // Register before the subclass can receive the shell's first button notification.
+    taskbar_button_created_message();
     // SAFETY: (the caller's) our own window; the proc lives as long as the program; the DWM
     // attribute is read from a local during the call.
     unsafe {
@@ -1102,9 +1298,9 @@ unsafe extern "system" fn caption_less_proc(
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         DefWindowProcW, HTMAXBUTTON, IsIconic, IsZoomed, NCCALCSIZE_PARAMS, PostMessageW, SC_CLOSE,
         SC_MAXIMIZE, SC_MINIMIZE, SC_RESTORE, STYLESTRUCT, SWP_HIDEWINDOW, SendMessageW, WINDOWPOS,
-        WM_GETMINMAXINFO, WM_NCACTIVATE, WM_NCLBUTTONDBLCLK, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP,
-        WM_NCMOUSELEAVE, WM_NCMOUSEMOVE, WM_NCRBUTTONUP, WM_STYLECHANGING, WM_SYSCOMMAND,
-        WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING, WS_CAPTION, WS_MINIMIZE,
+        WM_GETMINMAXINFO, WM_NCACTIVATE, WM_NCDESTROY, WM_NCLBUTTONDBLCLK, WM_NCLBUTTONDOWN,
+        WM_NCLBUTTONUP, WM_NCMOUSELEAVE, WM_NCMOUSEMOVE, WM_NCRBUTTONUP, WM_STYLECHANGING,
+        WM_SYSCOMMAND, WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING, WS_CAPTION, WS_MINIMIZE,
     };
     const HT_MAX: LRESULT = HTMAXBUTTON as LRESULT;
     let kind = Drawn::of(data);
@@ -1116,6 +1312,21 @@ unsafe extern "system" fn caption_less_proc(
         )
     };
     match msg {
+        m if m != 0 && m == taskbar_button_created_message() => {
+            // COM can dispatch this while a progress update is in flight. Record it only:
+            // the next watchdog-covered taskbar step resends even an unchanged fraction.
+            TASKBAR_BUTTONS.with_borrow_mut(|(generation, windows)| {
+                *generation = generation.wrapping_add(1);
+                windows.insert(hwnd as isize, *generation);
+            });
+            return 0;
+        }
+        WM_NCDESTROY => {
+            TASKBAR_BUTTONS.with_borrow_mut(|(_, windows)| {
+                windows.remove(&(hwnd as isize));
+            });
+            forget_caption(hwnd as isize);
+        }
         WM_STYLECHANGING if lparam != 0 => {
             // SAFETY: for WM_STYLECHANGING, lParam points to the STYLESTRUCT of the change,
             // whose styleNew the window may alter (Win32 contract).
@@ -2211,6 +2422,111 @@ pub fn tray_icon_tip(hwnd: isize, id: u32, tip: &str) -> bool {
     unsafe { Shell_NotifyIconW(NIM_MODIFY, &nid) != 0 }
 }
 
+/// The size the notification area draws MDM's icon at, in px, and the taskbar it draws it in (its
+/// window, 0 if none): Windows' small icon size (`SM_CXSMICON`) at the taskbar's DPI (#1161). The
+/// taskbar window's own DPI, not the system's: the system DPI is the main display's scale as it
+/// was when the user signed in, kept until they sign out, while Explorer draws the taskbar at its
+/// display's scale as soon as it changes. With no taskbar (Explorer isn't running), the system
+/// DPI. Never waits: Explorer is sent no message.
+pub fn tray_icon_px() -> (isize, u32) {
+    use windows_sys::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
+    use windows_sys::Win32::UI::WindowsAndMessaging::FindWindowW;
+    let class: Vec<u16> = "Shell_TrayWnd\0".encode_utf16().collect();
+    // SAFETY: a NUL-ended class name and no title: no window is sent a message.
+    let taskbar = unsafe { FindWindowW(class.as_ptr(), std::ptr::null()) };
+    let mut dpi = 0;
+    if !taskbar.is_null() {
+        // SAFETY: reads a window's DPI, as its own awareness of DPI has it (Explorer's: its
+        // display's); 0 for a window gone since.
+        dpi = unsafe { GetDpiForWindow(taskbar) };
+    }
+    if dpi == 0 {
+        // SAFETY: no arguments; reads the system's DPI.
+        dpi = unsafe { GetDpiForSystem() };
+    }
+    let px = small_icon_px_for_dpi(dpi)
+        .unwrap_or_else(|| crate::tray::small_icon_px(dpi))
+        .clamp(16, 256);
+    (taskbar as isize, px)
+}
+
+/// Windows' small icon size at `dpi` (`GetSystemMetricsForDpi(SM_CXSMICON)`), if it says.
+pub fn small_icon_px_for_dpi(dpi: u32) -> Option<u32> {
+    use windows_sys::Win32::UI::HiDpi::GetSystemMetricsForDpi;
+    use windows_sys::Win32::UI::WindowsAndMessaging::SM_CXSMICON;
+    // SAFETY: a plain query.
+    let px = unsafe { GetSystemMetricsForDpi(SM_CXSMICON, dpi) };
+    u32::try_from(px).ok().filter(|&px| px > 0)
+}
+
+/// A picture handed to the shell as the notification-area icon ([`tray_icon_picture`]), kept for
+/// as long as the shell may draw it, and destroyed when dropped (the next one handed over, or the
+/// icon gone).
+pub struct TrayPicture(isize);
+
+impl Drop for TrayPicture {
+    fn drop(&mut self) {
+        // SAFETY: an icon made by CreateIcon, owned here alone.
+        unsafe { DestroyIcon(self.0 as _) };
+    }
+}
+
+/// Draw icon `id` of `hwnd` with `rgba`, a `size`×`size` picture (straight alpha), from the
+/// tray's watcher thread: it waits for Explorer as [`tray_icon_ask`] does. The picture to keep
+/// while the shell has it, or None when the shell didn't take it (no such icon, or no answer).
+pub fn tray_icon_picture(hwnd: isize, id: u32, rgba: &[u8], size: u32) -> Option<TrayPicture> {
+    use windows_sys::Win32::UI::Shell::{NIF_ICON, NIM_MODIFY, NOTIFYICONDATAW, Shell_NotifyIconW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::CreateIcon;
+    let side = size as usize;
+    if side == 0 || rgba.len() != side * side * 4 {
+        return None;
+    }
+    let bgra: Vec<u8> = rgba
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|p| [p[2], p[1], p[0], p[3]])
+        .collect();
+    // The mask, for whatever draws the icon without its alpha: one bit a pixel, set where it is
+    // clear, in rows of whole 16-bit words.
+    let row = side.div_ceil(16) * 2;
+    let mut mask = vec![0u8; row * side];
+    for (i, p) in rgba.as_chunks::<4>().0.iter().enumerate() {
+        if p[3] == 0 {
+            let (y, x) = (i / side, i % side);
+            mask[y * row + x / 8] |= 0x80 >> (x % 8);
+        }
+    }
+    // SAFETY: both buffers live for the call and hold what the size says (32 bits a pixel, and
+    // the mask's rows); no module: the icon is made from them.
+    let icon = unsafe {
+        CreateIcon(
+            std::ptr::null_mut(),
+            size as i32,
+            size as i32,
+            1,
+            32,
+            mask.as_ptr(),
+            bgra.as_ptr(),
+        )
+    };
+    if icon.is_null() {
+        return None;
+    }
+    let picture = TrayPicture(icon as isize);
+    let nid = NOTIFYICONDATAW {
+        cbSize: size_of::<NOTIFYICONDATAW>() as u32,
+        hWnd: hwnd as HWND,
+        uID: id,
+        uFlags: NIF_ICON,
+        hIcon: icon,
+        // SAFETY: a plain C struct; all zero is its empty value.
+        ..unsafe { zeroed() }
+    };
+    // SAFETY: nid lives for the call; the shell only reads it (the icon stays alive in `picture`).
+    (unsafe { Shell_NotifyIconW(NIM_MODIFY, &nid) } != 0).then_some(picture)
+}
+
 /// Whether the window in front (the foreground window, which takes the keyboard) is another
 /// program's: a click outside MDM's windows (the desktop, the taskbar, another program) put it
 /// there. False while one of ours is in front, and while none is (Windows passing the foreground
@@ -2742,8 +3058,8 @@ mod menus_dark_tests {
     }
 }
 
-/// A drag out of Download complete is under way ([`drag_file_out`]): one at a time, the mouse
-/// holds only one.
+/// A drag out (of Download complete or the list) is under way ([`drag_files_out`]): one at a
+/// time, the mouse holds only one.
 static DRAGGING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 /// When the last drag out ended.
 static DRAG_ENDED: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
@@ -2761,20 +3077,22 @@ pub fn dragging_out() -> bool {
             .is_some_and(|t| t.elapsed() < std::time::Duration::from_millis(500))
 }
 
-/// Start dragging `file` out of our window (to Explorer, a mail, a chat…), like IDM's Download
-/// complete grip. The drag is the shell's own for the file, as Explorer's is (its preview, its
-/// formats). The window is the one holding the mouse (the button is down on its grip: winit
-/// captured the mouse for it), so it is the right one when several show the same title; else
-/// our window titled `title`, given in the interface language, as it shows.
+/// Start dragging `files` out of our window (to Explorer, a mail, a chat, a player…): from
+/// Download complete's grip, as IDM's, or from the download list's rows (#1210). The drag is the
+/// shell's own for the files, as Explorer's is (its preview, its formats). The window is the one
+/// holding the mouse (the button is down on it: winit captured the mouse for it), so it is the
+/// right one when several show the same title; else our window titled `title`, given in the
+/// interface language, as it shows. The files are looked for on the drag's thread (#743): those
+/// that aren't there are left out, and with none there is no drag.
 ///
 /// The drop target decides what the drag does (#869): MDM offers a move, a copy and a link, so
-/// Explorer applies its own rules, as for a file dragged in Explorer: moved on the same drive or
+/// Explorer applies its own rules, as for files dragged in Explorer: moved on the same drive or
 /// with Shift, copied to another drive or with Ctrl, a shortcut with Alt. A move is followed:
-/// `followed` is told where the file went (from the shell's change notifications), or that it
-/// went where MDM can't learn; a copy, a link or a cancelled drag tell nothing. It may come long
-/// after the drop (a move to another drive copies first), from the drag's thread. MDM never
-/// deletes the file itself, even for a target that asks the source to (a move it doesn't
-/// optimize): the file stays, so nothing is lost.
+/// `followed` is told, for each file moved (as it was given), where it went (from the shell's
+/// change notifications), or that it went where MDM can't learn; a copy, a link or a cancelled
+/// drag tell nothing. It may come long after the drop (a move to another drive copies first),
+/// from the drag's thread. MDM never deletes a file itself, even for a target that asks the
+/// source to (a move it doesn't optimize): the file stays, so nothing is lost.
 ///
 /// The drag runs on a thread of its own (#561): OLE's drag loop lasts as long as the button is
 /// held, and each step calls the program under the pointer (its drop target, in its own process),
@@ -2782,10 +3100,10 @@ pub fn dragging_out() -> bool {
 /// answers the drop, froze every window until it answered. That thread shares the window
 /// thread's input ([`with_shared_input`]): OLE reads the held button and takes the mouse from
 /// there, as it did from the window thread.
-pub fn drag_file_out(
+pub fn drag_files_out(
     title: &str,
-    file: &std::path::Path,
-    followed: impl FnOnce(crate::dialogs::DraggedOut) + Send + 'static,
+    files: Vec<std::path::PathBuf>,
+    followed: impl FnMut(std::path::PathBuf, crate::dialogs::DraggedOut) + Send + 'static,
 ) -> Result<(), String> {
     use std::sync::atomic::Ordering;
     let hwnd = own_capture()
@@ -2794,16 +3112,16 @@ pub fn drag_file_out(
     if DRAGGING.swap(true, Ordering::AcqRel) {
         return Ok(());
     }
-    let file = file.to_path_buf();
     let started = with_shared_input("drag out", move |shared| {
         if !shared {
             tracing::warn!("drag out: the window's input isn't shared");
         }
         // Looked for here, beside the window (#743): a drive slow to answer doesn't hold it.
-        let result = if file.exists() {
-            dragout::drag(hwnd as HWND, &file)
-        } else {
+        let there: Vec<_> = files.into_iter().filter(|f| f.exists()).collect();
+        let result = if there.is_empty() {
             Ok(None)
+        } else {
+            dragout::drag(hwnd as HWND, &there)
         };
         if let Ok(mut t) = DRAG_ENDED.lock() {
             *t = Some(std::time::Instant::now());
@@ -2817,10 +3135,10 @@ pub fn drag_file_out(
             tracing::warn!("drag out: {e}");
             None
         });
-        // Once the window's input is given back: what became of the file.
+        // Once the window's input is given back: what became of the files.
         move || {
-            if let Some(out) = dropped.and_then(dragout::Dropped::follow) {
-                followed(out);
+            if let Some(dropped) = dropped {
+                dropped.follow(followed);
             }
         }
     });
@@ -2828,6 +3146,12 @@ pub fn drag_file_out(
         DRAGGING.store(false, Ordering::Release);
     }
     started
+}
+
+/// A drag out of ours is over our own windows' drop target now: it refuses it (#1210), so a
+/// download's file dropped back on MDM isn't taken for a list of links or a torrent to add.
+fn own_drag_over_us() -> bool {
+    DRAGGING.load(std::sync::atomic::Ordering::Acquire)
 }
 
 /// Tell `hwnd` the left button is up, at the pointer, as Windows would have done had OLE's
@@ -2947,10 +3271,10 @@ mod drag_thread_tests {
     }
 }
 
-/// Dragging a downloaded file out of Download complete (#869): the shell's own data object for
-/// it (Explorer's drag image, its formats), offered for a move, a copy or a link so the drop
-/// target applies Explorer's rules, and a move followed through the shell's change
-/// notifications, so the download can point where its file went.
+/// Dragging downloaded files out of Download complete (#869) or the list (#1210): the shell's own
+/// data object for them (Explorer's drag image, its formats), offered for a move, a copy or a
+/// link so the drop target applies Explorer's rules, and a move followed through the shell's
+/// change notifications, so each download can point where its file went.
 mod dragout {
     use std::cell::RefCell;
     use std::ffi::c_void;
@@ -3043,6 +3367,7 @@ mod dragout {
         fn ILClone(pidl: *const c_void) -> *mut c_void;
         fn ILRemoveLastID(pidl: *mut c_void) -> i32;
         fn ILFindLastID(pidl: *const c_void) -> *mut c_void;
+        fn ILIsParent(parent: *const c_void, child: *const c_void, immediate: i32) -> i32;
         fn SHCreateDataObject(
             folder: *const c_void,
             count: u32,
@@ -3344,39 +3669,65 @@ mod dragout {
         }
     }
 
-    /// The shell's data object for one file: what Explorer itself drags (the file, its item, its
-    /// drag image), and where a drop target says what it did.
+    /// The shell's data object for files: what Explorer itself drags (the files, their items,
+    /// the drag image), and where a drop target says what it did.
     struct DataObject(*mut c_void);
 
     impl DataObject {
-        fn of(path: &Path) -> Option<DataObject> {
-            let w = wide(path.as_os_str());
-            // SAFETY: the item lists made from a NUL-terminated path (its folder's, and the
-            // file's within it, as Explorer's own drags give them) are freed once the data object
-            // has its own copies; `out` receives an IDataObject we release in Drop.
+        fn of(paths: &[PathBuf]) -> Option<DataObject> {
+            let free = |pidls: Vec<*mut c_void>| {
+                // SAFETY: item lists made by ILCreateFromPathW below, freed once.
+                pidls.into_iter().for_each(|p| unsafe { ILFree(p) })
+            };
+            // SAFETY: the item lists made from NUL-terminated paths (and their folder's) are
+            // freed once the data object has its own copies; `out` receives an IDataObject we
+            // release in Drop.
             unsafe {
-                let pidl = ILCreateFromPathW(w.as_ptr());
-                if pidl.is_null() {
-                    return None;
+                let mut pidls = Vec::with_capacity(paths.len());
+                for p in paths {
+                    let w = wide(p.as_os_str());
+                    let pidl = ILCreateFromPathW(w.as_ptr());
+                    if pidl.is_null() {
+                        free(pidls);
+                        return None;
+                    }
+                    pidls.push(pidl);
                 }
-                let folder = ILClone(pidl);
+                let folder = ILClone(*pidls.first()?);
                 if folder.is_null() {
-                    ILFree(pidl);
+                    free(pidls);
                     return None;
                 }
                 ILRemoveLastID(folder);
-                let item = ILFindLastID(pidl) as *const c_void;
+                // Files of one folder, as Explorer's own drags give them: the folder, and each
+                // file within it. Files of several folders (the list shows every category's):
+                // the desktop, the namespace's root, and each file's whole path from there.
+                let one_folder = pidls.iter().all(|p| ILIsParent(folder, *p, 1) != 0);
+                let (root, items): (*mut c_void, Vec<*const c_void>) = if one_folder {
+                    let items = pidls.iter().map(|p| ILFindLastID(*p) as *const c_void);
+                    (folder, items.collect())
+                } else {
+                    ILFree(folder);
+                    let mut desktop = std::ptr::null_mut();
+                    // CSIDL_DESKTOP (0).
+                    if SHGetSpecialFolderLocation(std::ptr::null_mut(), 0, &mut desktop) < 0 {
+                        free(pidls);
+                        return None;
+                    }
+                    let items = pidls.iter().map(|p| *p as *const c_void);
+                    (desktop, items.collect())
+                };
                 let mut out = std::ptr::null_mut();
                 let hr = SHCreateDataObject(
-                    folder,
-                    1,
-                    &item,
+                    root,
+                    items.len() as u32,
+                    items.as_ptr(),
                     std::ptr::null_mut(),
                     &IID_IDATAOBJECT,
                     &mut out,
                 );
-                ILFree(folder);
-                ILFree(pidl);
+                ILFree(root);
+                free(pidls);
                 (hr >= 0 && !out.is_null()).then_some(DataObject(out))
             }
         }
@@ -3434,19 +3785,24 @@ mod dragout {
         }
     }
 
-    /// A file dropped somewhere: what it took to learn what became of it.
+    /// Files dropped somewhere: what it took to learn what became of them.
     pub(super) struct Dropped {
-        file: PathBuf,
+        /// Each file as it was given, and as the shell names it.
+        files: Vec<(PathBuf, PathBuf)>,
         data: DataObject,
         watch: Option<Watch>,
         /// What the drag returned.
         effect: u32,
     }
 
-    /// Drag `file` out of `hwnd` (on the drag's thread, OLE set up), offering a move, a copy and
-    /// a link. Some when it was dropped.
-    pub(super) fn drag(hwnd: HWND, file: &Path) -> Result<Option<Dropped>, String> {
-        let file = plain(std::fs::canonicalize(file).map_err(|e| e.to_string())?);
+    /// Drag `files` out of `hwnd` (on the drag's thread, OLE set up), offering a move, a copy and
+    /// a link. Some when they were dropped.
+    pub(super) fn drag(hwnd: HWND, files: &[PathBuf]) -> Result<Option<Dropped>, String> {
+        let files = files
+            .iter()
+            .map(|f| Ok((f.clone(), plain(std::fs::canonicalize(f)?))))
+            .collect::<Result<Vec<_>, std::io::Error>>()
+            .map_err(|e| e.to_string())?;
         // Watched from before the drop: a move on the same drive is done before the drag ends.
         // MDM_TEST_NO_SHELL_WATCH=1 (debug builds, for checks): not watched, as when the shell
         // won't say, so a move is one MDM can't follow.
@@ -3456,7 +3812,8 @@ mod dragout {
         if watch.is_none() {
             tracing::warn!("drag out: the shell won't say where files go: a move isn't followed");
         }
-        let data = DataObject::of(&file).ok_or("the shell has no data object for the file")?;
+        let named: Vec<PathBuf> = files.iter().map(|(_, f)| f.clone()).collect();
+        let data = DataObject::of(&named).ok_or("the shell has no data object for the files")?;
         let mut effect = 0u32;
         // SAFETY: our window and data object; the shell makes the drop source and drag image,
         // and runs OLE's drag loop on this thread until the drop.
@@ -3476,12 +3833,13 @@ mod dragout {
             return Ok(None);
         }
         tracing::info!(
-            "drag out: dropped, effect {effect}, performed {:?}, logical {:?}",
+            "drag out: {} dropped, effect {effect}, performed {:?}, logical {:?}",
+            files.len(),
             data.effect(PERFORMED),
             data.effect(LOGICAL_PERFORMED)
         );
         Ok(Some(Dropped {
-            file,
+            files,
             data,
             watch,
             effect,
@@ -3489,13 +3847,18 @@ mod dragout {
     }
 
     impl Dropped {
-        /// What became of the file: moved (where to, or that MDM can't learn where), or None
-        /// when it stayed (a copy, a link, a drop that did nothing). Waits as long as a move may
-        /// take, on the drag's thread.
-        pub(super) fn follow(mut self) -> Option<DraggedOut> {
+        /// What became of each file: `told` the ones moved (as they were given: where to, or
+        /// that MDM can't learn where), nothing of those that stayed (a copy, a link, a drop
+        /// that did nothing). Waits as long as a move may take, on the drag's thread.
+        pub(super) fn follow(self, mut told: impl FnMut(PathBuf, DraggedOut)) {
             let since = Instant::now();
-            let mut gone: Option<Instant> = None;
-            loop {
+            // The files not settled yet, and since when each is gone from its place.
+            let mut open: Vec<(PathBuf, PathBuf, Option<Instant>)> = self
+                .files
+                .iter()
+                .map(|(given, file)| (given.clone(), file.clone(), None))
+                .collect();
+            while !open.is_empty() {
                 match &self.watch {
                     Some(w) => w.pump(Duration::from_millis(250)),
                     None => std::thread::sleep(Duration::from_millis(250)),
@@ -3506,34 +3869,38 @@ mod dragout {
                     self.data.effect(LOGICAL_PERFORMED),
                 ];
                 let moving = said.iter().flatten().any(|e| e & DROPEFFECT_MOVE != 0);
-                // A copy or a link, said so: the file stays.
+                // A copy or a link, said so: the files stay.
                 let kept = !moving
                     && said
                         .iter()
                         .flatten()
                         .any(|e| e & (DROPEFFECT_COPY | DROPEFFECT_LINK) != 0);
                 if kept {
-                    return None;
+                    return;
                 }
                 let seen = SEEN.with(|v| v.borrow().clone());
-                if let Some(to) = followed(&self.file, &seen) {
-                    tracing::info!("drag out: the file was moved");
-                    self.data.release();
-                    return Some(if in_recycle_bin(&to) {
-                        DraggedOut::MovedAway
+                let waited = since.elapsed() > if moving { MOVING_FOR } else { DROPPED_FOR };
+                open.retain_mut(|(given, file, gone)| {
+                    if let Some(to) = followed(file, &seen) {
+                        tracing::info!("drag out: a file was moved");
+                        let out = if in_recycle_bin(&to) {
+                            DraggedOut::MovedAway
+                        } else {
+                            DraggedOut::Moved(to)
+                        };
+                        told(given.clone(), out);
+                        false
+                    } else if std::fs::symlink_metadata(&*file).is_ok() {
+                        *gone = None;
+                        !waited
+                    } else if gone.get_or_insert_with(Instant::now).elapsed() > GONE_FOR {
+                        tracing::info!("drag out: a file was moved where the shell didn't say");
+                        told(given.clone(), DraggedOut::MovedAway);
+                        false
                     } else {
-                        DraggedOut::Moved(to)
-                    });
-                }
-                if std::fs::symlink_metadata(&self.file).is_ok() {
-                    gone = None;
-                    if since.elapsed() > if moving { MOVING_FOR } else { DROPPED_FOR } {
-                        return None;
+                        true
                     }
-                } else if gone.get_or_insert_with(Instant::now).elapsed() > GONE_FOR {
-                    tracing::info!("drag out: the file was moved where the shell didn't say");
-                    return Some(DraggedOut::MovedAway);
-                }
+                });
             }
         }
     }
@@ -3898,19 +4265,126 @@ struct TaskbarVtbl {
     set_progress_state: unsafe extern "system" fn(*mut c_void, HWND, u32) -> i32,
 }
 
-/// The taskbar object (created on first use on the UI thread) and the last value shown.
+/// The taskbar object, created on first use on the UI thread.
 struct Taskbar {
     obj: *mut *const TaskbarVtbl,
-    shown: Option<Option<u32>>,
 }
 
 thread_local! {
     static TASKBAR: std::cell::RefCell<Option<Taskbar>> = const { std::cell::RefCell::new(None) };
+    static MAIN_TASKBAR: std::cell::RefCell<TaskbarProgress> = const { std::cell::RefCell::new(TaskbarProgress::new()) };
+    // No borrow survives a shell call: its nested message loop can recreate a button.
+    static TASKBAR_BUTTONS: std::cell::RefCell<(u64, std::collections::HashMap<isize, u64>)> = Default::default();
 }
 
-/// The window's taskbar button shows `progress` (0..=1, the green bar), or nothing (None).
-/// Only changes (in 1/1000 steps) reach the shell.
+fn taskbar_button_created_message() -> u32 {
+    use windows_sys::Win32::UI::WindowsAndMessaging::RegisterWindowMessageW;
+    static ID: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    *ID.get_or_init(|| {
+        let name: Vec<u16> = "TaskbarButtonCreated\0".encode_utf16().collect();
+        // SAFETY: a NUL-terminated string read during the call.
+        unsafe { RegisterWindowMessageW(name.as_ptr()) }
+    })
+}
+
+/// One window's taskbar progress. The cache belongs to the window, not the COM object:
+/// two downloads (or the main window) can have the same fraction and still need an update.
+/// Dropping it clears the indicator before the viewport goes away.
+#[derive(Default)]
+pub struct TaskbarProgress {
+    window: isize,
+    shown: Option<Option<u32>>,
+    button_generation: u64,
+}
+
+impl TaskbarProgress {
+    pub const fn new() -> Self {
+        Self {
+            window: 0,
+            shown: None,
+            button_generation: 0,
+        }
+    }
+
+    pub fn window(&self) -> Option<isize> {
+        (self.window != 0).then_some(self.window)
+    }
+
+    /// A vanished viewport has nothing to clear. Its old HWND may already belong to another
+    /// window of this process, so do not send to it while forgetting the binding.
+    pub fn window_gone(&mut self) {
+        self.window = 0;
+        self.shown = None;
+        self.button_generation = 0;
+    }
+
+    pub fn set_window(&mut self, window: isize) {
+        self.set_window_with(window, write_taskbar_progress);
+    }
+
+    fn set_window_with(&mut self, window: isize, mut send: impl FnMut(isize, Option<u32>) -> bool) {
+        if self.window != window {
+            self.update_with(None, &mut send);
+            self.window = window;
+            self.shown = None;
+            self.button_generation = 0;
+        }
+    }
+
+    /// Only changed values or recreated buttons reach the shell; failed calls are retried.
+    pub fn update(&mut self, progress: Option<f64>) {
+        self.update_with(progress, write_taskbar_progress);
+    }
+
+    fn update_with(
+        &mut self,
+        progress: Option<f64>,
+        mut send: impl FnMut(isize, Option<u32>) -> bool,
+    ) {
+        // The main cache can be dropped after the notification storage during thread exit.
+        let generation = TASKBAR_BUTTONS
+            .try_with(|buttons| buttons.borrow().1.get(&self.window).copied().unwrap_or(0))
+            .unwrap_or(0);
+        if self.button_generation != generation {
+            self.shown = None;
+            // Take the generation before send: a notification during COM must survive it.
+            self.button_generation = generation;
+        }
+        let value = progress.map(|p| (p.clamp(0.0, 1.0) * 1000.0).round() as u32);
+        if self.window != 0 && self.shown != Some(value) && send(self.window, value) {
+            self.shown = Some(value);
+        }
+    }
+}
+
+impl Drop for TaskbarProgress {
+    fn drop(&mut self) {
+        self.update(None);
+    }
+}
+
+/// Aggregate progress on the main window; per-download windows own their own cache and handle.
 pub fn taskbar_progress(title: &str, progress: Option<f64>) {
+    if let Some(hwnd) = find_own_window(title) {
+        MAIN_TASKBAR.with_borrow_mut(|bar| {
+            bar.set_window(hwnd as isize);
+            bar.update(progress);
+        });
+    }
+}
+
+fn write_taskbar_progress(window: isize, value: Option<u32>) -> bool {
+    use windows_sys::Win32::UI::WindowsAndMessaging::IsWindow;
+    let hwnd = window as HWND;
+    let mut pid = 0;
+    // SAFETY: queries accepting any handle; pid is a writable local. A closed or foreign
+    // window has no indicator of ours to clear, even if Windows recycled the bound handle.
+    if unsafe { IsWindow(hwnd) } == 0
+        || unsafe { GetWindowThreadProcessId(hwnd, &mut pid) } == 0
+        || pid != unsafe { GetCurrentProcessId() }
+    {
+        return true;
+    }
     use windows_sys::Win32::System::Com::{
         CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
     };
@@ -3919,56 +4393,546 @@ pub fn taskbar_progress(title: &str, progress: Option<f64>) {
     const IID_ITASKBARLIST3: GUID = GUID::from_u128(0xea1afb91_9e28_4b86_90e9_9e9f8a5eefaf);
     const TBPF_NOPROGRESS: u32 = 0;
     const TBPF_NORMAL: u32 = 2;
-    let value = progress.map(|p| (p.clamp(0.0, 1.0) * 1000.0).round() as u32);
-    TASKBAR.with(|cell| {
-        let mut slot = cell.borrow_mut();
-        if slot.is_none() {
-            let mut obj: *mut c_void = std::ptr::null_mut();
-            // SAFETY: COM on the UI thread (a second CoInitializeEx is harmless); the out
-            // pointer receives an ITaskbarList3 on success, checked before use.
-            unsafe {
-                CoInitializeEx(std::ptr::null(), COINIT_APARTMENTTHREADED as u32);
-                let hr = CoCreateInstance(
-                    &CLSID_TASKBARLIST,
-                    std::ptr::null_mut(),
-                    CLSCTX_INPROC_SERVER,
-                    &IID_ITASKBARLIST3,
-                    &mut obj,
-                );
-                if hr < 0 || obj.is_null() {
-                    return;
+    TASKBAR
+        .try_with(|cell| {
+            let mut slot = cell.borrow_mut();
+            if slot.is_none() {
+                let mut obj: *mut c_void = std::ptr::null_mut();
+                // SAFETY: COM on the UI thread (a second CoInitializeEx is harmless); the out
+                // pointer receives an ITaskbarList3 on success, checked before use.
+                unsafe {
+                    CoInitializeEx(std::ptr::null(), COINIT_APARTMENTTHREADED as u32);
+                    let hr = CoCreateInstance(
+                        &CLSID_TASKBARLIST,
+                        std::ptr::null_mut(),
+                        CLSCTX_INPROC_SERVER,
+                        &IID_ITASKBARLIST3,
+                        &mut obj,
+                    );
+                    if hr < 0 || obj.is_null() {
+                        return false;
+                    }
+                    let tb = obj as *mut *const TaskbarVtbl;
+                    ((**tb).hr_init)(obj);
+                    *slot = Some(Taskbar { obj: tb });
                 }
-                let tb = obj as *mut *const TaskbarVtbl;
-                ((**tb).hr_init)(obj);
-                *slot = Some(Taskbar {
-                    obj: tb,
-                    shown: None,
+            }
+            let Some(tb) = slot.as_mut() else {
+                return false;
+            };
+            // SAFETY: `obj` is a live ITaskbarList3 (never released: it lives as long as the UI
+            // thread); the calls match the vtable above.
+            unsafe {
+                let this = tb.obj as *mut c_void;
+                match value {
+                    Some(v) => {
+                        ((**tb.obj).set_progress_state)(this, hwnd, TBPF_NORMAL) >= 0
+                            && ((**tb.obj).set_progress_value)(this, hwnd, u64::from(v), 1000) >= 0
+                    }
+                    None => ((**tb.obj).set_progress_state)(this, hwnd, TBPF_NOPROGRESS) >= 0,
+                }
+            }
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod taskbar_tests {
+    use super::TaskbarProgress;
+
+    #[test]
+    fn taskbar_cache_can_drop_after_notification_storage() {
+        std::thread::spawn(|| {
+            // The main cache is initialized first, so it is destroyed after TASKBAR_BUTTONS.
+            super::MAIN_TASKBAR.with_borrow_mut(|bar| {
+                bar.set_window_with(1, |_, _| true);
+                bar.update_with(Some(0.5), |_, _| true);
+            });
+        })
+        .join()
+        .unwrap();
+    }
+
+    #[test]
+    fn taskbar_button_creation_resends_stalled_progress_on_the_next_tick() {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, DestroyWindow, SW_HIDE, SW_SHOWNOACTIVATE, SendMessageW, ShowWindow,
+            WS_POPUP,
+        };
+        let class: Vec<u16> = "STATIC\0".encode_utf16().collect();
+        let message = super::taskbar_button_created_message();
+        assert_ne!(message, 0);
+        let mut bars = [TaskbarProgress::new(), TaskbarProgress::new()];
+        let mut windows = Vec::new();
+        let mut calls = Vec::new();
+        // SAFETY: hidden/off-screen windows of this thread, destroyed below. Notifications
+        // use the shell's registered message, without restarting the user's Explorer.
+        unsafe {
+            for bar in &mut bars {
+                let h = CreateWindowExW(
+                    0,
+                    class.as_ptr(),
+                    class.as_ptr(),
+                    WS_POPUP,
+                    -20000,
+                    -20000,
+                    100,
+                    100,
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null(),
+                );
+                assert!(!h.is_null());
+                super::caption_less(h, super::Drawn::Fixed);
+                SendMessageW(h, message, 0, 0); // A notification before binding is safe too.
+                bar.set_window_with(h as isize, |_, _| true);
+                bar.update_with(Some(0.25), |h, v| {
+                    calls.push((h, v));
+                    true
+                });
+                windows.push(h);
+            }
+            for _ in 0..100 {
+                for bar in &mut bars {
+                    bar.update_with(Some(0.25), |_, _| panic!("unchanged progress"));
+                }
+            }
+            SendMessageW(windows[0], message, 0, 0); // Delayed initial button creation.
+            bars[1].update_with(Some(0.25), |_, _| panic!("another window's cache"));
+            bars[0].update_with(Some(0.25), |h, v| {
+                calls.push((h, v));
+                true
+            });
+            assert_eq!(calls.len(), 3);
+
+            for &h in &windows {
+                SendMessageW(h, message, 0, 0); // Explorer recreates both taskbar buttons.
+            }
+            for bar in &mut bars {
+                bar.update_with(Some(0.25), |h, v| {
+                    calls.push((h, v));
+                    true
                 });
             }
-        }
-        let Some(tb) = slot.as_mut() else { return };
-        if tb.shown == Some(value) {
-            return;
-        }
-        let Some(hwnd) = find_own_window(title) else {
-            return;
-        };
-        // SAFETY: `obj` is a live ITaskbarList3 (never released: it lives as long as the UI
-        // thread); the calls match the vtable above.
-        unsafe {
-            let this = tb.obj as *mut c_void;
-            match value {
-                Some(v) => {
-                    ((**tb.obj).set_progress_state)(this, hwnd, TBPF_NORMAL);
-                    ((**tb.obj).set_progress_value)(this, hwnd, u64::from(v), 1000);
-                }
-                None => {
-                    ((**tb.obj).set_progress_state)(this, hwnd, TBPF_NOPROGRESS);
-                }
+            assert_eq!(calls.len(), 5);
+
+            ShowWindow(windows[0], SW_SHOWNOACTIVATE);
+            ShowWindow(windows[0], SW_HIDE);
+            ShowWindow(windows[0], SW_SHOWNOACTIVATE);
+            SendMessageW(windows[0], message, 0, 0); // Back from the tray, same value.
+            bars[0].update_with(Some(0.25), |h, v| {
+                calls.push((h, v));
+                // COM's nested message loop can recreate the button during this send.
+                SendMessageW(windows[0], message, 0, 0);
+                true
+            });
+            bars[0].update_with(Some(0.25), |h, v| {
+                calls.push((h, v));
+                true
+            });
+            assert_eq!(
+                calls.len(),
+                7,
+                "a notification during send must not be lost"
+            );
+            bars[0].update_with(Some(0.25), |_, _| panic!("already resent"));
+            assert!(calls.iter().all(|(_, v)| *v == Some(250)));
+            bars[0].update_with(None, |_, v| {
+                assert_eq!(v, None);
+                true
+            });
+            SendMessageW(windows[0], message, 0, 0);
+            bars[0].update_with(None, |_, v| {
+                assert_eq!(v, None);
+                true
+            });
+
+            for h in windows {
+                DestroyWindow(h);
+                super::TASKBAR_BUTTONS.with_borrow(|(_, windows)| {
+                    assert!(
+                        !windows.contains_key(&(h as isize)),
+                        "destroyed HWND forgotten"
+                    );
+                });
+                assert_eq!(
+                    super::thin_frame_on(h as isize, [100.0; 2], 1.0, None),
+                    None
+                );
+                assert!(super::write_taskbar_progress(h as isize, Some(250)));
             }
         }
-        tb.shown = Some(value);
-    });
+    }
+
+    #[test]
+    #[ignore = "child process for foreign_taskbar_windows_are_never_written_or_framed"]
+    fn foreign_taskbar_window_host() {
+        use std::io::{Write, stdin, stdout};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, DestroyWindow, WS_POPUP,
+        };
+        let class: Vec<u16> = "STATIC\0".encode_utf16().collect();
+        // SAFETY: this subprocess's hidden window; only its HWND crosses the process boundary.
+        unsafe {
+            let h = CreateWindowExW(
+                0,
+                class.as_ptr(),
+                class.as_ptr(),
+                WS_POPUP,
+                -20000,
+                -20000,
+                100,
+                100,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null(),
+            );
+            assert!(!h.is_null());
+            println!("TASKBAR_TEST_HWND={}", h as isize);
+            stdout().flush().unwrap();
+            stdin().read_line(&mut String::new()).unwrap();
+            DestroyWindow(h);
+        }
+    }
+
+    #[test]
+    fn foreign_taskbar_windows_are_never_written_or_framed() {
+        use std::io::{BufRead, BufReader};
+        use std::process::{Command, Stdio};
+        struct Host(std::process::Child);
+        impl Drop for Host {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let mut host = Host(
+            Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "win32::taskbar_tests::foreign_taskbar_window_host",
+                    "--ignored",
+                    "--nocapture",
+                ])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .spawn()
+                .unwrap(),
+        );
+        let window: isize = BufReader::new(host.0.stdout.take().unwrap())
+            .lines()
+            .map(|l| l.unwrap())
+            .find_map(|l| {
+                l.strip_prefix("TASKBAR_TEST_HWND=")
+                    .map(|h| h.parse().unwrap())
+            })
+            .expect("child window handle");
+        let mut pid = 0;
+        // SAFETY: plain queries of the subprocess's live HWND.
+        unsafe {
+            assert_ne!(
+                windows_sys::Win32::UI::WindowsAndMessaging::IsWindow(window as _),
+                0
+            );
+            super::GetWindowThreadProcessId(window as _, &mut pid);
+        }
+        assert_eq!(pid, host.0.id());
+        assert_ne!(pid, std::process::id());
+        assert_eq!(
+            super::thin_frame_on(window, [548.0, 472.0], 1.0, None),
+            None
+        );
+        // The stale binding must be rejected before even borrowing COM, for updates and clears.
+        super::TASKBAR.with_borrow_mut(|_| {
+            assert!(super::write_taskbar_progress(window, Some(250)));
+            assert!(super::write_taskbar_progress(window, None));
+        });
+    }
+
+    #[test]
+    fn taskbar_binding_keeps_shell_titles_without_isolates() {
+        use crate::{
+            model::{Item, Status},
+            progress::{Action, Progress},
+        };
+        use egui::{Pos2, ViewportId, vec2};
+        use std::{cell::RefCell, rc::Rc};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, DestroyWindow, SetWindowTextW, WS_POPUP,
+        };
+
+        let windows = Rc::new(RefCell::new(std::collections::HashMap::new()));
+        let titles = Rc::new(RefCell::new(Vec::new()));
+        let owned = windows.clone();
+        let given = titles.clone();
+        egui::Context::set_immediate_viewport_renderer(move |ctx, viewport| {
+            let title = viewport.builder.title.as_deref().unwrap();
+            given.borrow_mut().push(title.to_owned());
+            let wide: Vec<u16> = title.encode_utf16().chain(Some(0)).collect();
+            let hwnd = *owned
+                .borrow_mut()
+                .entry(viewport.ids.this)
+                .or_insert_with(|| {
+                    let class: Vec<u16> = "STATIC\0".encode_utf16().collect();
+                    // SAFETY: a hidden test window on this thread, using a system class.
+                    unsafe {
+                        CreateWindowExW(
+                            0,
+                            class.as_ptr(),
+                            wide.as_ptr(),
+                            WS_POPUP,
+                            -20000,
+                            -20000,
+                            548,
+                            472,
+                            std::ptr::null_mut(),
+                            std::ptr::null_mut(),
+                            std::ptr::null_mut(),
+                            std::ptr::null(),
+                        )
+                    }
+                });
+            assert!(!hwnd.is_null());
+            // SAFETY: this test's own window and a terminated title.
+            unsafe { SetWindowTextW(hwnd, wide.as_ptr()) };
+            let input = egui::RawInput {
+                viewport_id: viewport.ids.this,
+                viewports: std::iter::once((viewport.ids.this, egui::ViewportInfo::default()))
+                    .collect(),
+                screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, vec2(548.0, 472.0))),
+                ..Default::default()
+            };
+            let mut callback = viewport.viewport_ui_cb;
+            let mut out = ctx.run_ui(input, |ui| callback(ui));
+            out.textures_delta.clear();
+        });
+        let ctx = egui::Context::default();
+        ctx.set_embed_viewports(false);
+        let mut progress = Vec::new();
+        for (n, name) in ["same.bin", "same.bin", "שלום (1).txt"]
+            .into_iter()
+            .enumerate()
+        {
+            let id = u64::from(std::process::id()) * 1000 + n as u64;
+            let mut item = Item::new(
+                id,
+                "https://example.com/a".parse().unwrap(),
+                name.into(),
+                crate::model::Category::General,
+            );
+            item.size = Some(100);
+            item.downloaded = 25;
+            item.status = Status::Downloading;
+            progress.push((Progress::new(id, false), item));
+        }
+        for opening in 0..3 {
+            for pass in 0..2 {
+                titles.borrow_mut().clear();
+                // show() binds and draws only. Shell writes belong to tick()'s watchdog step.
+                let mut out = super::TASKBAR.with_borrow_mut(|_| {
+                    ctx.run_ui(egui::RawInput::default(), |ui| {
+                        for (window, item) in &mut progress {
+                            assert!(matches!(window.show(ui.ctx(), item, None), Action::None));
+                        }
+                    })
+                });
+                out.textures_delta.clear();
+                assert_eq!(titles.borrow().len(), progress.len());
+                for ((_, item), title) in progress.iter().zip(titles.borrow().iter()) {
+                    let vid = ViewportId::from_hash_of(("progress", item.id));
+                    let expected = crate::i18n::os_text(&format!(
+                        "25% {}",
+                        crate::i18n::isolate(&item.file_name)
+                    ));
+                    if pass == 0 {
+                        assert_eq!(*title, format!("mdm-progress-{}", item.id));
+                        assert!(
+                            out.viewport_output[&vid].commands.iter().any(|cmd| {
+                                matches!(cmd, egui::ViewportCommand::Title(t) if t == &expected)
+                            }),
+                            "binding must set the shell-safe title before the window is revealed"
+                        );
+                    } else {
+                        assert_eq!(*title, expected);
+                    }
+                    assert!(
+                        !expected
+                            .chars()
+                            .any(|c| ('\u{2066}'..='\u{2069}').contains(&c))
+                    );
+                }
+            }
+            if opening == 1 {
+                // Completion can replace the controller too; exercise both lifecycle paths.
+                for (window, item) in &mut progress {
+                    *window = Progress::new(item.id, false);
+                }
+            }
+            for (_, hwnd) in windows.borrow_mut().drain() {
+                // SAFETY: a hidden window created by this test on this thread.
+                unsafe { DestroyWindow(hwnd) };
+            }
+            // Keep the controller and egui's frame cache through a missing pass, without a
+            // close action: keep_theme and the HWND binding must both start fresh on reopening.
+            let mut out = ctx.run_ui(egui::RawInput::default(), |_| {});
+            out.textures_delta.clear();
+        }
+    }
+
+    #[test]
+    fn taskbar_windows_with_equal_titles_keep_their_own_frames() {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowRect, RegisterClassW,
+            SetWindowTextW, WNDCLASSW, WS_EX_APPWINDOW, WS_POPUP,
+        };
+        let class: Vec<u16> = "mdm-taskbar-binding-test\0".encode_utf16().collect();
+        let titles: Vec<Vec<u16>> = (0..2)
+            .map(|id| format!("mdm-progress-test-{id}\0").encode_utf16().collect())
+            .collect();
+        let same: Vec<u16> = "25% same.bin\0".encode_utf16().collect();
+        // SAFETY: hidden test windows on this thread, with the system's window procedure.
+        // All strings are terminated; no input or messages go to any other process.
+        unsafe {
+            let mut wc: WNDCLASSW = std::mem::zeroed();
+            wc.lpfnWndProc = Some(DefWindowProcW);
+            wc.lpszClassName = class.as_ptr();
+            RegisterClassW(&wc);
+            let windows: Vec<_> = titles
+                .iter()
+                .map(|title| {
+                    CreateWindowExW(
+                        WS_EX_APPWINDOW,
+                        class.as_ptr(),
+                        title.as_ptr(),
+                        WS_POPUP,
+                        -20000,
+                        -20000,
+                        548,
+                        472,
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        std::ptr::null(),
+                    )
+                })
+                .collect();
+            assert!(windows.iter().all(|h| !h.is_null()));
+            for (i, h) in windows.iter().enumerate() {
+                let title = format!("mdm-progress-test-{i}");
+                assert_eq!(super::find_own_window(&title), Some(*h));
+                SetWindowTextW(*h, same.as_ptr());
+            }
+            for (i, h) in windows.iter().enumerate() {
+                assert_eq!(
+                    super::thin_frame_on(*h as isize, [548.0, 472.0], 1.0 + i as f32 * 0.25, None),
+                    Some(*h as isize)
+                );
+            }
+            let mut first = std::mem::zeroed();
+            let mut second = std::mem::zeroed();
+            GetWindowRect(windows[0], &mut first);
+            GetWindowRect(windows[1], &mut second);
+            assert!(
+                second.right - second.left > first.right - first.left,
+                "scaling one of two equal titles must resize that window alone"
+            );
+            for h in windows {
+                DestroyWindow(h);
+            }
+        }
+    }
+
+    #[test]
+    fn equal_fractions_reach_each_window_and_clear_independently() {
+        let mut main = TaskbarProgress::new();
+        let mut first = TaskbarProgress::new();
+        let mut second = TaskbarProgress::new();
+        let mut calls = Vec::new();
+        let mut send = |h, v| {
+            calls.push((h, v));
+            true
+        };
+        for (bar, h) in [(&mut main, 1), (&mut first, 2), (&mut second, 3)] {
+            bar.set_window_with(h, &mut send);
+            bar.update_with(Some(0.25), &mut send);
+            bar.update_with(Some(0.2501), &mut send);
+        }
+        first.update_with(None, &mut send);
+        second.update_with(Some(0.75), &mut send);
+        main.update_with(Some(0.5), &mut send);
+        assert_eq!(
+            calls,
+            [
+                (1, Some(250)),
+                (2, Some(250)),
+                (3, Some(250)),
+                (2, None),
+                (3, Some(750)),
+                (1, Some(500))
+            ]
+        );
+    }
+
+    #[test]
+    fn replacing_or_closing_a_window_clears_it_and_reopening_sends_again() {
+        let mut bar = TaskbarProgress::new();
+        let mut calls = Vec::new();
+        let mut send = |h, v| {
+            calls.push((h, v));
+            true
+        };
+        bar.set_window_with(1, &mut send);
+        bar.update_with(Some(0.5), &mut send);
+        bar.set_window_with(2, &mut send);
+        bar.update_with(Some(0.5), &mut send);
+        bar.set_window_with(0, &mut send);
+        bar.update_with(Some(0.9), &mut send); // no window
+        bar.set_window_with(2, &mut send); // even a reused HWND is a fresh cache
+        bar.update_with(Some(0.5), &mut send);
+        assert_eq!(
+            calls,
+            [
+                (1, Some(500)),
+                (1, None),
+                (2, Some(500)),
+                (2, None),
+                (2, Some(500))
+            ]
+        );
+    }
+
+    #[test]
+    fn failed_shell_calls_are_retried() {
+        let mut bar = TaskbarProgress::new();
+        bar.set_window_with(1, |_, _| true);
+        bar.update_with(Some(0.4), |_, _| false);
+        let mut calls = Vec::new();
+        bar.update_with(Some(0.4), |h, v| {
+            calls.push((h, v));
+            true
+        });
+        assert_eq!(calls, [(1, Some(400))]);
+    }
+
+    #[test]
+    fn a_vanished_window_is_forgotten_without_writing_to_a_recycled_handle() {
+        let mut bar = TaskbarProgress::new();
+        bar.set_window_with(1, |_, _| true);
+        bar.update_with(Some(0.5), |_, _| true);
+        // Even a live, same-process replacement must not receive the old window's clear.
+        super::TASKBAR.with_borrow_mut(|_| bar.window_gone());
+        assert_eq!(bar.window(), None);
+        bar.update_with(Some(0.5), |_, _| panic!("no bound window"));
+        bar.set_window_with(1, |_, _| panic!("the vanished window needs no clear"));
+        let mut calls = Vec::new();
+        bar.update_with(Some(0.5), |h, v| {
+            calls.push((h, v));
+            true
+        });
+        assert_eq!(calls, [(1, Some(500))]);
+    }
 }
 
 /// A REG_SZ / REG_DWORD value under HKEY_CURRENT_USER\`key` (None when absent).
@@ -4254,6 +5218,17 @@ fn reg_string_in(
     }
     let len = (size as usize / 2).saturating_sub(1).min(buf.len());
     Some(String::from_utf16_lossy(&buf[..len]))
+}
+
+/// Whether Windows lets programs that ask for it use paths past `MAX_PATH` (Group Policy's
+/// "Enable Win32 long paths", `LongPathsEnabled`; off on a new install): yt-dlp and ffmpeg ask,
+/// so a video's files may then pass 259 characters (#1102). Read only.
+pub fn long_paths_enabled() -> bool {
+    reg_dword_in(
+        windows_sys::Win32::System::Registry::HKEY_LOCAL_MACHINE,
+        r"SYSTEM\CurrentControlSet\Control\FileSystem",
+        "LongPathsEnabled",
+    ) == Some(1)
 }
 
 fn reg_dword(key: &str, name: &str) -> Option<u32> {
@@ -5351,7 +6326,8 @@ pub mod ole {
     ) -> HResult {
         // SAFETY: valid for the call.
         unsafe {
-            let ok = !read(data).is_empty();
+            // Our own drag out (a download's file): not something to add (#1210).
+            let ok = !super::own_drag_over_us() && !read(data).is_empty();
             (*this).accepts.store(ok, Ordering::Relaxed);
             (*this).over.store(ok, Ordering::Relaxed);
             (*this).wake.request_repaint();
@@ -5396,7 +6372,11 @@ pub mod ole {
         // SAFETY: valid for the call.
         unsafe {
             (*this).over.store(false, Ordering::Relaxed);
-            let found = read(data);
+            let found = if super::own_drag_over_us() {
+                Vec::new()
+            } else {
+                read(data)
+            };
             *effect = if found.is_empty() {
                 DROPEFFECT_NONE
             } else {
@@ -5678,7 +6658,8 @@ static CRASH_HANDLER: std::sync::OnceLock<mdm_crash::crash_handler::CrashHandler
 pub fn attach_crash_handler(reporter: std::sync::Arc<mdm_crash::client::Reporter>) -> bool {
     use mdm_crash::crash_handler::{CrashEventResult, CrashHandler, make_crash_event};
     // SAFETY: the closure runs in the exception's context; it only sends the dump request over
-    // the already-open socket (no allocation needed by minidumper's request).
+    // the monitor's socket, when its connection is open (no allocation needed by minidumper's
+    // request; before it is, the dump is refused and the process dies the system's way).
     let event = unsafe { make_crash_event(move |cc| CrashEventResult::Handled(reporter.dump(cc))) };
     match CrashHandler::attach(event) {
         Ok(h) => CRASH_HANDLER.set(h).is_ok(),
@@ -5886,6 +6867,52 @@ pub fn gl_driver(gl: &eframe::glow::Context) -> String {
         )
     };
     format!("{renderer} ({version})")
+}
+
+/// The graphics adapters and their drivers' versions, as Direct3D 12 sees them (DXGI; the
+/// version as wgpu writes it, "32.0.15.6224"), and whether each is a software renderer (WARP):
+/// a remembered failure is tried again once they change (renderer.rs, #1205). Read without
+/// starting Direct3D 12 on any of them. None when DXGI can't say.
+pub fn graphics_drivers() -> Option<Vec<(String, String, bool)>> {
+    use windows::Win32::Graphics::Dxgi::{
+        CreateDXGIFactory1, DXGI_ADAPTER_FLAG_SOFTWARE, IDXGIDevice, IDXGIFactory1,
+    };
+    use windows::core::Interface as _;
+    // SAFETY: a DXGI factory and its adapters, asked for their descriptions and their drivers'
+    // versions only; each COM object is released when dropped.
+    unsafe {
+        let factory: IDXGIFactory1 = CreateDXGIFactory1().ok()?;
+        let mut list = Vec::new();
+        // EnumAdapters1 fails past the last one (DXGI_ERROR_NOT_FOUND).
+        for i in 0..32 {
+            let Ok(adapter) = factory.EnumAdapters1(i) else {
+                break;
+            };
+            let Ok(desc) = adapter.GetDesc1() else {
+                continue;
+            };
+            let end = desc.Description.iter().position(|&c| c == 0);
+            let name = String::from_utf16_lossy(&desc.Description[..end.unwrap_or(128)]);
+            let version = adapter
+                .CheckInterfaceSupport(&IDXGIDevice::IID)
+                .map_or_else(
+                    |_| String::new(),
+                    |v| {
+                        let v = v as u64;
+                        format!(
+                            "{}.{}.{}.{}",
+                            (v >> 48) as u16,
+                            (v >> 32) as u16,
+                            (v >> 16) as u16,
+                            v as u16
+                        )
+                    },
+                );
+            let software = desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE.0 as u32 != 0;
+            list.push((name.trim().to_owned(), version, software));
+        }
+        Some(list)
+    }
 }
 
 /// Windows' clipboard sequence number: it changes each time the clipboard does, and asking for
@@ -7305,6 +8332,10 @@ mod open_with_tests {
 /// Unlike invoking `explorer.exe <file>`, which fails with `ExitStatus(1)` on archive files
 /// (.zip, .7z) when a third-party tool such as 7-Zip is the default handler, `ShellExecuteW`
 /// invokes the user's registered file association directly.
+///
+/// The program starts in the file's folder, as Explorer starts it (#1216): without a folder it
+/// would start in MDM's own working folder, which is `C:\Windows\System32` when Windows started
+/// MDM with the session, and a downloaded program writing beside itself would be refused there.
 pub fn open_file_shell(path: &std::path::Path) -> Result<(), std::io::Error> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::UI::Shell::ShellExecuteW;
@@ -7312,15 +8343,19 @@ pub fn open_file_shell(path: &std::path::Path) -> Result<(), std::io::Error> {
 
     com_on_this_thread();
     let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
-    // SAFETY: lpFile is a null-terminated UTF-16 string; lpOperation is NULL so Windows
-    // executes the default action registered for the file type.
+    let folder: Option<Vec<u16>> = std::path::absolute(path).ok().and_then(|p| {
+        p.parent()
+            .map(|d| d.as_os_str().encode_wide().chain(Some(0)).collect())
+    });
+    // SAFETY: lpFile and lpDirectory (or NULL) are null-terminated UTF-16 strings that outlive
+    // the call; lpOperation is NULL so Windows executes the default action for the file type.
     let ret = unsafe {
         ShellExecuteW(
             std::ptr::null_mut(),
             std::ptr::null(),
             wide.as_ptr(),
             std::ptr::null(),
-            std::ptr::null(),
+            folder.as_ref().map_or(std::ptr::null(), |f| f.as_ptr()),
             SW_SHOWNORMAL,
         )
     };
@@ -7334,6 +8369,33 @@ pub fn open_file_shell(path: &std::path::Path) -> Result<(), std::io::Error> {
         });
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod open_file_tests {
+    /// #1216: the program a file opens with starts in the file's folder, not in MDM's own
+    /// working folder. A batch file writes where it runs; Windows shows its console a moment,
+    /// so it is run by hand: `cargo test -p mdm-app opened_in_its_folder -- --ignored`.
+    #[test]
+    #[ignore = "opens a console window for a moment"]
+    fn a_file_is_opened_in_its_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        let script = dir.path().join("where.cmd");
+        std::fs::write(&script, "@cd > \"%~dp0cwd.txt\"\r\n").unwrap();
+        assert_ne!(std::env::current_dir().unwrap(), dir.path());
+        super::open_file_shell(&script).unwrap();
+        let said = dir.path().join("cwd.txt");
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        let text = loop {
+            match std::fs::read_to_string(&said) {
+                Ok(t) if t.ends_with('\n') => break t,
+                _ if std::time::Instant::now() > deadline => panic!("the batch file didn't run"),
+                _ => std::thread::sleep(std::time::Duration::from_millis(100)),
+            }
+        };
+        let real = |p: &std::path::Path| std::fs::canonicalize(p).unwrap();
+        assert_eq!(real(std::path::Path::new(text.trim())), real(dir.path()));
+    }
 }
 
 /// The program Windows runs to open folders, when that isn't Explorer (a file manager such as
@@ -7708,6 +8770,8 @@ impl GlobalHotKeyOs {
                     }
                     while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
                         if msg.message == WM_HOTKEY {
+                            // The window is asked for: a stall now is felt (crash.rs, #1126).
+                            crate::crash::asked();
                             fired.store(true, Ordering::SeqCst);
                             ctx.request_ui_pass(egui::ViewportId::ROOT);
                             ctx.request_repaint();

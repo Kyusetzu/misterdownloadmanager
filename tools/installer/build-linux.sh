@@ -168,8 +168,26 @@ cp -r "$tree" "$appdir"
 ln -s usr/bin/misterdownloadmanager "$appdir/AppRun"
 cp "$tree/usr/share/applications/misterdownloadmanager.desktop" "$appdir/"
 cp "$tree/usr/share/icons/hicolor/256x256/apps/misterdownloadmanager.png" "$appdir/"
+# appimagetool and the runtime it puts at the front of every AppImage, each at a fixed release and
+# checked by its sha256: their `continuous` tags move with every upstream commit, so the same MDM
+# tag could otherwise be packaged with a different tool. A new version is a new pair of hashes here
+# (GitHub shows each file's sha256 on its release page).
+appimagetool_tag=1.9.1
+runtime_tag=20251108
+case "$pkg_arch" in
+  x86_64)
+    appimagetool_sha=ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+    runtime_sha=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d ;;
+  aarch64)
+    appimagetool_sha=f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158
+    runtime_sha=00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444 ;;
+esac
 tool="$stage/appimagetool"
-python3 "$root/tools/installer/fetch_release.py" AppImage/appimagetool continuous "appimagetool-$pkg_arch.AppImage" "$tool"
+runtime="$stage/runtime"
+python3 "$root/tools/installer/fetch_release.py" AppImage/appimagetool "$appimagetool_tag" \
+  "appimagetool-$pkg_arch.AppImage" "$tool" "$appimagetool_sha"
+python3 "$root/tools/installer/fetch_release.py" AppImage/type2-runtime "$runtime_tag" \
+  "runtime-$pkg_arch" "$runtime" "$runtime_sha"
 chmod +x "$tool"
 # Update information (#24): AppImageLauncher, Gear Lever and AppImageUpdate read it from the
 # AppImage, find the latest release's .zsync and download only the parts that changed. MDM's own
@@ -178,7 +196,7 @@ update="gh-releases-zsync|anefzaoui|misterdownloadmanager|latest|MisterDownloadM
 # No FUSE on CI runners: the tool runs from its own extracted copy.
 # zstd at its strongest level (#25; unpacking is as fast): the tool's 128K blocks stay, as 1M
 # blocks make the AppImage start slower (AppImage/appimagetool#64).
-APPIMAGE_EXTRACT_AND_RUN=1 ARCH=$pkg_arch "$tool" -u "$update" \
+APPIMAGE_EXTRACT_AND_RUN=1 ARCH=$pkg_arch "$tool" -u "$update" --runtime-file "$runtime" \
   --mksquashfs-opt -Xcompression-level --mksquashfs-opt 22 "$appdir" "$dist/$name.AppImage"
 # appimagetool writes the .zsync itself (beside the AppImage, or in the current folder); with
 # one that doesn't, zsyncmake makes it.

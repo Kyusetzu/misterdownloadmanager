@@ -815,6 +815,10 @@
 #. Link grabber, a link's status: the server asked to try later (429, 503)
 #, machine
 	Busy, try later	Überlastet, später erneut versuchen
+#. text in the Options window
+#. Options → Download panels: the size of the download button over videos, chosen after it (Full / Compact)
+#, machine
+	Button size:	Schaltflächengröße:
 #. message or event log entry in the main window
 #, machine
 	by batch download	per Batch-Download
@@ -1070,6 +1074,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Comoros	Komoren
+#. option (radio button) in the Options window
+#. Options → Download panels → Button size: only the round button (the logo, the arrow, the close mark) over every video
+#, machine
+	Compact	Kompakt
 #. item in the Categories tree in the download list; value in a column's filter list in the download list; text in the download list (sizes, speeds, status); text in a download's progress window; text in remote.rs
 #. a download's status (state it is in, not a command)
 #. a download's status (state it is in, not a command): finished
@@ -1545,6 +1553,14 @@
 #, machine
 	Dragged out of Download complete and moved to {folder}	Aus „Download abgeschlossen“ gezogen und nach „{folder}“ verschoben
 #. message or event log entry in the main window
+#. a download's note: its file was dragged out of the download list and moved somewhere MDM can't tell (a program took it, the Recycle Bin)
+#, machine
+	Dragged out of the list and moved to a place MDM couldn't learn	Aus der Liste gezogen und an einen Ort verschoben, den MDM nicht ermitteln konnte
+#. message or event log entry in the main window
+#. a download's note: its file was dragged out of the download list and moved to that folder
+#, machine
+	Dragged out of the list and moved to {folder}	Aus der Liste gezogen und nach „{folder}“ verschoben
+#. message or event log entry in the main window
 #. in Import, where the addresses came from: dragged onto the window
 #, machine
 	Dropped links	Abgelegte Links
@@ -1999,6 +2015,10 @@
 #. checkbox in the Options window
 #, machine
 	ftp	FTP
+#. text in the Options window
+#. Options → Download panels → Button size: the button with its words ("Download video", the quality) where they fit (the default)
+#, machine
+	Full	Vollständig
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -2220,6 +2240,10 @@
 #. Options → DNS settings: checkbox: when the chosen DNS can't be reached, use the system's instead
 #, machine
 	If it can't be reached, use the system's DNS	Wenn nicht erreichbar, den DNS des Systems verwenden
+#. text in extension.rs
+#. under "macOS keeps Mister Download Manager out of …'s folder" (Test browser integration, the browser extension's window): how to allow it. The quoted words and System Settings → Privacy & Security → Full Disk Access are macOS's own: use Apple's words in this language, or keep the English ones when unsure
+#, machine
+	If macOS asks whether it may access data from other apps, allow it. Or turn on Mister Download Manager in System Settings → Privacy & Security → Full Disk Access. Then press Set it up.	Wenn macOS fragt, ob es auf Daten von anderen Apps zugreifen darf, erlauben Sie es. Oder aktivieren Sie Mister Download Manager unter Systemeinstellungen → Datenschutz & Sicherheit → Festplattenvollzugriff. Drücken Sie dann „Einrichten“.
 #. text in errors.rs
 #. what to do when a helper's server couldn't be reached; {proxy} = the Options tab Proxy / Socks; {name} = yt-dlp, ffmpeg or gallery-dl; {helpers} and {other} = the buttons Helpers and Use another program
 #. {name} = a file name (keep the braces as they are)
@@ -2652,6 +2676,14 @@
 #. tooltip of "Mark downloaded files as coming from the internet" on macOS
 #, machine
 	macOS checks the files marked this way: Gatekeeper before a program first opens. Unticked, no download is marked.	macOS überprüft so markierte Dateien: Gatekeeper, bevor ein Programm zum ersten Mal geöffnet wird. Wenn die Option deaktiviert ist, wird kein Download markiert.
+#. text in extension.rs
+#. a check of Test browser integration, and the browser extension's window (macOS): macOS refused to let MDM read or write a browser's folder (where the browser finds MDM's helper)
+#, machine
+	macOS keeps Mister Download Manager out of a browser's folder.	macOS verwehrt Mister Download Manager den Zugriff auf den Ordner eines Browsers.
+#. text in extension.rs
+#. a check of Test browser integration, and the browser extension's window (macOS): macOS refused to let MDM read or write {browser}'s folder (where the browser finds MDM's helper); {browser} is a browser's name
+#, machine
+	macOS keeps Mister Download Manager out of {browser}'s folder.	macOS verwehrt Mister Download Manager den Zugriff auf den Ordner von {browser}.
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -4202,6 +4234,26 @@
 #. Options → Accounts: the account's sign-in can't be read (signed out, or the settings came from another computer)
 #, machine
 	signed out: sign in again	abgemeldet: erneut anmelden
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system doesn't draw MDM; {date}: the day that was found
+#, machine
+	Since {date}	Seit {date}
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; MDM tries it again once the graphics driver is updated
+#, machine
+	Since {date}: MDM tries it again after a driver update	Seit {date}: MDM versucht es nach einer Treiberaktualisierung erneut
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; MDM tries that graphics system again when it next starts
+#, machine
+	Since {date}: MDM tries it again at its next start	Seit {date}: MDM versucht es beim nächsten Start erneut
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; {retry}: the day MDM tries it again
+#, machine
+	Since {date}: MDM tries it again on {retry}	Seit {date}: MDM versucht es am {retry} erneut
+#. message or event log entry in the main window
+#. View → Draw with: a greyed note under why a graphics system ("it": Direct3D, Vulkan, Metal or OpenGL) doesn't draw MDM; {date}: the day that was found; {retry}: the day MDM tries it again, unless the graphics driver is updated before
+#, machine
+	Since {date}: MDM tries it again on {retry}, or after a driver update	Seit {date}: MDM versucht es am {retry} erneut oder nach einer Treiberaktualisierung
 #. text in countries.rs
 #. a country's name (where a download's server is)
 #, machine
@@ -4324,6 +4376,26 @@
 #. window title in a dialog box
 #, machine
 	Speed Limiter settings	Einstellungen des Geschwindigkeitsbegrenzers
+#. text in the download list (sizes, speeds, status)
+#. tip of a download's Transfer rate in the list: {limit} is the most this download may take ("512 KB/sec"), set with the Speed Limiter
+#, machine
+	Speed Limiter: at most {limit} for this download	Geschwindigkeitsbegrenzer: höchstens {limit} für diesen Download
+#. text in the download list (sizes, speeds, status)
+#. the status bar and the tray icon's tip while the Speed Limiter's limit for all downloads together is on: {limit} is the most they may take together ("1024 KB/sec")
+#, machine
+	Speed Limiter: {limit} for all downloads	Geschwindigkeitsbegrenzer: {limit} für alle Downloads
+#. text in the download list (sizes, speeds, status)
+#. tip of a download's Transfer rate in the list: {limit} is the most all downloads together may take ("1024 KB/sec"), set in the Speed Limiter's settings
+#, machine
+	Speed Limiter: {limit} for all downloads together	Geschwindigkeitsbegrenzer: {limit} für alle Downloads zusammen
+#. text in the download list (sizes, speeds, status)
+#. the status bar and the tray icon's tip while Downloads → Speed Limiter is turned on: {limit} is the most each download may take ("512 KB/sec")
+#, machine
+	Speed Limiter: {limit} per download	Geschwindigkeitsbegrenzer: {limit} pro Download
+#. text in the download list (sizes, speeds, status)
+#. the status bar and the tray icon's tip while both Speed Limiter limits are on: {one} is the most each download may take ("512 KB/sec"), {all} the most all of them together may take ("1024 KB/sec")
+#, machine
+	Speed Limiter: {one} per download, {all} for all	Geschwindigkeitsbegrenzer: {one} pro Download, {all} für alle
 #. message or event log entry in the main window
 #. tooltip on the disabled Rename box when the file is one part of a split archive (.part1.rar, .7z.001…)
 #, machine
@@ -5907,7 +5979,7 @@
 	{file} is too large to be a list of addresses ({size}). Import reads text files, web pages and .ef2 exports of up to {limit}.	{file} ist zu groß für eine Adressliste ({size}). Der Import liest Textdateien, Webseiten und .ef2-Exporte bis zu {limit}.
 #. text in a dialog box
 #, machine
-	{file} was moved elsewhere by dragging it out of Download complete, and MDM couldn't learn where. Look for it where you dropped it.	{file} wurde durch Ziehen aus „Download abgeschlossen“ verschoben, und MDM konnte den neuen Speicherort nicht ermitteln. Suchen Sie die Datei dort, wo Sie sie abgelegt haben.
+	{file} was moved elsewhere by dragging it out of MDM, and MDM couldn't learn where. Look for it where you dropped it.	{file} wurde durch Ziehen aus MDM verschoben, und MDM konnte den neuen Speicherort nicht ermitteln. Suchen Sie die Datei dort, wo Sie sie abgelegt haben.
 #. text in the Checksum window
 #. {algorithm} = a checksum algorithm such as "SHA-256" (keep the braces as they are)
 #, machine
@@ -6039,6 +6111,16 @@
 #. why a helper couldn't be downloaded ({problem}), then what to do about it ({advice}, whole sentences)
 #, machine
 	{problem}. {advice}	{problem}. {advice}
+#. text in the download list (sizes, speeds, status)
+#. the progress window's Transfer rate row while the limit for all downloads together applies: {rate} is this download's speed now ("512.000 KB/sec"), {limit} the most all downloads together may take ("1024 KB/sec"). The row is narrow: keep it short
+#. {rate} = a speed such as "1.2 MB/sec" (keep the braces as they are)
+#, machine
+	{rate} (limit for all downloads: {limit})	{rate} (Limit für alle Downloads: {limit})
+#. text in the download list (sizes, speeds, status)
+#. the progress window's Transfer rate row while a speed limit applies: {rate} is the download's speed now ("512.000 KB/sec"), {limit} the most this download may take ("512 KB/sec"). The row is narrow: keep it short
+#. {rate} = a speed such as "1.2 MB/sec" (keep the braces as they are)
+#, machine
+	{rate} (limit: {limit})	{rate} (Limit: {limit})
 #. text in errors.rs
 #. a debrid service's error: too many requests; MDM waits and retries
 #, machine

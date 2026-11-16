@@ -210,8 +210,8 @@ id = "download-panels"
 page = "browser-integration.md"
 under = "The download button over videos"
 take = "options:panels"
-alt = "The Download panels settings: the button on or off, and the sites it never shows on"
-caption = "Options → General → Edit...: turn the button off, or list sites it never shows on."
+alt = "The Download panels settings: the button on or off, its size, and the sites it never shows on"
+caption = "Options → General → Edit...: turn the button off, choose its size, or list sites it never shows on."
 
 # ---- Video --------------------------------------------------------------------------------------
 

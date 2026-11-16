@@ -30,6 +30,10 @@ pub enum ProcError {
     /// The chosen network adapter is down, or yt-dlp can't be held to it here (#35).
     #[error(transparent)]
     Adapter(#[from] mdm_engine::NetError),
+    /// A video's files would pass the system's path limits in its folder (#1102): its name
+    /// (`<folder>/<stem>`) is too long there, or the folder is too deep for any.
+    #[error("the path is too long for this system with the files saved beside it: {}", .0.display())]
+    PathTooLong(std::path::PathBuf),
 }
 
 /// Options → Proxy / Socks → Network adapter (#35) for the helpers and the media-server checks;
@@ -384,10 +388,10 @@ pub fn missing_js_runtime(warnings: &[String], runtime_here: bool) -> bool {
     })
 }
 
-/// Has this computer a JavaScript runtime yt-dlp can use (Deno, Node.js or Bun), where the
-/// helpers' runs look for one ([`js_runtime_found`])?
-pub fn js_runtime_here() -> bool {
-    js_runtime_found().is_some()
+/// Has this computer a JavaScript runtime yt-dlp can use (Deno, Node.js, QuickJS or Bun), where
+/// the helpers' runs look for one ([`js_runtime_found`])?
+pub fn js_runtime_here(exe: &Path) -> bool {
+    js_runtime_found(exe).is_some()
 }
 
 /// Does yt-dlp's `WARNING:` (or `ERROR:`) line say it couldn't read the browser's cookies?
@@ -607,9 +611,8 @@ pub fn gallery_dl(
     ours: &[String],
     url: &str,
 ) -> Result<Command, ProcError> {
-    let mut cmd = Command::new(&tool.exe);
+    let mut cmd = helper_command(&tool.exe);
     let route = through_adapter(&mut cmd, Helper::GalleryDl, Some(url))?;
-    cmd.env("PYTHONIOENCODING", "utf-8");
     for a in ours {
         cmd.arg(safe(a)?);
     }
@@ -820,9 +823,18 @@ fn cookie_file(text: &str) -> std::io::Result<CookieFile> {
 /// Python's.
 const UTF8: [&str; 2] = ["--encoding", "utf-8"];
 
-fn ytdlp_command(exe: &Path) -> Command {
+/// yt-dlp's or gallery-dl's program, built as it will run: output in UTF-8 ([`UTF8`]), and in
+/// the helpers' folder with it as TEMP, TMP and TMPDIR ([`crate::workdir`]), never MDM's own
+/// working folder, which is whatever started MDM gave it: the install folder from the Start
+/// menu or the browser (#834: Chrome starts its host in the host's folder), and
+/// `C:\Windows\System32` when Windows starts it with the session (#1216). On Windows yt-dlp
+/// makes the small file it tries a format with (a YouTube video put online in the last two
+/// days, a stream marked as protected) in its working folder: its `get_output_path('temp')` is
+/// `.` there when MDM gives no `-P temp:`. [`spawn`] gives the same to any other program.
+fn helper_command(exe: &Path) -> Command {
     let mut cmd = Command::new(exe);
     cmd.env("PYTHONIOENCODING", "utf-8");
+    crate::workdir::apply(&mut cmd, crate::workdir::folders());
     cmd
 }
 
@@ -868,24 +880,33 @@ fn file_in(dirs: &[PathBuf], file: &str) -> Option<PathBuf> {
         .find(|p| p.is_file())
 }
 
-/// Node.js from nvm (`~/.nvm/versions/node/<version>/bin/node`), the newest name first: a program
-/// started from the desktop doesn't have nvm's folders on its PATH (#360).
+/// Node.js from nvm, the newest version first: a program started from the desktop doesn't have
+/// nvm's folders on its PATH (#360). Unix nvm keeps them in `~/.nvm/versions/node/<v>/bin`;
+/// nvm-windows in `%APPDATA%\nvm\<v>`.
 fn nvm_node(home: &Path) -> Option<PathBuf> {
     let mut versions: Vec<PathBuf> = std::fs::read_dir(home.join(".nvm/versions/node"))
-        .ok()?
-        .flatten()
-        .map(|e| e.path().join("bin"))
-        .collect();
+        .map(|entries| entries.flatten().map(|e| e.path().join("bin")).collect())
+        .unwrap_or_default();
+    #[cfg(windows)]
+    if let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from)
+        && let Ok(entries) = std::fs::read_dir(appdata.join("nvm"))
+    {
+        versions.extend(entries.flatten().map(|e| e.path()));
+    }
     versions.sort();
     versions.reverse();
     program_in(&versions, "node")
 }
 
 /// What yt-dlp should be told about JavaScript (#360, #352, #351): YouTube's formats need a
-/// runtime, and yt-dlp looks for Deno alone, on the PATH, unless told of another. Deno on the
-/// PATH (`dirs`): nothing to say. Else Deno where its own installer puts it
-/// (`~/.deno/bin`, #852: no PATH of a program started from the desktop has it), or in `more`
-/// (folders a runtime installed after MDM started is in, [`runtime_dirs`]); else Node.js or Bun.
+/// runtime, and per yt-dlp's EJS guide (https://github.com/yt-dlp/yt-dlp/wiki/EJS) only Deno is
+/// enabled by default — every other runtime is passed as `--js-runtimes name:path`. Deno on the
+/// PATH (`dirs`): nothing to say. Else Deno where its own installer puts it (`~/.deno/bin`,
+/// #852: no PATH of a program started from the desktop has it), or in `more` (folders a runtime
+/// installed after MDM started is in, [`runtime_dirs`], which on Windows also carries
+/// `~/.deno/bin` and `~/.bun/bin`); else Node.js (≥ 22) on the PATH, under nvm, or in `more`;
+/// else QuickJS (`qjs`, the executable must be named so); else Bun — deprecated in yt-dlp and
+/// unsupported past 1.3.14, so only a last resort.
 fn js_runtime(
     dirs: &[PathBuf],
     more: &[PathBuf],
@@ -904,24 +925,30 @@ fn js_runtime(
                 .or_else(|| program_in(more, "node"))
                 .map(|p| ("node", p))
         })
-        .or_else(|| program_in(dirs, "bun").map(|p| ("bun", p)))
+        .or_else(|| {
+            program_in(dirs, "qjs")
+                .or_else(|| program_in(more, "qjs"))
+                .map(|p| ("quickjs", p))
+        })
+        .or_else(|| {
+            program_in(dirs, "bun")
+                .or_else(|| program_in(more, "bun"))
+                .map(|p| ("bun", p))
+        })
 }
 
-/// Where Windows' installers put a JavaScript runtime (#852): winget's links (Deno, Node.js) and
-/// Node.js's own installer. They add these to the PATH of programs started after them, not to
-/// MDM's own, so a runtime installed while MDM runs is found here when the video is looked up
-/// again. None elsewhere: a package manager's folder is on the PATH already ([`usable_dirs`]).
+/// Where installers put a JavaScript runtime (#852): winget's links (Deno, Node.js) and Node.js's
+/// own installer. They add these to the PATH of programs started after them, not to MDM's own,
+/// so a runtime installed while MDM runs is found here when the video is looked up again.
+/// None elsewhere: a package manager's folder is on the PATH already ([`usable_dirs`]).
 fn runtime_dirs() -> Vec<PathBuf> {
     #[cfg(windows)]
     {
-        let under = |var: &str, rel: &str| std::env::var_os(var).map(|v| Path::new(&v).join(rel));
-        [
-            under("LOCALAPPDATA", r"Microsoft\WinGet\Links"),
-            under("ProgramFiles", "nodejs"),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
+        let mut dirs = crate::system::extra_dirs();
+        if let Some(programs) = std::env::var_os("ProgramFiles") {
+            dirs.push(Path::new(&programs).join("nodejs"));
+        }
+        dirs
     }
     #[cfg(not(windows))]
     Vec::new()
@@ -1022,19 +1049,27 @@ fn with_usable_path(cmd: &mut Command) {
 }
 
 /// This computer's JavaScript runtime for yt-dlp ([`js_runtime`]): `Some` with the arguments
-/// that tell yt-dlp of it (none for Deno on the PATH, which it finds itself), in the PATH
-/// folders a helper gets ([`usable_dirs`]: a node.exe behind a junction is named by its real
-/// folder). Kept once found; while there is none it is looked for again at each run, so one
-/// installed meanwhile counts at the next look-up (#852).
-fn js_runtime_found() -> Option<Vec<String>> {
+/// that tell yt-dlp of it (none for Deno where yt-dlp finds it itself), in the PATH folders a
+/// helper gets ([`usable_dirs`]: a node.exe behind a junction is named by its real folder) and
+/// in MDM's own tools folder (per the EJS guide, a runtime beside `yt-dlp.exe` counts too; only
+/// MDM's, never a folder a chosen program sits in, where a node.exe nobody meant could land and
+/// be run, cached for the session). Kept once found; while there is none it is looked for again
+/// at each run, so one installed meanwhile counts at the next look-up (#852).
+fn js_runtime_found(exe: &Path) -> Option<Vec<String>> {
     static FOUND: Mutex<Option<Vec<String>>> = Mutex::new(None);
     let mut found = FOUND
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     if found.is_none() {
-        let dirs: Vec<PathBuf> = std::env::var_os("PATH")
+        let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
             .map(|p| usable_dirs(&p))
             .unwrap_or_default();
+        if let Some(tools) = crate::tools_dir()
+            && exe.starts_with(&tools)
+            && let Some(beside) = exe.parent()
+        {
+            dirs.push(beside.to_path_buf());
+        }
         let home = std::env::var_os("HOME")
             .or_else(|| std::env::var_os("USERPROFILE"))
             .map(PathBuf::from);
@@ -1053,8 +1088,8 @@ fn js_runtime_found() -> Option<Vec<String>> {
 }
 
 /// `--js-runtimes` for this computer's runtime, when yt-dlp must be told of it.
-fn js_runtime_args() -> Vec<String> {
-    js_runtime_found().unwrap_or_default()
+fn js_runtime_args(exe: &Path) -> Vec<String> {
+    js_runtime_found(exe).unwrap_or_default()
 }
 
 /// `yt-dlp` with arguments in layers: `user` extras, then `ours` (then the chosen browser's
@@ -1067,11 +1102,11 @@ pub fn ytdlp(
     ours: &[String],
     url: &str,
 ) -> Result<Command, ProcError> {
-    let mut cmd = ytdlp_command(exe);
+    let mut cmd = helper_command(exe);
     let route = through_adapter(&mut cmd, Helper::YtDlp, Some(url))?;
     layers(&mut cmd, user, ours)?;
     cmd.args(["--ignore-config", "--no-exec", "--no-update"]);
-    cmd.args(js_runtime_args());
+    cmd.args(js_runtime_args(exe));
     cmd.args(cert_args(SYSTEM_CERTS.load(Ordering::Relaxed)));
     cmd.args(UTF8);
     cmd.args(route);
@@ -1088,11 +1123,11 @@ pub fn ytdlp_info(
     ours: &[String],
     info: &Path,
 ) -> Result<Command, ProcError> {
-    let mut cmd = ytdlp_command(exe);
+    let mut cmd = helper_command(exe);
     let route = through_adapter(&mut cmd, Helper::YtDlp, None)?;
     layers(&mut cmd, user, ours)?;
     cmd.args(["--ignore-config", "--no-exec", "--no-update"]);
-    cmd.args(js_runtime_args());
+    cmd.args(js_runtime_args(exe));
     cmd.args(cert_args(SYSTEM_CERTS.load(Ordering::Relaxed)));
     cmd.args(UTF8);
     cmd.args(route);
@@ -1790,6 +1825,17 @@ mod tests {
         assert!(found.to_string_lossy().contains("v22.3.0"));
         touch(&path, "bun");
         assert_eq!(js_runtime(&dirs, &[], None).unwrap().0, "bun");
+        // QuickJS (`qjs`) is a supported runtime too, and preferred over Bun, which yt-dlp
+        // deprecated (https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+        let qjs_bin = root.path().join("qjs-bin");
+        touch(&qjs_bin, "qjs");
+        touch(&qjs_bin, "bun");
+        assert_eq!(
+            js_runtime(std::slice::from_ref(&qjs_bin), &[], None)
+                .unwrap()
+                .0,
+            "quickjs"
+        );
         touch(&path, "node");
         assert_eq!(
             js_runtime(&dirs, &[], None).unwrap().1,
@@ -2301,12 +2347,50 @@ foreach ($d in $env:PATH.Split(';')) {
         }
     }
 
+    /// #1216: yt-dlp's and gallery-dl's commands are built to start in the helpers' folder, with
+    /// it as TEMP, TMP and TMPDIR, whatever folder MDM itself was started in
+    /// (`C:\Windows\System32` when Windows starts it with the session): yt-dlp made the file
+    /// it tries a format with there, and Windows refused it.
+    #[test]
+    fn the_helpers_commands_start_in_the_helpers_folder() {
+        let dir = crate::workdir::folders()
+            .dir
+            .clone()
+            .expect("a temporary folder that can be written");
+        let exe = Path::new("yt-dlp");
+        let tool = crate::Installed {
+            version: "1.32.0".into(),
+            exe: "gallery-dl".into(),
+        };
+        let built = [
+            ytdlp(exe, &[], &["-J".into()], "https://x.test/v").unwrap(),
+            ytdlp_info(exe, &[], &[], Path::new("/info.json")).unwrap(),
+            gallery_dl(&tool, &[], "https://x.test/g").unwrap(),
+        ];
+        for cmd in &built {
+            let program = cmd.get_program().to_string_lossy();
+            assert_eq!(cmd.get_current_dir(), Some(dir.as_path()), "{program}");
+            for var in crate::workdir::TEMP_VARS {
+                let value = cmd.get_envs().find(|(k, _)| *k == var).and_then(|(_, v)| v);
+                assert_eq!(value, Some(dir.as_os_str()), "{program} {var}");
+            }
+            // And nothing it inherits is taken away: the rest of MDM's environment goes too.
+            assert!(cmd.get_envs().all(|(_, v)| v.is_some()), "{program}");
+        }
+    }
+
     /// #61: killing a helper ends what it started too (yt-dlp.exe is a launcher whose child
-    /// downloads). Here a script starts a child that writes a line every second: once killed,
-    /// the file stops growing.
+    /// downloads). Here a script starts a child that writes a line every second for a minute,
+    /// holding the helper's stderr as yt-dlp's child does: once killed, the stderr closes (every
+    /// process that held it has ended), long before the child's minute, and the file stops
+    /// growing.
     #[cfg(windows)]
     #[test]
     fn killing_a_helper_ends_its_children() {
+        use std::sync::atomic::Ordering;
+        /// Long enough for anything the test waits for to come on the slowest runner, and half
+        /// the child's minute: a child left running holds the stderr past it.
+        const STUCK: Duration = Duration::from_secs(30);
         let dir = tempfile::tempdir().unwrap();
         let marker = dir.path().join("marker.txt");
         let child = dir.path().join("child.cmd");
@@ -2331,12 +2415,24 @@ foreach ($d in $env:PATH.Split(';')) {
         cmd.arg("/C").arg(&parent);
         let mut s = spawn(cmd, "cmd").unwrap();
         let size = || std::fs::metadata(&marker).map_or(0, |m| m.len());
-        std::thread::sleep(Duration::from_secs(3));
-        assert!(size() > 0, "the child runs");
+        let start = Instant::now();
+        while size() == 0 {
+            assert!(start.elapsed() < STUCK, "the child never ran");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert!(
+            !s.stderr_done.load(Ordering::Acquire),
+            "the stderr closed early"
+        );
         s.kill();
-        std::thread::sleep(Duration::from_millis(1500));
+        let start = Instant::now();
+        while !s.stderr_done.load(Ordering::Acquire) {
+            assert!(start.elapsed() < STUCK, "the child outlived the helper");
+            std::thread::sleep(Duration::from_millis(20));
+        }
         let after_kill = size();
-        std::thread::sleep(Duration::from_secs(3));
+        // Nothing left to write it: the same a child's second later.
+        std::thread::sleep(Duration::from_millis(1500));
         assert_eq!(size(), after_kill, "the child ended with the helper");
     }
 }

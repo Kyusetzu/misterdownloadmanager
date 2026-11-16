@@ -14,7 +14,7 @@
 - **The clipboard.** **Tasks → Add batch download from clipboard** (**Ctrl+B**, also in the tray icon's menu) reads the copied text when you choose it and lists every download link in it: `http`, `https`, `ftp` and magnet links, in a list, a forum post, Markdown or HTML, each once.
 - **Pasting.** Choose **Tasks → Link grabber...** and press **Ctrl+V**: every download link in the copied text is added.
 - **A web page's address.** Paste or copy the address of a page (`https://example.com/downloads`) and MDM reads the page and lists the links on it, as the browser's **Download all links** does, in a package named after the page. The page itself is left unticked. This works for addresses that came on their own (pasted, copied, typed, in a list), not for the links found on a page, so MDM never wanders off through a site. MDM reads only what the page itself holds: links a page's scripts add after it loads come only through the browser.
-- **Click'n'Load** buttons on link sites, once you turn it on. See [Click'n'Load](#clickn-load).
+- **Click'n'Load** buttons on link sites, once you turn it on. See [Click'n'Load](#clicknload).
 
 A magnet link shows as **Magnet link** and isn't looked up: once you click **Start** or **Add to queue**, MDM finds the torrent's files and adds it with all of them, in the package's folder (or the **Torrents** folder when the package has none).
 

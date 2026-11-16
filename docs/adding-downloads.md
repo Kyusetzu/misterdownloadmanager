@@ -97,7 +97,7 @@ MDM asks the server for the file's name and size, and shows them in **Download F
 
 - **URL** — the address.
 - **Category** — chosen from the file's type (Compressed, Documents, Music, Programs, Video or General). Each category has its own folder. **+** beside it makes a new category.
-- **Save As** — the folder and file name. You can type another, pick one of the last 20 folders you saved to from the arrow at its end, or choose the folder and the file name in the system's Save dialog with **...** (a name typed there without an extension keeps the download's).
+- **Save As** — the folder and file name. You can type another, pick one of the last 20 folders you saved to from the arrow at its end, or choose the folder and the file name in the system's Save dialog with **...** (a name typed there without an extension keeps the download's). If you choose a file that is already there and answer **Yes** when the dialog asks whether to replace it, the download replaces it once it is complete; until then the old file stays as it was, so it is kept if the download fails or you cancel it. A name already taken that you type in **Save As** itself never replaces anything: the download takes the next free name, such as `name (1).zip`.
 - **Remember this path for "…" category** — tick it to make the folder you typed the category's folder from now on.
 - **Description** — a note of your own. It shows in the list's **Description** column and Find can search it.
 - **Server** — where the server is: its country's flag and name, and how long a round trip to it takes. See [Where the server is](connections-and-speed.md#where-the-server-is). It stays blank when the browser handed the download over with its name and size, since MDM didn't need to ask the server.

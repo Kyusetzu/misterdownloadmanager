@@ -143,7 +143,8 @@ fn an_assistant_lists_adds_and_acts_through_the_app() {
             "pause_downloads",
             "remove_downloads",
             "resume_downloads",
-            "start_queue"
+            "start_queue",
+            "stop_queue"
         ]
     );
 
@@ -168,18 +169,40 @@ fn an_assistant_lists_adds_and_acts_through_the_app() {
     assert!(!err && text.contains(r#""done":[1]"#), "{text}");
     let (_, err) = mcp.call("pause_downloads", json!({ "ids": [2] }));
     assert!(!err);
-    let (_, err) = mcp.call("start_queue", json!({}));
-    assert!(!err);
+    let (text, err) = mcp.call("start_queue", json!({}));
+    assert!(!err && text.contains("main download queue"), "{text}");
+    let (text, err) = mcp.call("stop_queue", json!({}));
+    assert!(!err && text.contains("main download queue"), "{text}");
+
+    let (text, err) = mcp.call(
+        "add_download",
+        json!({ "url": "https://example.com/b.zip", "later": true, "queue": "Night", "category": "Compressed" }),
+    );
+    assert!(!err && text.contains(r#"queue "Night""#), "{text}");
+    let (text, err) = mcp.call("start_queue", json!({ "queue": "Night" }));
+    assert!(!err && text.contains(r#"queue "Night""#), "{text}");
+    let (text, err) = mcp.call("stop_queue", json!({ "queue": "Night" }));
+    assert!(!err && text.contains(r#"queue "Night""#), "{text}");
 
     // What reached the app: the fields its channel reads (mdm_ipc::Command), with the token.
     let seen = seen.lock().unwrap();
-    let add = seen.iter().find(|r| r["url"].is_string()).unwrap();
+    let add = seen
+        .iter()
+        .find(|r| r["url"] == "https://example.com/a.zip")
+        .unwrap();
     assert_eq!(add["url"], "https://example.com/a.zip");
     assert_eq!(add["dir"], "D:\\Files");
     assert_eq!(
         (add["later"].clone(), add["silent"].clone()),
         (json!(true), json!(true))
     );
+    let add_night = seen
+        .iter()
+        .find(|r| r["url"] == "https://example.com/b.zip")
+        .unwrap();
+    assert_eq!(add_night["url"], "https://example.com/b.zip");
+    assert_eq!(add_night["queue"], "Night");
+    assert_eq!(add_night["category"], "Compressed");
     assert!(
         seen.iter()
             .any(|r| r["action"] == "delete" && r["ids"] == json!([1]))
@@ -189,6 +212,18 @@ fn an_assistant_lists_adds_and_acts_through_the_app() {
             .any(|r| r["action"] == "pause" && r["ids"] == json!([2]))
     );
     assert!(seen.iter().any(|r| r["start_queue"] == true));
+    assert!(
+        seen.iter()
+            .any(|r| r["action"] == "stop_queue" && r["queue"].is_null())
+    );
+    assert!(
+        seen.iter()
+            .any(|r| r["action"] == "start_queue" && r["queue"] == "Night")
+    );
+    assert!(
+        seen.iter()
+            .any(|r| r["action"] == "stop_queue" && r["queue"] == "Night")
+    );
     assert!(seen.iter().all(|r| r["token"] == "secret"));
 }
 

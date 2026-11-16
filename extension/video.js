@@ -274,6 +274,14 @@
     return r.lookup;
   }
 
+  // Whether what the tab played is worth asking for (#1092), after a look-up's state `s`: the page
+  // found nothing (a feed no post names, a failure, no qualities), not a list, nor a look-up that
+  // didn't happen (busy, off, too late, another MDM) or that YouTube's player answers for.
+  function playedWanted(s) {
+    const state = s && typeof s === "object" ? s.state : "";
+    return state === "feed" || state === "failed" || (state === "ready" && !(Array.isArray(s.choices) && s.choices.length));
+  }
+
   // The app's word on what the look-up lacked, to show with its qualities (#852: YouTube without
   // a JavaScript runtime lists only some): its text, its link's words and the help page it
   // opens, on MDM's own site only. Null when there is none (an app older than it) or it isn't one.
@@ -306,7 +314,8 @@
       if (state === "list") return { act: "say", text: t("video_playlist") };
       if (state === "busy") return { act: "say", text: t("video_busy") };
       if (state === "off") return { act: "flash", kind: "off", text: t("video_off") };
-      if (state === "unnamed") return { act: "flash", kind: "warn", text: t("video_unnamed") };
+      // "several" (#1092): more than one of what the tab played fits the video.
+      if (state === "unnamed" || state === "several") return { act: "flash", kind: "warn", text: t("video_unnamed") };
       if (state === "feed") return { act: "flash", kind: "warn", text: t("video_open_post") };
     }
     // "use-window", "gone" (the app forgot it: restarted), a choice the app didn't take, and
@@ -403,7 +412,8 @@
       if (site.embed && site.embed(url)) return location.href;
       const found = nearest(v, (node) => site.read(node, url));
       if (found) return found;
-      return site.own(url) ? location.href : null;
+      // The page's own, or the one video its address opens over it (Douyin's ?modal_id=).
+      return site.own(url) ? location.href : (site.opened && site.opened(url)) || null;
     }
     // Any other site: a player embedded in another page (its own frame), or the one video of its
     // page, is its video's own page, as before.
@@ -668,6 +678,20 @@
       },
       own: (u) => u.hostname.startsWith("geo.") || /^\/(?:embed\/)?video\/[a-z0-9]+|^\/player/i.test(u.pathname),
     },
+    {
+      // #1092: a post's slide in the feed carries its id (data-e2e-vid, the aweme id), which
+      // yt-dlp's Douyin extractor reads as /video/<id>; a profile's, a search's or a collection's
+      // page names the video it opened over itself (?modal_id=<id>).
+      hosts: /^douyin\.com$/,
+      read(node) {
+        const sure = new Map();
+        const id = node.getAttribute?.("data-e2e-vid");
+        if (/^\d{15,22}$/.test(id || "")) sure.set(id, `https://www.douyin.com/video/${id}`);
+        return { sure, maybe: new Map() };
+      },
+      own: (u) => /^\/(?:video|note)\/\d{15,22}(?:[/?#]|$)/.test(u.pathname),
+      opened: (u) => (/^\d{15,22}$/.test(u.searchParams.get("modal_id") || "") ? `https://www.douyin.com/video/${u.searchParams.get("modal_id")}` : null),
+    },
   ];
   // ---- the video's own address: end.
 
@@ -765,6 +789,11 @@
   function fitsWords(videoWidth, fullWidth, inset) {
     return videoWidth >= 360 && fullWidth <= videoWidth - 2 * inset;
   }
+  // The round button (the logo, the arrow, the ✕) or the whole one: always round when Options →
+  // Download panels → Button size is Compact (`always`, #1278); else round where its words don't fit.
+  function compactFor(always, videoWidth, fullWidth, inset) {
+    return Boolean(always) || !fitsWords(videoWidth, fullWidth, inset);
+  }
   // ---- the button's words: end.
 
   // The address this page first loaded at (`download`: a page that moves in place keeps its first
@@ -786,6 +815,9 @@
   let asking = null;
   let never = false;
   let placed = false;
+  // Options → Download panels → Button size is Compact (#1278): the round button over every video.
+  // It comes with the app's answer, so a change in Options reaches a page already open with it.
+  let compactAlways = false;
   // Hidden while the page is fullscreen, when chosen in the popup (off: it shows, as now).
   let hideFullscreen = false;
   try {
@@ -1134,8 +1166,9 @@ button:focus-visible { outline: none; }
     }
     return "";
   }
-  // What the button sends for a video, and its look-up's key (none when nothing names the video).
-  const lookKey = (d) => (d.url === null ? null : `${d.url} ${d.src}`);
+  // What the button sends for a video, and its look-up's key: what it plays (its blob:) when
+  // nothing names it (#1092: what the tab played for it may still be offered); none without that.
+  const lookKey = (d) => (d.url === null ? (d.blob ? `played ${d.blob}` : null) : `${d.url} ${d.src}`);
   // What download sends for the video now ({v, d, key}), kept a moment (the DOM walk is not free).
   let current = null;
   function describeNow(v) {
@@ -1170,10 +1203,10 @@ button:focus-visible { outline: none; }
     const l = { state: "pending", at: Date.now(), href: location.href, asked };
     looks.set(c.key, l);
     const alive = () => looks.get(c.key) === l && location.href === l.href;
-    l.done = (async () => {
-      const r = await within(send({ type: "video-lookup", ...asked }), LOOKUP_MS);
-      if (r && r.show) l.show = String(r.show);
-      if (r && r.post) l.post = String(r.post);
+    // A look-up (`more`: #1092's stream the tab played, in place of the page's) followed until
+    // `end`: the background's first answer and the state it came to.
+    const lookUp = async (more, end) => {
+      const r = await within(send({ type: "video-lookup", ...asked, ...more }), LOOKUP_MS);
       let s = replyState(r) || { state: "gone" };
       if (s.state === "pending") {
         s =
@@ -1182,8 +1215,25 @@ button:focus-visible { outline: none; }
             alive,
             sleep: (ms) => new Promise((wake) => setTimeout(wake, ms)),
             now: Date.now,
-            end: l.at + LOOKUP_MS,
+            end,
           })) || { state: "gone" };
+      }
+      return { r, s };
+    };
+    l.done = (async () => {
+      const { r, s: found } = await lookUp({}, l.at + LOOKUP_MS);
+      if (r && r.show) l.show = String(r.show);
+      if (r && r.post) l.post = String(r.post);
+      let s = found;
+      // #1092: the page found nothing (a feed, a post yt-dlp can't read, a site it doesn't
+      // know): what the tab played for this video, when something fits it.
+      if (playedWanted(s) && alive()) {
+        const p = await playedLook(c.v, lookUp, alive);
+        if (p) {
+          if (p.show) l.show = p.show;
+          // The page's look-up's words go with it.
+          s = { reason: undefined, message: undefined, notice: undefined, ...p };
+        }
       }
       Object.assign(l, s, { at: Date.now() });
       if (alive() && current && current.key === c.key) {
@@ -1194,6 +1244,51 @@ button:focus-visible { outline: none; }
     })();
     render();
     return l;
+  }
+
+  // What a player is, for the background's choice of what the tab played for it (#1092): its
+  // length (live or not), its picture's height, a sound player or not, when it began to load
+  // what it plays, when the next player of the page began to (a feed's next video), and whether
+  // it is the page's only one playing something.
+  function playedFacts(v) {
+    const others = [...videos, ...audios].filter((o) => o !== v && (o.currentSrc || o.src));
+    const at = began.get(v) || 0;
+    const next = at ? others.map((o) => began.get(o) || 0).filter((x) => x > at) : [];
+    const d = v.duration;
+    return {
+      duration: Number.isFinite(d) && d > 0 ? d : 0,
+      live: d === Infinity,
+      height: v.videoHeight || 0,
+      audio: v.localName === "audio",
+      began: at,
+      nextBegan: next.length ? Math.min(...next) : 0,
+      alone: !others.length,
+    };
+  }
+
+  // What the tab played for `v`, asked when its page's look-up found nothing (#1092), as a
+  // look-up's state: a file, offered as one (`file`, its address in `src`); a stream, looked up in
+  // its turn (its qualities); "several" when more than one fits and none is clearly this one (said,
+  // never guessed). `played`: what it is, for the window too. Null: nothing fits. `lookUp`:
+  // startLook's.
+  async function playedLook(v, lookUp, alive) {
+    const r = await within(send({ type: "video-played", ...playedFacts(v) }), LOOKUP_MS);
+    if (r && Number(r.several) > 0) return { state: "several" };
+    const p = r && r.played;
+    if (!p || typeof p.url !== "string" || !/^https?:/i.test(p.url) || !alive()) return null;
+    if (!p.stream) {
+      return {
+        state: "ready",
+        file: true,
+        src: p.url,
+        played: p.url,
+        ext: String(p.ext || "").slice(0, 8),
+        height: Number(p.height) || v.videoHeight || 0,
+        size: Number(p.size) || 0,
+      };
+    }
+    const { r: again, s } = await lookUp({ played: p.url }, Date.now() + LOOKUP_MS);
+    return { ...s, played: p.url, ...(again && again.show ? { show: String(again.show) } : {}) };
   }
 
   // The look-up starts once the button stayed a moment over the same video.
@@ -1316,6 +1411,15 @@ button:focus-visible { outline: none; }
   const videos = document.getElementsByTagName("video");
   const audios = document.getElementsByTagName("audio");
 
+  // When each player began to load what it plays (#1092): a feed's player loads the next video
+  // while this one plays, and what came in between is this one's (playedFacts). Unknown (0) for
+  // one that began before this script ran.
+  const began = new WeakMap();
+  const onLoadStart = (e) => {
+    if (e.target instanceof HTMLMediaElement) began.set(e.target, Date.now());
+  };
+  addEventListener("loadstart", onLoadStart, true);
+
   // Videos inside open shadow roots (players built as web components), looked for again every
   // few seconds at most.
   let shadowed = [];
@@ -1432,9 +1536,10 @@ button:focus-visible { outline: none; }
 
   function position() {
     if (!video) return;
-    // A small video, or one its words wouldn't fit: the round button and its menu only.
+    // A small video, one its words wouldn't fit, or Compact chosen in Options: the round button
+    // and its menu only.
     const vr = held ? held.r : video.getBoundingClientRect();
-    pill.classList.toggle("compact", !fitsWords(vr.width, fullWidth, INSET));
+    pill.classList.toggle("compact", compactFor(compactAlways, vr.width, fullWidth, INSET));
     const { r, w, roomX, roomY } = rects();
     // The pointer on it (or its menu open): it stays where it is, whatever the video does
     // meanwhile. A preview that grows while the pointer is over it and shrinks back when the
@@ -1596,6 +1701,8 @@ button:focus-visible { outline: none; }
     return {
       drm: Boolean(v.mediaKeys),
       src: post ? "" : file,
+      // What a player fed by the page plays (a MediaSource's blob:): one per video it plays.
+      blob: /^blob:/i.test(v.currentSrc || "") ? v.currentSrc : "",
       url,
       // The middle of the video: where the background asks the page's own player what it plays.
       at: { x: r.left + r.width / 2, y: r.top + r.height / 2 },
@@ -1674,6 +1781,9 @@ button:focus-visible { outline: none; }
     asking = asking || send({ type: "panel" }).then(async (r) => {
       allowed = !never && Boolean(r && r.on);
       askedAt = Date.now();
+      const wasCompact = compactAlways;
+      compactAlways = Boolean(r && r.compact);
+      if (allowed && compactAlways !== wasCompact && video) position();
       // Switched off meanwhile: gone now, unless the menu, a drag or its "Turn on" has it in hand.
       if (!allowed && video && !menuOpen && !dragging && !(status && status.state === "off")) {
         video = null;
@@ -1721,8 +1831,14 @@ button:focus-visible { outline: none; }
 
   // ---- acting ---------------------------------------------------------------------------------
   // The middle of the video: where the background asks the page's own player what it plays.
-  function middle(v) {
+  // A video with no box on the screen any more (a hover preview the page stopped as the pointer
+  // went to the button, #1271: taken out, or hidden in a container of no size) is at no point:
+  // its middle would be the window's corner, where YouTube keeps its main player, whose answer
+  // is the video watched last, not the preview's. The point it was at when the click was taken
+  // (`was`) instead.
+  function middle(v, was) {
     const box = v.getBoundingClientRect();
+    if (!v.isConnected || !(box.width > 0 && box.height > 0)) return was;
     return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
   }
 
@@ -1755,17 +1871,20 @@ button:focus-visible { outline: none; }
       const c = { v: video, d, key: lookKey(d) };
       let l = lookOf(c);
       setStatus({ state: "sending", text: t("video_sending") });
-      if (toWindow) return await useWindow(j);
-      if (l && l.file) return await useWindow(j, { direct: true, words: qualityName(l, t) });
+      // What the tab played for it (#1092) goes to the window too: the page has nothing.
+      if (toWindow) return await useWindow(l && l.played ? playedJob(j, l) : j);
+      if (l && l.file) return await useWindow(playedJob(j, l), { direct: true, words: qualityName(l, t) });
       if (!usable(l) || l.state === "busy") l = startLook(c, true);
       if (!l) return await useWindow(j);
       if (l.state === "pending") await within(l.done, LOOKUP_MS);
+      // A file the tab played, found as the look-up ended (#1092).
+      if (l.file) return await useWindow(playedJob(j, l), { direct: true, words: qualityName(l, t) });
       const a = lookupAction(l, t);
       if (a.act === "flash") return showFlash(a, l);
       // The post a video in a feed sits in, which can't be looked up from here (#689): opening
       // the post is the user's step ("Open post"; the menu's "All qualities…" still has the window).
       if (a.act !== "offer" && l.post && l.state === "failed") return showFlash({ kind: "warn", text: t("video_open_post") }, l);
-      if (a.act !== "offer") return await useWindow(j);
+      if (a.act !== "offer") return await useWindow(playedJob(j, l));
       const choices = l.choices;
       const i = row && Number.isInteger(row.choice) ? row.choice : choices.indexOf(bestOf(l));
       return await pick(j, l, Math.max(0, i));
@@ -1774,10 +1893,17 @@ button:focus-visible { outline: none; }
     }
   }
 
+  // The click `j` with what the tab played for its video (#1092, `l.played`): a file as the video's
+  // own (`src`), a stream for the window.
+  function playedJob(j, l) {
+    if (!l || !l.played) return j;
+    return { ...j, asked: { ...j.asked, ...(l.file ? { src: l.played } : {}), played: l.played } };
+  }
+
   // A quality the look-up offered: MDM downloads it (its own choice of it, with what it looked the
   // video up with) without its window. Only the token and the quality's number go.
   async function pick(j, l, i) {
-    if (!l.token || l.picked || !(i >= 0 && i < Math.min(l.choices.length, 100))) return useWindow(j);
+    if (!l.token || l.picked || !(i >= 0 && i < Math.min(l.choices.length, 100))) return useWindow(playedJob(j, l));
     l.picked = true;
     const s = replyState(await send({ type: "video-pick", token: l.token, choice: i }));
     if (!s) return endStatus(true);
@@ -1785,7 +1911,7 @@ button:focus-visible { outline: none; }
     // look-up forgotten, another window's, an older app): the window.
     const a = lookupAction(s, t, true);
     if (a.act === "flash") return showFlash(a, l, qualityName(l.choices[i], t));
-    return useWindow(j);
+    return useWindow(playedJob(j, l));
   }
 
   // What a look-up or a choice came to, on the button: green with "Show", grey "off" with "Turn
@@ -1809,7 +1935,7 @@ button:focus-visible { outline: none; }
   async function useWindow(j, { direct = false, words = "" } = {}) {
     if (!firstWindow(j)) return;
     // Where the video is now, for the background to ask the page's player there.
-    const r = await send({ type: "video", ...j.asked, ...(direct ? { direct: true } : {}), ...(j.video.isConnected ? { at: middle(j.video) } : {}) });
+    const r = await send({ type: "video", ...j.asked, ...(direct ? { direct: true } : {}), at: middle(j.video, j.asked.at) });
     if (r.gone) return;
     if (r.ok) {
       lastShow = r.show || "";
@@ -2199,6 +2325,7 @@ button:focus-visible { outline: none; }
     cancelAnimationFrame(scan);
     removeEventListener("pointermove", onMove, true);
     removeEventListener("keydown", onTab, true);
+    removeEventListener("loadstart", onLoadStart, true);
     root.remove();
     never = true;
     allowed = false;
@@ -2250,7 +2377,9 @@ button:focus-visible { outline: none; }
   });
   document.addEventListener("fullscreenchange", () => {
     if (!video) return;
-    if (hideFullscreen && document.fullscreenElement) hide(true);
+    // Entering full screen: out of the way at once, as the player's own controls are; the
+    // pointer's next move brings it back. Leaving it: shown again, as before.
+    if (document.fullscreenElement) hide(true);
     else show(video);
   });
   addEventListener("blur", () => hide());

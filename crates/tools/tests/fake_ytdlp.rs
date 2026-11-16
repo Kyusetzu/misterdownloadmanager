@@ -38,6 +38,8 @@ fn main() -> ExitCode {
         list_checks(&me);
         preloaded_checks(&me);
         engine_checks(&me);
+        long_name_checks(&me);
+        saved_checks(&me);
         live_checks(&me);
         println!("fake_ytdlp: ok");
         return ExitCode::SUCCESS;
@@ -202,7 +204,16 @@ fn fake_ytdlp() -> ExitCode {
             std::fs::read_to_string(after("--load-info-json").expect("a page")).expect("the page");
         let info: serde_json::Value = serde_json::from_str(&info).expect("json");
         let template = after("-o").expect("-o").replace("%%", "%");
-        let chosen = choice(&info, &after("-f").unwrap_or_default(), &template);
+        let selector = after("-f").unwrap_or_default();
+        // #94, #1240: the chosen height isn't offered, for the engine's choice too.
+        let dir = Path::new(&template).parent().expect("a folder");
+        if mode(dir) == "unavailable" && selector.contains("[height=") {
+            eprintln!(
+                "ERROR: [youtube] talk: Requested format is not available. Use --list-formats for a list of available formats"
+            );
+            return ExitCode::FAILURE;
+        }
+        let chosen = choice(&info, &selector, &template);
         println!("MDMJ {chosen}");
         return ExitCode::SUCCESS;
     }
@@ -359,7 +370,18 @@ fn fake_ytdlp() -> ExitCode {
             match std::fs::read(s) {
                 // "has already been downloaded"
                 Ok(b) => merged.extend(b),
-                Err(_) => merged.extend(b"downloaded by yt-dlp"),
+                // Downloaded here, through yt-dlp's own unfinished files (#1102): `.part`, and
+                // the fragments' resume file, `.ytdl`.
+                Err(_) => {
+                    for temp in [format!("{s}.part"), format!("{s}.ytdl")] {
+                        if let Err(failed) = python_write(&temp, b"") {
+                            return failed;
+                        }
+                    }
+                    let _ = std::fs::remove_file(format!("{s}.part"));
+                    let _ = std::fs::remove_file(format!("{s}.ytdl"));
+                    merged.extend(b"downloaded by yt-dlp");
+                }
             }
         }
         for s in streams.iter().filter(|s| **s != output) {
@@ -373,12 +395,14 @@ fn fake_ytdlp() -> ExitCode {
             let temp = output.replace(".mp4", ".temp.mp4");
             let step = merged.len().div_ceil(5);
             for k in 1..=5 {
-                std::fs::write(&temp, &merged[..(k * step).min(merged.len())]).unwrap();
+                if let Err(failed) = python_write(&temp, &merged[..(k * step).min(merged.len())]) {
+                    return failed;
+                }
                 std::thread::sleep(Duration::from_millis(300));
             }
             std::fs::rename(&temp, &output).unwrap();
-        } else {
-            std::fs::write(&output, merged).unwrap();
+        } else if let Err(failed) = python_write(&output, &merged) {
+            return failed;
         }
         println!("MDMF {output}");
         return ExitCode::SUCCESS;
@@ -411,6 +435,45 @@ fn fake_ytdlp() -> ExitCode {
         }
     }
     ExitCode::SUCCESS
+}
+
+/// Write `path` as yt-dlp's Python does on a new install (#1102): on Windows, with long paths
+/// off (the default), a path past 259 UTF-16 units fails as `[Errno 2] No such file or
+/// directory`; a name past 255 (UTF-16 units on Windows, bytes elsewhere) as `[Errno 22]
+/// Invalid argument` on Windows, `[Errno 36] File name too long` elsewhere. Said as yt-dlp says
+/// it, the path in Python's quotes.
+fn python_write(path: &str, data: &[u8]) -> Result<(), ExitCode> {
+    let units = |s: &str| {
+        if cfg!(windows) {
+            s.encode_utf16().count()
+        } else {
+            s.len()
+        }
+    };
+    let long_name = Path::new(path)
+        .iter()
+        .any(|n| units(&n.to_string_lossy()) > 255);
+    let error = if cfg!(windows) && units(path) > 259 {
+        Some("[Errno 2] No such file or directory")
+    } else if long_name && cfg!(windows) {
+        Some("[Errno 22] Invalid argument")
+    } else if long_name {
+        Some("[Errno 36] File name too long")
+    } else {
+        None
+    };
+    if let Some(error) = error {
+        let escaped = path.replace('\\', "\\\\");
+        let quoted = if path.contains('\'') && !path.contains('"') {
+            format!("\"{escaped}\"")
+        } else {
+            format!("'{}'", escaped.replace('\'', "\\'"))
+        };
+        eprintln!("ERROR: Unable to download video: {error}: {quoted}");
+        return Err(ExitCode::FAILURE);
+    }
+    std::fs::write(path, data).unwrap();
+    Ok(())
 }
 
 /// yt-dlp's choice of formats on page `info` for `selector`: a format id the page has, that one;
@@ -550,6 +613,69 @@ fn download_as(
         .collect();
     files.sort();
     (p, files, out)
+}
+
+/// #1103: the saved video is shown to `saved` (the app's mark that it came from the internet) on
+/// the job's own thread before the job says it is done, and a disk slow to take the mark keeps
+/// only that thread waiting: the progress, which the window reads every frame, answers at once.
+fn saved_checks(me: &Path) {
+    use std::sync::{Arc, Mutex};
+    let tools = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    std::fs::write(out.path().join("mode.txt"), "").unwrap();
+    let exe = fake_in(me, tools.path());
+    // Each file shown, and when the hook returned; it takes 2 s, as a busy disk did (#1103: 8 s).
+    let shown: Arc<Mutex<Vec<(PathBuf, Instant)>>> = Arc::default();
+    let hook = {
+        let shown = shown.clone();
+        mdm_engine::FileHook::new(move |p: &Path| {
+            std::thread::sleep(Duration::from_secs(2));
+            shown.lock().unwrap().push((p.to_owned(), Instant::now()));
+        })
+    };
+    let job = VideoJob::start_with(
+        &exe,
+        "https://video.example/talk",
+        "b",
+        out.path(),
+        "Talk",
+        None,
+        None,
+        None,
+        &Default::default(),
+        &Subs::default(),
+        None,
+        None,
+        Some(hook),
+    )
+    .expect("started");
+    let end = Instant::now() + Duration::from_secs(120);
+    let mut slowest = Duration::ZERO;
+    let (p, done_at) = loop {
+        let asked = Instant::now();
+        let p = job.progress();
+        slowest = slowest.max(asked.elapsed());
+        if p.state != State::Running {
+            break (p, Instant::now());
+        }
+        assert!(Instant::now() < end, "still running: {p:?}");
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let State::Done(file) = &p.state else {
+        panic!("not done: {:?}", p.state)
+    };
+    let shown = shown.lock().unwrap().clone();
+    assert_eq!(shown.len(), 1, "{shown:?}");
+    assert_eq!(&shown[0].0, file, "the saved file is the one marked");
+    assert!(
+        shown[0].1 <= done_at,
+        "marked before it was said to be done"
+    );
+    assert!(
+        slowest < Duration::from_millis(500),
+        "the progress waited {slowest:?} for the mark"
+    );
+    println!("saved_checks: marked before done; the slowest look at the progress took {slowest:?}");
 }
 
 fn log_of(p: &mdm_tools::video::Progress) -> Vec<String> {
@@ -747,6 +873,7 @@ fn preloaded_checks(me: &Path) {
             &Default::default(),
             &Subs::default(),
             preloaded,
+            None,
             None,
         )
         .expect("started");
@@ -1124,6 +1251,43 @@ fn engine_checks(me: &Path) {
         "no part file or state left"
     );
 
+    // #1240: the chosen height isn't offered (a reroute left it out): the engine downloads the
+    // nearest below too, not the one asked for again.
+    let (tools, out) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    std::fs::write(
+        tools.path().join("page.json"),
+        page("/gen/3M/v.mp4?seed=1", "/gen/1M/a.m4a?seed=2", "https"),
+    )
+    .unwrap();
+    std::fs::write(out.path().join("mode.txt"), "unavailable").unwrap();
+    let job = VideoJob::start(
+        &fake_in(me, tools.path()),
+        "https://video.example/talk",
+        "bv*[height=1080]+ba/b[height=1080]",
+        out.path(),
+        "Talk",
+        None,
+        None,
+        None,
+        &Default::default(),
+        &Subs::default(),
+        Some(engine(2)),
+    )
+    .expect("started");
+    let (p, _) = wait(&job);
+    let log = log_of(&p);
+    assert!(matches!(p.state, State::Done(_)), "{:?}: {log:?}", p.state);
+    assert!(p.helper.is_none(), "the engine downloaded it: {log:?}");
+    assert!(
+        log.iter()
+            .any(|t| t.starts_with("The chosen quality isn't offered")),
+        "{log:?}"
+    );
+    assert!(
+        std::fs::read(out.path().join("Talk.mp4")).unwrap() == expected(),
+        "the streams merged"
+    );
+
     // Stopped half-way, then started again: it goes on from the bytes already there.
     lab.clear_log();
     let (tools, out) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
@@ -1213,6 +1377,204 @@ fn engine_checks(me: &Path) {
     signed_in_checks(me, &lab, &engine);
     pieces_checks(me, &rt, &lab, &engine, &expected_audio());
     println!("fake_ytdlp: the engine's checks ok");
+}
+
+/// #1102: an X post with a long text, as the report's: its video saved in a deep folder (here,
+/// under the build's own folder) under a name shortened so that every file MDM's engine and
+/// yt-dlp make for it stays within Windows' 259 (and names within 255 everywhere), both when the
+/// engine downloads its streams (an HLS sound in pieces) and when yt-dlp does (its `.part` and
+/// `.ytdl`). A name not shortened is refused at once, and a path yt-dlp couldn't make is named
+/// as too long, not as a missing folder.
+fn long_name_checks(me: &Path) {
+    use mdm_labserver::{Config, LabServer};
+    const TITLE: &str = "Kira on X: \"This is f*cking insane. Nvidia CEO Jensen Huang on what he expects from an engineer he pays $500,000 a year: \"If that $500,000 engineer did not consume at least $250,000 worth of tokens\" He'd be deeply alarmed";
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let lab = rt.block_on(LabServer::start(Config::default())).unwrap();
+    let engine = mdm_tools::streams::Engine {
+        handle: rt.handle().clone(),
+        opts: mdm_engine::Options {
+            max_connections: 2,
+            retry_delay: Duration::from_millis(50),
+            ..Default::default()
+        },
+    };
+    let page = |protocol: &str, audio_id: &str| {
+        format!(
+            r#"{{"id": "1", "title": "{}", "ext": "mp4", "formats": [
+            {{"format_id": "hls-2176", "ext": "mp4", "protocol": "{protocol}", "filesize": 1048576,
+              "vcodec": "avc1", "acodec": "none", "url": "{}"}},
+            {{"format_id": "{audio_id}", "ext": "mp4", "protocol": "{}",
+              "vcodec": "none", "acodec": "mp4a", "url": "{}"}}]}}"#,
+            TITLE.replace('"', "\\\""),
+            lab.url("/gen/1M/v.mp4?seed=1"),
+            if protocol == "https" {
+                "m3u8_native"
+            } else {
+                protocol
+            },
+            lab.url("/hls/720p/index.m3u8")
+        )
+    };
+    // Folders 100 characters long (89, and a temporary folder's `\.tmpXXXXXX` in it), on this
+    // computer's disk under the build's folder.
+    let base = tempfile::tempdir_in(env!("CARGO_TARGET_TMPDIR")).unwrap();
+    let pad = 89usize
+        .saturating_sub(base.path().as_os_str().len() + 1)
+        .max(1);
+    let folder = base.path().join("d".repeat(pad));
+    std::fs::create_dir_all(&folder).unwrap();
+    let name = format!("{}.mp4", mdm_engine::naming::sanitize(TITLE));
+    let units = |p: &Path| {
+        let s = p.to_string_lossy();
+        if cfg!(windows) {
+            s.encode_utf16().count()
+        } else {
+            s.len()
+        }
+    };
+    let longest = |dir: &Path| -> usize {
+        fn walk(d: &Path, out: &mut Vec<PathBuf>) {
+            for e in std::fs::read_dir(d).into_iter().flatten().flatten() {
+                out.push(e.path());
+                if e.path().is_dir() {
+                    walk(&e.path(), out);
+                }
+            }
+        }
+        let mut all = Vec::new();
+        walk(dir, &mut all);
+        all.iter().map(|p| units(p)).max().unwrap_or(0)
+    };
+    for protocol in ["https", "rtmp"] {
+        let (tools, out) = (
+            tempfile::tempdir().unwrap(),
+            tempfile::tempdir_in(&folder).unwrap(),
+        );
+        let dir = out.path().to_owned();
+        std::fs::write(
+            tools.path().join("page.json"),
+            page(protocol, "audio-128000-Audio"),
+        )
+        .unwrap();
+        let dest = mdm_engine::naming::stem_destination(&dir, &name, |_| false);
+        let stem = dest.file_stem().unwrap().to_string_lossy().into_owned();
+        assert!(stem.len() < 221, "shortened: {stem}");
+        assert!(
+            mdm_engine::naming::sanitize(TITLE).starts_with(&stem),
+            "{stem}"
+        );
+        let exe = fake_in(me, tools.path());
+        let job = VideoJob::start(
+            &exe,
+            "https://x.example/kira/status/1",
+            "bv*+ba/b",
+            &dir,
+            &stem,
+            None,
+            None,
+            None,
+            &Default::default(),
+            &Subs::default(),
+            Some(engine.clone()),
+        )
+        .expect("started");
+        let end = Instant::now() + Duration::from_secs(120);
+        let mut most = 0;
+        let p = loop {
+            most = most.max(longest(&dir));
+            let p = job.progress();
+            if p.state != State::Running {
+                break p;
+            }
+            assert!(Instant::now() < end, "still running: {:?}", log_of(&p));
+            std::thread::sleep(Duration::from_millis(20));
+        };
+        let log = log_of(&p);
+        let State::Done(saved) = &p.state else {
+            panic!("{protocol}: {:?}: {log:?}", p.state);
+        };
+        assert_eq!(saved, &dest, "{protocol}");
+        if protocol == "https" {
+            assert!(p.helper.is_none(), "the engine's: {:?}", p.helper);
+        }
+        if cfg!(windows) {
+            assert!(units(saved) <= 259 && most <= 259, "{protocol}: {most}");
+        }
+        println!(
+            "fake_ytdlp: #1102 ({protocol}): saved as {} ({} long, the longest file on the way {most})",
+            saved.display(),
+            units(saved)
+        );
+    }
+
+    // The title's name, not shortened: refused before yt-dlp is asked anything.
+    let dir = tempfile::tempdir_in(&folder).unwrap();
+    let whole = mdm_engine::naming::sanitize(TITLE);
+    let refused = VideoJob::start(
+        Path::new("not-run"),
+        "https://x.example/kira/status/1",
+        "bv*+ba/b",
+        dir.path(),
+        &whole,
+        None,
+        None,
+        None,
+        &Default::default(),
+        &Subs::default(),
+        None,
+    );
+    assert!(
+        matches!(refused, Err(mdm_tools::proc::ProcError::PathTooLong(_))),
+        "refused at once"
+    );
+
+    // A format id longer than the room kept for one (rare): yt-dlp can't make its file, and
+    // the path is named as too long (Windows, where the path limit is).
+    if cfg!(windows) {
+        let (tools, out) = (
+            tempfile::tempdir().unwrap(),
+            tempfile::tempdir_in(&folder).unwrap(),
+        );
+        std::fs::write(
+            tools.path().join("page.json"),
+            page("rtmp", &"long-id-".repeat(10)),
+        )
+        .unwrap();
+        let dest = mdm_engine::naming::stem_destination(out.path(), &name, |_| false);
+        let stem = dest.file_stem().unwrap().to_string_lossy().into_owned();
+        let exe = fake_in(me, tools.path());
+        let job = VideoJob::start(
+            &exe,
+            "https://x.example/kira/status/1",
+            "bv*+ba/b",
+            out.path(),
+            &stem,
+            None,
+            None,
+            None,
+            &Default::default(),
+            &Subs::default(),
+            Some(engine.clone()),
+        )
+        .expect("started");
+        let end = Instant::now() + Duration::from_secs(120);
+        let p = loop {
+            let p = job.progress();
+            if p.state != State::Running {
+                break p;
+            }
+            assert!(Instant::now() < end, "still running");
+            std::thread::sleep(Duration::from_millis(50));
+        };
+        let State::Failed(error) = &p.state else {
+            panic!("{:?}", p.state);
+        };
+        assert!(error.contains("[Errno 2]"), "{error}");
+        let path = mdm_tools::video::too_long(error).expect("named as too long");
+        assert!(units(&path) > 259, "{}", path.display());
+        assert!(path.starts_with(out.path()), "{}", path.display());
+    }
+    println!("fake_ytdlp: #1102's long names ok");
 }
 
 /// The sound every page of the engine's checks has (format 140, the lab's `/gen/1M/a.m4a`).

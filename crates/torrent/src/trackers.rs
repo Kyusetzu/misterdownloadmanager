@@ -6,7 +6,7 @@
 //! The list is changed in the torrent itself (`announce`, `announce-list`, outside the info
 //! dictionary, so its hash stays the same) and in a magnet link (`tr=`).
 
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr};
 
 /// Whether MDM may contact `tracker`.
 pub fn allowed(tracker: &str, proxied: bool) -> bool {
@@ -30,25 +30,44 @@ pub fn allowed(tracker: &str, proxied: bool) -> bool {
 }
 
 /// An address on the internet (not this computer, the local network or a reserved range).
-fn public(ip: IpAddr) -> bool {
+pub(crate) fn public(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(a) => {
+            let o = a.octets();
             !(a.is_loopback()
                 || a.is_private()
                 || a.is_link_local()
                 || a.is_unspecified()
                 || a.is_broadcast()
                 || a.is_multicast()
+                // 0.0.0.0/8, "this network": 0.0.0.1 reaches the machine's own stack.
+                || o[0] == 0
                 // 100.64.0.0/10, carrier-grade NAT.
-                || (a.octets()[0] == 100 && (a.octets()[1] & 0xc0) == 64))
+                || (o[0] == 100 && (o[1] & 0xc0) == 64)
+                || (o[0] == 192 && o[1] == 0 && o[2] == 0)
+                // 198.18.0.0/15, the benchmark ranges.
+                || (o[0] == 198 && (o[1] & 0xfe) == 18)
+                // 240.0.0.0/4, reserved (255.255.255.255 is the broadcast, above).
+                || o[0] >= 240)
         }
         IpAddr::V6(a) => {
-            let seg = a.segments()[0];
+            let s = a.segments();
+            // IPv4 inside IPv6 that isn't the mapped form: compatible (::a.b.c.d) and NAT64
+            // (64:ff9b::a.b.c.d). Whichever it is, its IPv4 rules decide.
+            let embedded = (s[..6] == [0; 6] && !a.is_unspecified() && !a.is_loopback())
+                .then_some([s[6], s[7]])
+                .or_else(|| {
+                    (s[0] == 0x64 && s[1] == 0xff9b && s[2..6] == [0; 4]).then_some([s[6], s[7]])
+                });
+            if let Some([hi, lo]) = embedded {
+                let v4 = Ipv4Addr::new((hi >> 8) as u8, hi as u8, (lo >> 8) as u8, lo as u8);
+                return public(IpAddr::V4(v4));
+            }
             !(a.is_loopback()
                 || a.is_unspecified()
                 || a.is_multicast()
-                || (seg & 0xfe00) == 0xfc00 // unique local
-                || (seg & 0xffc0) == 0xfe80 // link local
+                || (s[0] & 0xfe00) == 0xfc00 // unique local
+                || (s[0] & 0xffc0) == 0xfe80 // link local
                 || a.to_ipv4_mapped().is_some_and(|v4| !public(IpAddr::V4(v4))))
         }
     }
@@ -329,6 +348,28 @@ mod tests {
             "UDP goes around the proxy"
         );
         assert!(allowed("https://t.example/a", true));
+    }
+
+    /// "This" network, the reserved ranges and IPv4 addresses written as IPv6 reach this
+    /// machine or go nowhere: no tracker there gets a request.
+    #[test]
+    fn this_networks_and_reserved_addresses_are_dropped() {
+        for bad in [
+            "http://0.0.0.1/announce",
+            "http://0.255.255.254/announce",
+            "http://240.0.0.1/announce",
+            "http://192.0.0.170/announce",
+            "http://198.18.0.1/announce",
+            "http://198.19.255.254/announce",
+            "http://[::7f00:1]/announce",
+            "http://[64:ff9b::a00:1]/announce",
+        ] {
+            assert!(!allowed(bad, false), "{bad}");
+        }
+        // Their public neighbours still pass.
+        assert!(allowed("http://192.0.1.1/announce", false));
+        assert!(allowed("http://198.20.0.1/announce", false));
+        assert!(allowed("http://[2001:4860:4860::8888]/announce", false));
     }
 
     #[test]

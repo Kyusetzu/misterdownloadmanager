@@ -361,11 +361,9 @@
 	Add them without starting them	Tambah tanpa memulakan
 #. message or event log entry in the main window; text in the Link grabber window
 #. Link grabber button: add the ticked links to the download queue without starting them (IDM's OK)
-#, machine
-	Add to queue	Tambah pada giliran
+	Add to queue	Tambah pada baris gilir
 #. text in a dialog box
-#, machine
-	Add to queue:	Tambah pada giliran:
+	Add to queue:	Tambah pada baris gilir:
 #. message or event log entry in the main window; window title in the Add torrent window
 #, machine
 	Add torrent	Tambah torrent
@@ -1061,8 +1059,7 @@
 #, machine
 	Cookies for video sites	Kuki untuk tapak video
 #. text in the Help menu's windows (About, updates, shortcuts, Tell a friend)
-#, machine
-	Copied to the clipboard.	Disalin ke papan keratan.
+	Copied to the clipboard.	Disalin ke papan klip.
 #. button in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #, machine
 	Copy	Salin
@@ -3126,8 +3123,7 @@
 #, machine
 	Norway	Norway
 #. text in the Checksum window
-#, machine
-	Not a checksum this can read	Bukan jumlah hasil tambah yang boleh dibaca ini
+	Not a checksum this can read	Ini bukan jumlah semak yang boleh dibaca
 #. text in rssdlg.rs
 #. RSS feeds window, Download rules: a regular expression that can't be read, with why
 #. {error} = an error message (keep the braces as they are)
@@ -3204,8 +3200,7 @@
 #, machine
 	Off: nothing on the network can reach MDM.	Mati: tiada apa-apa pada rangkaian boleh mencapai MDM.
 #. text in the Options window
-#, machine
-	Offer to download links copied to the clipboard	Tawarkan untuk memuat turun pautan yang disalin ke papan keratan
+	Offer to download links copied to the clipboard	Tawarkan untuk memuat turun pautan yang disalin ke papan klip
 #. text in the Link grabber window
 #. Link grabber, a link's status: the server hasn't the file; {status} is the HTTP code (404)
 #, machine
@@ -3428,8 +3423,7 @@
 	Paste links here (Ctrl+V), or send a page's links from the browser.	Tampal pautan di sini (Ctrl+V) atau hantar pautan halaman dari pelayar.
 #. text in the Checksum window
 #. why Verify / OK is greyed in Verify checksum
-#, machine
-	Paste the checksum the download's page gives	Tampal jumlah hasil tambah semak yang diberikan oleh halaman muat turun
+	Paste the checksum the download's page gives	Tampal jumlah semak yang diberikan oleh halaman muat turun
 #. text in the Options window
 #. Options → Add an account: label before the field for the service's API key (Premiumize: the only way to sign in; the key is on the service's Account page)
 #, machine
@@ -4694,11 +4688,9 @@
 	The report	Laporan
 #. text in crashui.rs
 #. crash report window: after Copy report
-#, machine
-	The report is on your clipboard.	Laporan ada pada papan keratan anda.
+	The report is on your clipboard.	Laporan ada pada papan klip anda.
 #. text in crashui.rs
-#, machine
-	The report is on your clipboard: paste it in a comment on the issue.	Laporan ada pada papan keratan anda: tampalkannya dalam ulasan pada isu tersebut.
+	The report is on your clipboard: paste it in a comment on the issue.	Laporan ada pada papan klip anda: tampalkannya dalam ulasan pada isu tersebut.
 #. text in errors.rs
 #. an FTPS (or other TLS) connection could not be secured
 #, machine
@@ -6060,8 +6052,7 @@ extension	A list of videos: choose them in Mister Download Manager	Senarai video
 extension	Added to MDM	Ditambah ke MDM
 #. text in the browser extension
 #. shown briefly on the download button over a video after a quality was picked: the download was added to the app's download queue, to start later
-#, machine
-extension	Added to the queue	Ditambah pada giliran
+extension	Added to the queue	Ditambah pada baris gilir
 #. text in the browser extension
 #. command in the menu of the download button over a video: opens the app's Download video window, with every quality and the subtitles
 #. the trailing ... means it is still going on: keep it

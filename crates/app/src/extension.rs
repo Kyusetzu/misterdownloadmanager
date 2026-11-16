@@ -8,6 +8,11 @@
 //!
 //! Safari (macOS) has its extension in the app already (tools/safari): its row says "How to
 //! Add", which opens the steps that turn on an extension Apple hasn't notarized.
+//!
+//! Where it stands (the browsers' folders, the extension's notes) is read beside the window,
+//! never on its thread (#1218): a browser's folder can take seconds to answer (a sleeping disk,
+//! a network home folder, macOS asking the person whether MDM may read another app's data), and
+//! the window shows what it read last meanwhile.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -36,18 +41,54 @@ pub fn worth_asking(settings: &crate::settings::Settings) -> bool {
 pub struct Extension {
     /// The browsers installed: name and program. Empty: one row for the system's browser.
     browsers: Vec<(String, Option<PathBuf>)>,
-    /// A browser's extension has reached the app since the window opened.
+    /// Where it stands, read beside the window (once a second, and again once a Set it up
+    /// finished: its key is [`set_up_runs`]), and what was read last. None before the first
+    /// answer ("Checking...").
+    status: crate::launch::Asked<u64, Status>,
+    shown: Option<Status>,
+    /// What reads it ([`Status::read`]; a test's slow one).
+    read: fn() -> Status,
+    /// The steps that add Safari's extension, while that window is open.
+    steps: Option<SafariSteps>,
+}
+
+/// How often the window reads where it stands again: the host marks the extension seen when a
+/// browser starts it.
+const LOOK_EVERY: Duration = Duration::from_secs(1);
+/// How long a window waits for its very first read (none after): a read that answers at once,
+/// as nearly all do, is shown at once, without a "Checking..." frame first.
+const FIRST_WAIT: Duration = Duration::from_millis(100);
+
+/// What the extension's window shows of where it stands, read beside it ([`Status::read`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct Status {
+    /// A browser's extension has reached the app.
     connected: bool,
     /// The browsers whose extension has (Options' names, mdm_ipc::extension::seen_browsers).
     seen: Vec<String>,
     /// The browsers can find the app (the native host is registered).
     registered: bool,
-    /// When the status files were read last (once a second, not every frame).
-    looked: std::time::Instant,
-    /// Set it up's runs seen finished ([`set_up_finished`]).
-    set_up_seen: u64,
-    /// The steps that add Safari's extension, while that window is open.
-    steps: Option<SafariSteps>,
+    /// macOS kept MDM out of a browser's folder, when reading it or setting it up.
+    refused: Option<Refused>,
+}
+
+impl Status {
+    /// Read from the disk: the extension's notes in the data folder, the browsers' folders. May
+    /// wait (#1218): never on the window's thread.
+    fn read() -> Status {
+        let registration = registration();
+        let registered = registration == Registration::Ready;
+        Status {
+            connected: mdm_ipc::extension::seen(),
+            seen: seen_names(),
+            registered,
+            refused: if registered {
+                None
+            } else {
+                refused_now(&registration)
+            },
+        }
+    }
 }
 
 /// Whether `row` (a browser as the window lists it) is among the browsers seen (as Options
@@ -90,15 +131,34 @@ impl Extension {
         if browsers.is_empty() {
             browsers.push((String::new(), None));
         }
+        Self::with_reader(browsers, Status::read)
+    }
+
+    /// The window for `browsers`, where it stands read by `read`.
+    fn with_reader(browsers: Vec<(String, Option<PathBuf>)>, read: fn() -> Status) -> Self {
         Extension {
             browsers,
-            connected: mdm_ipc::extension::seen(),
-            seen: seen_names(),
-            registered: registered(),
-            looked: std::time::Instant::now(),
-            set_up_seen: 0,
+            status: crate::launch::Asked::default(),
+            shown: None,
+            read,
             steps: None,
         }
+    }
+
+    /// Where it stands, never waiting for the disk (only for the very first read, at most
+    /// [`FIRST_WAIT`]): the last read's answer while the next is under way, one at a time, and
+    /// None before the first. `repaint` is woken when an answer that differs comes.
+    fn follow(&mut self, repaint: Option<&egui::Context>) -> Option<&Status> {
+        let read = self.read;
+        if let Some(status) =
+            self.status
+                .get_or_last(&set_up_runs(), LOOK_EVERY, FIRST_WAIT, repaint, move |_| {
+                    read()
+                })
+        {
+            self.shown = Some(status);
+        }
+        self.shown.as_ref()
     }
 
     /// The Safari steps, open at once (`/show safari-steps`: screenshots).
@@ -109,17 +169,16 @@ impl Extension {
     /// Open until closed; Done when "Don't ask again" was pressed.
     pub fn show(&mut self, ctx: &egui::Context) -> Outcome<()> {
         // The host marks the extension seen when a browser starts it: look again now and then
-        // (each browser's own, as each adds it).
-        if self.looked.elapsed() >= Duration::from_secs(1) || set_up_finished(&mut self.set_up_seen)
-        {
-            self.looked = std::time::Instant::now();
-            self.connected = mdm_ipc::extension::seen();
-            self.seen = seen_names();
-            self.registered = registered();
-        }
-        ctx.request_repaint_after(Duration::from_secs(1));
-        let h = BANNER + 16.0 + self.browsers.len() as f32 * ROW + 104.0;
-        // A long translation's subline makes the banner taller (winui::banner).
+        // (each browser's own, as each adds it), beside the window.
+        self.follow(Some(ctx));
+        ctx.request_repaint_after(LOOK_EVERY);
+        // A long translation's subline makes the banner taller (winui::banner), a long
+        // paragraph of where it stands its bottom (macOS's refusal, #1218).
+        let h = BANNER
+            + 16.0
+            + self.browsers.len() as f32 * ROW
+            + 104.0
+            + crate::dialogs::grow_extra(ctx, "extension-status");
         let extra = crate::dialogs::grow_extra(ctx, "extension-banner");
         let mut answer = None;
         let mut open_steps = false;
@@ -178,6 +237,18 @@ impl Extension {
         );
         // Everything below it moves down with a taller banner.
         let o = o + egui::vec2(0.0, extra);
+        // What was read last (beside the window); before the first answer, nothing said wrong.
+        let status = self.shown.clone();
+        let known = status.is_some();
+        let Status {
+            connected,
+            seen,
+            registered,
+            refused,
+        } = status.unwrap_or(Status {
+            registered: true,
+            ..Status::default()
+        });
 
         // One row per browser: its name, and the button that opens the extension's page in it:
         // Firefox's on addons.mozilla.org, the Chrome Web Store's for the others (the tutorial
@@ -218,7 +289,7 @@ impl Extension {
             let (add_x, add_w) =
                 winui::buttons_to_right(&p, W - 18.0, 8.0, &[(label, 150.0)], 220.0)[0];
             // This browser's extension is there already: said, before its button.
-            if is_seen(&self.seen, name) {
+            if is_seen(&seen, name) {
                 winui::text_right(
                     &p,
                     o.x + add_x - 10.0,
@@ -265,18 +336,28 @@ impl Extension {
 
         // Where it stands, then the answer. Not set up at all (the setup's box unticked): no
         // extension could reach the app, so that comes first, with the fix.
-        let y = h - 84.0;
-        if !self.registered {
+        // A paragraph longer than the three lines planned grows the window (its height counts
+        // this already): it starts as high as before.
+        let grown = crate::dialogs::grow_extra(ui.ctx(), "extension-status");
+        let y = h - 84.0 - grown;
+        let mut lines = 0;
+        if !registered {
             // As wide as its label in this language (#192); the paragraph ends 10 px before it.
             let (fix_x, fix_w) =
                 winui::buttons_to_right(&p, W - 18.0, 8.0, &[("Set it up", 110.0)], 180.0)[0];
-            winui::paragraph(
+            // macOS kept MDM out of a browser's folder (#1218, #1173): what to allow, and where.
+            let why = match &refused {
+                Some(refused) => format!("{} {}", refused_line(refused), refused_how()),
+                None => crate::i18n::t(
+                    "Browser integration isn't set up on this computer, so no browser can reach Mister Download Manager yet.",
+                )
+                .to_owned(),
+            };
+            lines = winui::paragraph(
                 &p,
                 o.x + 18.0,
                 o.y + y,
-                crate::i18n::t(
-                    "Browser integration isn't set up on this computer, so no browser can reach Mister Download Manager yet.",
-                ),
+                &why,
                 winui::ERROR(),
                 o.x + fix_x - 10.0,
                 14.0,
@@ -294,9 +375,12 @@ impl Extension {
                 set_up(ui.ctx());
             }
         }
-        let (line, color) = if !self.registered {
+        let (line, color) = if !registered {
             (String::new(), muted)
-        } else if self.connected {
+        } else if !known {
+            // i18n: in the browser extension's window, while it reads whether the browsers can reach MDM (a moment, usually)
+            (crate::i18n::t("Checking...").to_owned(), muted)
+        } else if connected {
             (
                 crate::i18n::t("Connected: downloads from your browser now come here.").to_owned(),
                 winui::SUCCESS(),
@@ -311,8 +395,13 @@ impl Extension {
             )
         };
         if !line.is_empty() {
-            winui::paragraph(&p, o.x + 18.0, o.y + y, &line, color, o.x + W - 18.0, 14.0);
+            lines = winui::paragraph(&p, o.x + 18.0, o.y + y, &line, color, o.x + W - 18.0, 14.0);
         }
+        crate::dialogs::grow_px(
+            ui.ctx(),
+            "extension-status",
+            14.0 * lines.saturating_sub(3) as f32,
+        );
         winui::etched_h(&p, o.x + 16.0, o.y + h - 46.0, W - 32.0);
         let y = h - 36.0;
         // The fallback, when a store can't be used (a managed browser, a store turned off): the
@@ -332,7 +421,7 @@ impl Extension {
         }
         // As wide as their labels in this language (#192), Don't ask again only while no
         // extension has reached MDM.
-        let row: Vec<(&str, f32)> = if self.connected {
+        let row: Vec<(&str, f32)> = if connected {
             vec![("Close", 90.0)]
         } else {
             vec![("Don't ask again", 130.0), ("Close", 90.0)]
@@ -350,7 +439,7 @@ impl Extension {
         if close.clicked() || winui::enter_pressed(ui) {
             *answer = Some(false);
         }
-        if !self.connected {
+        if !connected {
             // i18n: button in the browser extension's window: stop offering it at each start
             let never = winui::button(
                 ui,
@@ -523,20 +612,134 @@ pub enum Registration {
     /// that wrote it: one run from inside a zip, whose temporary folder was deleted (#818).
     #[cfg_attr(unix, allow(dead_code))]
     Gone(PathBuf),
+    /// macOS refused to let MDM read this browser folder ("Operation not permitted", #1218):
+    /// its protection of other apps' data. Other systems never say it (their folders don't
+    /// refuse that way); an off-screen test copy can, for its screenshots (MDM_TEST_REFUSED).
+    Refused(PathBuf),
 }
 
 /// Where browser integration's registration stands: the native host's manifests where the
-/// browsers look, and the helper they name.
+/// browsers look, and the helper they name. It reads the browsers' folders, which can take
+/// seconds (#1218): never on the window's thread ([`Status::read`], [`Tester`]).
+///
+/// Off-screen test copies only: MDM_TEST_SLOW_REGISTRATION=<seconds> makes it take that long
+/// first (a folder that doesn't answer), MDM_TEST_REFUSED=<folder> says macOS refused that one.
 pub fn registration() -> Registration {
+    if crate::offscreen() {
+        if let Some(secs) = std::env::var("MDM_TEST_SLOW_REGISTRATION")
+            .ok()
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .filter(|s| s.is_finite() && *s > 0.0)
+        {
+            tracing::info!(
+                "browser integration: a slow read ({secs} s, MDM_TEST_SLOW_REGISTRATION)"
+            );
+            std::thread::sleep(Duration::from_secs_f64(secs.min(600.0)));
+        }
+        if let Some(folder) = std::env::var_os("MDM_TEST_REFUSED").filter(|f| !f.is_empty()) {
+            return Registration::Refused(PathBuf::from(folder));
+        }
+    }
     #[cfg(windows)]
     return crate::win32::host_registration();
     #[cfg(unix)]
     return crate::unix::host_registration();
 }
 
-/// Is browser integration registered on this computer, ready for the browsers?
-pub fn registered() -> bool {
-    registration() == Registration::Ready
+/// macOS kept MDM out of a browser's folder ("Operation not permitted", EPERM, #1218, #1173):
+/// which browser's (its name in the app; empty when the folder is no browser's MDM knows by
+/// name), and the folder.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Refused {
+    pub browser: String,
+    pub folder: PathBuf,
+}
+
+impl Refused {
+    /// The folder `folder` refused: its browser named by its place under Application Support.
+    fn at(folder: &std::path::Path) -> Refused {
+        Refused {
+            browser: browser_of_folder(&folder.to_string_lossy())
+                .unwrap_or_default()
+                .to_owned(),
+            folder: folder.to_owned(),
+        }
+    }
+}
+
+/// The browser whose folder `path` is in (under `Library/Application Support/`, as MDM's table
+/// names its data and host folders on macOS: `Google/Chrome/NativeMessagingHosts` is Chrome's,
+/// `Mozilla/...` Firefox's), None for another folder.
+fn browser_of_folder(path: &str) -> Option<&'static str> {
+    const SUPPORT: &str = "Library/Application Support/";
+    let under = &path[path.rfind(SUPPORT)? + SUPPORT.len()..];
+    mdm_ipc::browsers::BROWSERS
+        .iter()
+        .find(|b| {
+            b.mac_data.iter().chain(b.mac_hosts.iter()).any(|d| {
+                under
+                    .strip_prefix(d)
+                    .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
+            })
+        })
+        .map(|b| b.name)
+}
+
+/// Whether the native host's error `error` (its `--register`, or the window's own) says macOS
+/// kept MDM out of a browser's folder: "<folder>: Operation not permitted (os error 1)", the
+/// folder under `Library/Application Support/`. Only on macOS (`macos`): elsewhere EPERM means
+/// other things, and the error is shown as it is.
+fn refused_in(error: &str, macos: bool) -> Option<Refused> {
+    const EPERM: &str = ": Operation not permitted (os error 1)";
+    if !macos {
+        return None;
+    }
+    // Several folders' errors are joined with "; " (crates/nmhost): the first refused one.
+    let at = error.find(EPERM)?;
+    let before = &error[..at];
+    let head = &before[..before.rfind("/Library/Application Support/")?];
+    // The folder starts after the words before it ("misterdownloadmanager-nmhost: /Users/…"),
+    // or the error before it ("…; /Users/…").
+    let start = [head.rfind(": "), head.rfind("; ")]
+        .into_iter()
+        .flatten()
+        .max()
+        .map_or(0, |s| s + 2);
+    Some(Refused::at(std::path::Path::new(before[start..].trim())))
+}
+
+/// macOS keeping MDM out of a browser's folder now: the folder it refused to read, else the last
+/// Set it up's error, if it says so.
+fn refused_now(registration: &Registration) -> Option<Refused> {
+    match registration {
+        Registration::Refused(folder) => Some(Refused::at(folder)),
+        _ => register_error().and_then(|e| refused_in(&e, cfg!(target_os = "macos"))),
+    }
+}
+
+/// What macOS refusing a folder means, in a line: "macOS keeps MDM out of Google Chrome's folder".
+fn refused_line(refused: &Refused) -> String {
+    if refused.browser.is_empty() {
+        // i18n: a check of Test browser integration, and the browser extension's window (macOS): macOS refused to let MDM read or write a browser's folder (where the browser finds MDM's helper)
+        crate::i18n::t("macOS keeps Mister Download Manager out of a browser's folder.").to_owned()
+    } else {
+        crate::i18n::fmt(
+            // i18n: a check of Test browser integration, and the browser extension's window (macOS): macOS refused to let MDM read or write {browser}'s folder (where the browser finds MDM's helper); {browser} is a browser's name
+            crate::i18n::t("macOS keeps Mister Download Manager out of {browser}'s folder."),
+            &[("browser", &refused.browser)],
+        )
+    }
+}
+
+/// What to do about it, in Apple's words for its settings (System Settings → Privacy & Security
+/// → Full Disk Access: "Allow apps to access all files on a user's Mac, including data from other
+/// apps", Apple's Platform Support guide; the prompt macOS shows is "… would like to access data
+/// from other apps").
+fn refused_how() -> &'static str {
+    // i18n: under "macOS keeps Mister Download Manager out of …'s folder" (Test browser integration, the browser extension's window): how to allow it. The quoted words and System Settings → Privacy & Security → Full Disk Access are macOS's own: use Apple's words in this language, or keep the English ones when unsure
+    crate::i18n::t(
+        "If macOS asks whether it may access data from other apps, allow it. Or turn on Mister Download Manager in System Settings → Privacy & Security → Full Disk Access. Then press Set it up.",
+    )
 }
 
 /// Why the last registration failed (at a start, or Set it up's), in the native host's words;
@@ -679,15 +882,15 @@ pub fn set_up(ctx: &egui::Context) {
     }
 }
 
-/// Whether a Set it up finished since `seen` was last given here (it is then brought up to
-/// date): the caller reads the checks again.
-pub fn set_up_finished(seen: &mut u64) -> bool {
-    let done = SET_UP_DONE.load(Ordering::Acquire);
-    std::mem::replace(seen, done) != done
+/// Set it up's runs finished so far: a window that shows where it stands reads it again when
+/// this changes (its read's key).
+pub fn set_up_runs() -> u64 {
+    SET_UP_DONE.load(Ordering::Acquire)
 }
 
 /// One line of Options → General → Test browser integration: what was checked, whether it
 /// holds, and the help page's section when it doesn't.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Check {
     pub ok: bool,
     pub text: String,
@@ -695,19 +898,58 @@ pub struct Check {
     /// A path the check names, on a line of its own under it: shortened in the middle when it
     /// doesn't fit, whole on hover.
     pub detail: Option<String>,
+    /// What to do about it, a paragraph under it (macOS's refusal, #1218).
+    pub how: Option<String>,
 }
 
-/// The checks in the order a connection needs them; the first failing one is what to fix.
-pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
+/// Test browser integration's checks, read beside the window (#1218): the browsers' folders can
+/// take seconds to answer. Read when it opens, and again once a Set it up finished; the window
+/// shows the last ones meanwhile, and "Checking..." before the first.
+pub struct Tester {
+    asked: crate::launch::Asked<(u64, bool), Vec<Check>>,
+    /// Options' "Advanced browser integration" as the window opened (the first check).
+    advanced: bool,
+    /// What reads them ([`checks`]; a test's slow one).
+    read: fn(bool) -> Vec<Check>,
+}
+
+impl Tester {
+    pub fn new(advanced: bool) -> Self {
+        Tester {
+            asked: crate::launch::Asked::default(),
+            advanced,
+            read: checks,
+        }
+    }
+
+    /// The checks, never waiting for the disk (only for the very first read, at most
+    /// [`FIRST_WAIT`]); None before the first answer. `repaint` is woken when they come.
+    pub fn checks(&self, repaint: Option<&egui::Context>) -> Option<Vec<Check>> {
+        let read = self.read;
+        self.asked.get_or_last(
+            &(set_up_runs(), self.advanced),
+            Duration::MAX,
+            FIRST_WAIT,
+            repaint,
+            move |&(_, advanced)| read(advanced),
+        )
+    }
+}
+
+/// The checks in the order a connection needs them, with Options' "Advanced browser
+/// integration" `advanced`; the first failing one is what to fix. It reads the browsers'
+/// folders: never on the window's thread ([`Tester`]).
+pub fn checks(advanced: bool) -> Vec<Check> {
     let check = |ok: bool, text: &str, why: Option<&'static str>| Check {
         ok,
         text: crate::i18n::t(text).to_owned(),
         why: (!ok).then_some(why).flatten(),
         detail: None,
+        how: None,
     };
     let mut out = vec![
         check(
-            settings.advanced_integration,
+            advanced,
             // i18n: a check of Test browser integration (Options → General)
             "Advanced browser integration is on",
             Some("options"),
@@ -759,12 +1001,30 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
                 text: crate::i18n::t("The browsers are set up for a copy that is gone:").to_owned(),
                 why: Some("not-installed"),
                 detail: Some(folder.display().to_string()),
+                how: None,
             }
         }
+        Registration::Refused(folder) => {
+            tracing::warn!(
+                "browser integration: macOS refused {} (Operation not permitted)",
+                folder.display()
+            );
+            refused_check(&Refused::at(folder))
+        }
     });
-    if registration != Registration::Ready
-        && let Some(error) = register_error()
-    {
+    let error = (registration != Registration::Ready)
+        .then(register_error)
+        .flatten();
+    // Setting it up was refused by macOS (#1173): said what it means, once (not again when the
+    // read was refused already).
+    let refused = error
+        .as_deref()
+        .and_then(|e| refused_in(e, cfg!(target_os = "macos")));
+    if let Some(refused) = refused {
+        if !matches!(registration, Registration::Refused(_)) {
+            out.push(refused_check(&refused));
+        }
+    } else if let Some(error) = error {
         out.push(Check {
             ok: false,
             text: crate::i18n::fmt(
@@ -774,6 +1034,7 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
             ),
             why: Some("not-installed"),
             detail: None,
+            how: None,
         });
     }
     let seen = mdm_ipc::extension::seen_browsers();
@@ -809,9 +1070,22 @@ pub fn checks(settings: &crate::settings::Settings) -> Vec<Check> {
             text,
             why: None,
             detail: None,
+            how: None,
         });
     }
     out
+}
+
+/// Test browser integration's line for a folder macOS refused: what it means, the folder, what
+/// to do (Set it up is offered, as for every registration that failed).
+fn refused_check(refused: &Refused) -> Check {
+    Check {
+        ok: false,
+        text: refused_line(refused),
+        why: Some("not-installed"),
+        detail: Some(refused.folder.display().to_string()),
+        how: Some(refused_how().to_owned()),
+    }
 }
 
 #[cfg(test)]
@@ -858,5 +1132,193 @@ mod tests {
         for b in ["Google Chrome", "Helium", "Brave", "Your browser", ""] {
             assert!(!is_gecko(b), "{b}");
         }
+    }
+
+    /// Long enough for anything a test waits for to come on the slowest runner: a deadlock
+    /// breaker, never a time any check is about.
+    const STUCK: Duration = Duration::from_secs(30);
+    /// How long the fake slow reads take: far longer than a frame may.
+    const SLOW: Duration = Duration::from_millis(1500);
+
+    fn slow_status() -> Status {
+        std::thread::sleep(SLOW);
+        Status {
+            connected: true,
+            seen: vec!["Google Chrome".into()],
+            registered: true,
+            refused: None,
+        }
+    }
+
+    /// #1218: the extension's window never waits for a slow read: before the first answer it
+    /// says "Checking..." (None) after a short wait at most, then shows the answer, and keeps
+    /// showing it at once while the next read (a second later) is under way.
+    #[test]
+    fn the_window_never_waits_for_a_slow_read() {
+        let mut window = Extension::with_reader(vec![], slow_status);
+        let start = std::time::Instant::now();
+        assert_eq!(window.follow(None), None);
+        assert!(start.elapsed() < SLOW / 2, "{:?}", start.elapsed());
+        let start = std::time::Instant::now();
+        loop {
+            let frame = std::time::Instant::now();
+            let shown = window.follow(None).cloned();
+            assert!(
+                frame.elapsed() < SLOW / 2,
+                "a frame waited {:?}",
+                frame.elapsed()
+            );
+            if let Some(shown) = shown {
+                assert!(shown.connected && shown.registered);
+                break;
+            }
+            assert!(start.elapsed() < STUCK, "never came");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        // Over the next reads (each a second after the last came, each 1.5 s long): every
+        // frame at once, the last answer shown throughout.
+        let start = std::time::Instant::now();
+        while start.elapsed() < LOOK_EVERY + SLOW * 2 {
+            let frame = std::time::Instant::now();
+            assert!(window.follow(None).is_some_and(|s| s.connected));
+            assert!(
+                frame.elapsed() < SLOW / 2,
+                "a frame waited {:?}",
+                frame.elapsed()
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    fn slow_checks(advanced: bool) -> Vec<Check> {
+        std::thread::sleep(SLOW);
+        vec![Check {
+            ok: advanced,
+            text: "checked".into(),
+            why: None,
+            detail: None,
+            how: None,
+        }]
+    }
+
+    /// #1218: Test browser integration's checks, the same way: "Checking..." (None) at once,
+    /// then the checks.
+    #[test]
+    fn test_browser_integration_never_waits_for_a_slow_read() {
+        let tester = Tester {
+            asked: crate::launch::Asked::default(),
+            advanced: true,
+            read: slow_checks,
+        };
+        let start = std::time::Instant::now();
+        assert_eq!(tester.checks(None), None);
+        assert!(start.elapsed() < SLOW / 2, "{:?}", start.elapsed());
+        let start = std::time::Instant::now();
+        let checks = loop {
+            let frame = std::time::Instant::now();
+            let checks = tester.checks(None);
+            assert!(
+                frame.elapsed() < SLOW / 2,
+                "a frame waited {:?}",
+                frame.elapsed()
+            );
+            if let Some(checks) = checks {
+                break checks;
+            }
+            assert!(start.elapsed() < STUCK, "never came");
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        assert!(checks.len() == 1 && checks[0].ok);
+    }
+
+    /// #1218, #1173: the native host's error for a folder macOS refused names its browser and
+    /// the folder; other errors, other folders and other systems keep the error as it is.
+    #[test]
+    fn a_folder_macos_refused_is_named_with_its_browser() {
+        let chrome = "/Users/a b/Library/Application Support/Google/Chrome/NativeMessagingHosts";
+        let error = format!(
+            "/Applications/Mister Download Manager.app/Contents/MacOS/misterdownloadmanager-nmhost \
+             --repair: exit status: 1: registered com.misterdownloadmanager.host in /Users/a b/\
+             Library/Application Support/Vivaldi/NativeMessagingHosts misterdownloadmanager-nmhost: \
+             {chrome}: Operation not permitted (os error 1)"
+        );
+        let refused = refused_in(&error, true).unwrap();
+        assert_eq!(refused.browser, "Google Chrome");
+        assert_eq!(refused.folder, PathBuf::from(chrome));
+        // Not on Linux or Windows, where EPERM means other things.
+        assert_eq!(refused_in(&error, false), None);
+        // Another error: shown as it is ("Setting it up failed: …").
+        assert_eq!(
+            refused_in(
+                &error.replace(
+                    "Operation not permitted (os error 1)",
+                    "Permission denied (os error 13)"
+                ),
+                true
+            ),
+            None
+        );
+        // Several folders: the refused one, after another's error.
+        let two = "x: /Users/a/Library/Application Support/Zen/NativeMessagingHosts: Permission \
+             denied (os error 13); /Users/a/Library/Application Support/Mozilla/\
+             NativeMessagingHosts: Operation not permitted (os error 1)";
+        let refused = refused_in(two, true).unwrap();
+        assert_eq!(refused.browser, "Mozilla Firefox");
+        assert_eq!(
+            refused.folder,
+            PathBuf::from("/Users/a/Library/Application Support/Mozilla/NativeMessagingHosts")
+        );
+        // A folder outside Application Support: not a browser's.
+        assert_eq!(
+            refused_in("/tmp/x: Operation not permitted (os error 1)", true),
+            None
+        );
+    }
+
+    /// The browser of a folder, by MDM's table: each of Chrome's channels has a folder of its
+    /// own, all Chrome's; Brave's hosts folder is Chrome's; another folder is none.
+    #[test]
+    fn folders_name_their_browser() {
+        let at = |d: &str| browser_of_folder(&format!("/Users/a/Library/Application Support/{d}"));
+        assert_eq!(
+            at("Google/Chrome/NativeMessagingHosts"),
+            Some("Google Chrome")
+        );
+        assert_eq!(
+            at("Google/Chrome Beta/NativeMessagingHosts"),
+            Some("Google Chrome")
+        );
+        assert_eq!(at("Microsoft Edge"), Some("Microsoft Edge"));
+        assert_eq!(at("BraveSoftware/Brave-Browser/x"), Some("Brave"));
+        assert_eq!(at("Mozilla/NativeMessagingHosts"), Some("Mozilla Firefox"));
+        assert_eq!(at("Google/ChromeX/NativeMessagingHosts"), None);
+        assert_eq!(at("Something Else/NativeMessagingHosts"), None);
+        assert_eq!(browser_of_folder("/home/a/.config/google-chrome"), None);
+    }
+
+    /// What macOS's refusal says, in English: the browser named, Apple's setting, the fix.
+    #[test]
+    fn the_refusal_says_what_to_do() {
+        let chrome = Refused::at(std::path::Path::new(
+            "/Users/a/Library/Application Support/Google/Chrome/NativeMessagingHosts",
+        ));
+        let line = refused_line(&chrome);
+        let unknown = refused_line(&Refused::default());
+        println!("{line}\n{unknown}\n{}", refused_how());
+        assert_eq!(
+            line,
+            "macOS keeps Mister Download Manager out of Google Chrome's folder."
+        );
+        assert_eq!(
+            unknown,
+            "macOS keeps Mister Download Manager out of a browser's folder."
+        );
+        assert!(refused_how().contains("Privacy & Security → Full Disk Access"));
+        let check = refused_check(&chrome);
+        assert!(!check.ok && check.why == Some("not-installed") && check.how.is_some());
+        assert_eq!(
+            check.detail.as_deref(),
+            Some(chrome.folder.to_str().unwrap())
+        );
     }
 }

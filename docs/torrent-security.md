@@ -28,6 +28,12 @@ A torrent names the trackers MDM asks for peers. MDM doesn't contact a tracker o
 
 A `.torrent` file fetched from a web address goes through the same checks as one opened from disk, and MDM reads at most 10 MB of it.
 
+## Peers
+
+Trackers, the DHT and other peers tell MDM where a torrent's peers are. MDM follows the same rule for them as for trackers: it only connects to a peer on the internet. An address on your own computer or your local network is left alone, whoever names it, so a list of peers can't point MDM at your router or another device at home.
+
+Peers on your local network are still found: with **Find peers on the local network** on, each one announces itself there, and MDM connects to those.
+
 ## Blocking addresses
 
 **Block the addresses in this list** takes the address of a public IP blocklist, in the P2P (PeerGuardian) or eMule `.dat` format, plain or gzipped. MDM downloads it with its own downloader (your Proxy / Socks settings apply), checks it, and fetches it again every 7 days. Peers in it are refused. A list MDM can't read is left out, and the last good one stays. The engine reads the list when it starts.

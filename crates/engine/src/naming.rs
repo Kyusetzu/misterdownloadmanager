@@ -2,9 +2,11 @@
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Condvar, Mutex, OnceLock};
 
 use percent_encoding::percent_decode_str;
+use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
 
 /// File name from `Content-Disposition`, else the address's ([`address_name`]), else
@@ -497,37 +499,172 @@ pub fn is_format_char(c: char) -> bool {
     )
 }
 
-/// Longest file name we create, in UTF-16 units: NTFS allows 255, and the part file adds
-/// ".mdm.part" (9) and a duplicate may add " (NNN)" (6). The extension is kept.
+/// Longest file name [`sanitize`] makes, in the system's units ([`Limits`]): a name may have
+/// 255, the part file adds ".mdm.part" (9) and a duplicate may add " (NNN)" (6). The extension
+/// is kept.
 const MAX_NAME: usize = 230;
-
-/// Longest full path we create, in UTF-16 units. On Windows: `MAX_PATH` (260) without the
-/// terminating NUL, so Explorer and other programs can still open the file.
-#[cfg(windows)]
-const MAX_PATH_LEN: usize = 259;
-#[cfg(not(windows))]
-const MAX_PATH_LEN: usize = 4095;
 /// What our files add to a destination: ".mdm.part" / ".mdm.json".
 const SIDECAR: usize = 9;
 /// What a duplicate's number adds: " (NNN)".
 const DUPLICATE: usize = 6;
 /// Shortest name worth making when a deep folder leaves little room.
 const MIN_NAME: usize = 20;
+/// The most a video's files add to its stem (#1102), MDM's engine's and yt-dlp's alike: a
+/// stream's pieces, `<stem>.f<id>.<ext>.mdm.pieces/000123.mdm.part` (2 + a format id of up to
+/// 32 + 1 + an extension of up to 5 + 11 + 1 + 15), longer than yt-dlp's own
+/// `<stem>.f<id>.<ext>.part`, `.ytdl` and `.part-Frag<N>.part`, its merge's `<stem>.temp.<ext>`,
+/// the subtitles' `<stem>.<lang>.srt` and the engine's `<stem>.f<id>.<ext>.mdm.part`. A longer
+/// format id (rare) ends in yt-dlp's error, which then names the path that was too long
+/// (`mdm_tools::video::too_long`).
+pub const HELPER_FILES: usize = 67;
+/// A path's most on Windows with long paths on: the `\\?\` form's 32,767 UTF-16 units, with
+/// room for its prefix.
+const LONG_PATH: usize = 32_000;
 
-fn utf16_len(s: &std::ffi::OsStr) -> usize {
-    s.to_string_lossy().encode_utf16().count()
+/// Whether Windows lets programs use paths past `MAX_PATH` (`LongPathsEnabled`), as yt-dlp and
+/// ffmpeg do then. MDM's own file calls get past it either way (Rust's standard library makes a
+/// long path a `\\?\` one), but keep within it while it is off so that every program the files
+/// are opened with can. The app reads it as it starts (win32.rs); off until then, and on every
+/// other system, where it means nothing.
+static LONG_PATHS: AtomicBool = AtomicBool::new(false);
+
+/// Say whether Windows' long paths are on ([`LONG_PATHS`]).
+pub fn set_long_paths(on: bool) {
+    LONG_PATHS.store(on, Ordering::Relaxed);
 }
 
-/// Whether `dest` and the part and state files beside it stay within the path limit.
+/// Whether Windows' long paths are on ([`LONG_PATHS`]).
+pub fn long_paths() -> bool {
+    LONG_PATHS.load(Ordering::Relaxed)
+}
+
+/// How long a path and each name in it may be, and in what units.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Limits {
+    /// A whole path's most.
+    pub path: usize,
+    /// One name's (a file's or a folder's) most.
+    pub name: usize,
+    /// Counted in UTF-8 bytes (ext4, APFS and the other Linux and macOS file systems), else in
+    /// UTF-16 units (NTFS, exFAT and Windows' paths).
+    pub bytes: bool,
+}
+
+impl Limits {
+    /// This system's. Windows: a path of 259 UTF-16 units (`MAX_PATH` without its NUL) while long
+    /// paths are off, Python's (yt-dlp's) and Explorer's limit, and names of 255. Linux: 4095
+    /// bytes a path (`PATH_MAX` without its NUL) and 255 a name; macOS: 1023 and 255.
+    pub fn here() -> Limits {
+        if cfg!(windows) {
+            Limits {
+                path: if long_paths() { LONG_PATH } else { 259 },
+                name: 255,
+                bytes: false,
+            }
+        } else if cfg!(target_os = "macos") {
+            Limits {
+                path: 1023,
+                name: 255,
+                bytes: true,
+            }
+        } else {
+            Limits {
+                path: 4095,
+                name: 255,
+                bytes: true,
+            }
+        }
+    }
+
+    /// `s`'s length in these units.
+    pub fn len(&self, s: &str) -> usize {
+        if self.bytes {
+            s.len()
+        } else {
+            s.encode_utf16().count()
+        }
+    }
+
+    fn of(&self, p: &Path) -> usize {
+        self.len(&p.to_string_lossy())
+    }
+
+    /// Whether `dest`, and the files that add `extra` to its name beside it, are within these.
+    fn fit(&self, dest: &Path, extra: usize) -> bool {
+        let name = dest
+            .file_name()
+            .map_or(0, |n| self.len(&n.to_string_lossy()));
+        self.of(dest) + extra <= self.path && name + extra <= self.name
+    }
+
+    /// The room for a name in `dir` whose files add `extra` to it. None when there is none.
+    fn room(&self, dir: &Path, extra: usize) -> Option<usize> {
+        let by_path = self.path.checked_sub(self.of(dir) + 1 + extra)?;
+        let by_name = self.name.checked_sub(extra)?;
+        Some(by_path.min(by_name))
+    }
+}
+
+/// Whether `path` is within the path limits: as a whole, and each name in it.
+pub fn fits(path: &Path) -> bool {
+    let limits = Limits::here();
+    limits.of(path) <= limits.path
+        && path
+            .iter()
+            .all(|name| limits.len(&name.to_string_lossy()) <= limits.name)
+}
+
+/// Whether `dest` and the part and state files beside it stay within the path limits.
 pub fn path_fits(dest: &Path) -> bool {
-    utf16_len(dest.as_os_str()) + SIDECAR <= MAX_PATH_LEN
+    Limits::here().fit(dest, SIDECAR)
+}
+
+/// Whether every file of a video saved in `dir` as `<stem>.<ext>` (#1102): its streams, their
+/// pieces, yt-dlp's own unfinished files, all `<stem>.*` beside it ([`HELPER_FILES`]), stays
+/// within the path limits.
+pub fn stem_fits(dir: &Path, stem: &str) -> bool {
+    Limits::here().fit(&dir.join(stem), HELPER_FILES)
 }
 
 /// `name`, shortened (keeping the extension) so that `dir/name`, its part and state files and a
-/// duplicate's number stay within the path limit. None when `dir` alone leaves too little room.
+/// duplicate's number stay within the path limits. None when `dir` alone leaves too little room.
 pub fn fit_name(dir: &Path, name: &str) -> Option<String> {
-    let room = MAX_PATH_LEN.checked_sub(utf16_len(dir.as_os_str()) + 1 + SIDECAR + DUPLICATE)?;
-    (room >= MIN_NAME).then(|| clamp_to(name, room.min(MAX_NAME)))
+    fit_name_in(dir, name, Limits::here())
+}
+
+fn fit_name_in(dir: &Path, name: &str, limits: Limits) -> Option<String> {
+    let room = limits.room(dir, SIDECAR + DUPLICATE)?;
+    (room >= MIN_NAME).then(|| clamp_to(name, room.min(MAX_NAME), limits))
+}
+
+/// A video's `name` (`<stem>.<ext>`), its stem shortened so that every file MDM's engine and
+/// yt-dlp write for it ([`HELPER_FILES`]) and a duplicate's number stay within the path limits
+/// (#1102), extension kept. None when `dir` alone leaves too little room.
+pub fn fit_stem(dir: &Path, name: &str) -> Option<String> {
+    fit_stem_in(dir, name, Limits::here())
+}
+
+fn fit_stem_in(dir: &Path, name: &str, limits: Limits) -> Option<String> {
+    let room = limits.room(dir, DUPLICATE + HELPER_FILES)?;
+    if room < MIN_NAME {
+        return None;
+    }
+    let (stem, ext) = stem_and_ext(name);
+    if limits.len(stem) <= room {
+        return Some(name.to_owned());
+    }
+    let stem = cut(stem, room, limits);
+    let stem = if stem.is_empty() { "download" } else { &stem };
+    Some(format!("{stem}{ext}"))
+}
+
+/// `name`'s stem and its extension with the dot (`Talk.mp4` → `Talk`, `.mp4`), as yt-dlp's
+/// output name `<stem>.%(ext)s` has them.
+fn stem_and_ext(name: &str) -> (&str, &str) {
+    match name.rfind('.') {
+        Some(i) if i > 0 => (&name[..i], &name[i..]),
+        _ => (name, ""),
+    }
 }
 
 /// Where a new download named `name` goes in `dir`: the name shortened to fit the path limit
@@ -553,15 +690,36 @@ fn fitted(dir: &Path, name: &str) -> String {
 
 /// `destination` for a download whose helper picks the extension and takes any `<stem>.*` it
 /// finds as its own (a video: yt-dlp reuses a file of the stem already there, and after an
-/// MP3's conversion deletes it, #32). The stem is numbered on until no file in `dir` starts
-/// with it and a dot, letter case aside, and `in_use` (the other downloads' stems in `dir`)
-/// says no.
+/// MP3's conversion deletes it, #32). The stem is first shortened so that the helper's files fit
+/// the path limits ([`fit_stem`], #1102), then numbered on until no file in `dir` starts with it
+/// and a dot, letter case aside, no name held in this process ([`reserve`]) does either, and
+/// `in_use` (the other downloads' stems in `dir`) says no.
 pub fn stem_destination(dir: &Path, name: &str, in_use: impl Fn(&str) -> bool) -> PathBuf {
-    let name = fitted(dir, name);
-    let (stem, ext) = match name.rfind('.') {
-        Some(i) if i > 0 => (&name[..i], &name[i..]),
-        _ => (name.as_str(), ""),
-    };
+    let name = fit_stem(dir, name).unwrap_or_else(|| name.to_owned());
+    stem_place(dir, &name, in_use)
+}
+
+/// [`stem_destination`] for a name the user typed (#1102): kept as typed, only numbered on when
+/// its stem is taken. One too long for its folder says so when its download starts
+/// ([`stem_fits`]).
+pub fn typed_stem_destination(dir: &Path, name: &str, in_use: impl Fn(&str) -> bool) -> PathBuf {
+    stem_place(dir, name, in_use)
+}
+
+/// [`stem_destination`] (`typed`: [`typed_stem_destination`]) before the folder is looked at:
+/// the stem fitted to the path limits, not yet numbered, as [`guess`] is for a file. What a new
+/// video's row shows while its folder is asked beside the window (a sleeping drive or a network
+/// folder can take seconds to answer); it is numbered on then, or as it starts. Never touches the
+/// disk.
+pub fn stem_guess(dir: &Path, name: &str, typed: bool) -> PathBuf {
+    if typed {
+        return dir.join(name);
+    }
+    dir.join(fit_stem(dir, name).unwrap_or_else(|| name.to_owned()))
+}
+
+fn stem_place(dir: &Path, name: &str, in_use: impl Fn(&str) -> bool) -> PathBuf {
+    let (stem, ext) = stem_and_ext(name);
     let there: Vec<String> = std::fs::read_dir(dir)
         .map(|rd| {
             rd.filter_map(Result::ok)
@@ -576,6 +734,7 @@ pub fn stem_destination(dir: &Path, name: &str, in_use: impl Fn(&str) -> bool) -
             .iter()
             .any(|n| n.starts_with(&prefix) || *n == s.to_lowercase())
             && !is_reserved(&p)
+            && !stem_reserved(dir, s)
             && !in_use(s)
     };
     std::iter::once(stem.to_owned())
@@ -599,35 +758,41 @@ pub struct Stems {
 impl Stems {
     /// `in_use`: the stems of the other downloads into `dir`.
     pub fn new(dir: &Path, in_use: impl IntoIterator<Item = String>) -> Stems {
-        let mut taken = HashSet::new();
+        let mut stems = Stems::listed(dir, in_use);
         if let Ok(rd) = std::fs::read_dir(dir) {
             for e in rd.filter_map(Result::ok) {
                 let name = e.file_name().to_string_lossy().to_lowercase();
                 for (i, _) in name.match_indices('.') {
-                    taken.insert(name[..i].to_owned());
+                    stems.taken.insert(name[..i].to_owned());
                 }
-                taken.insert(name);
+                stems.taken.insert(name);
             }
         }
-        taken.extend(in_use.into_iter().map(|s| s.to_lowercase()));
+        stems
+    }
+
+    /// [`Stems::new`] without reading the folder (never touches the disk): the stems differ from
+    /// one another and from `in_use`, and each is numbered on past the folder's files later, as
+    /// its download starts ([`stem_destination`], beside a window that mustn't wait for a
+    /// sleeping drive or a network folder).
+    pub fn listed(dir: &Path, in_use: impl IntoIterator<Item = String>) -> Stems {
         Stems {
             dir: dir.to_owned(),
-            taken,
+            taken: in_use.into_iter().map(|s| s.to_lowercase()).collect(),
         }
     }
 
-    /// Where `name` goes: its stem, else numbered on (` (1)`, ` (2)`…).
+    /// Where `name` goes: its stem, fitted to the path limits ([`fit_stem`]), else numbered on
+    /// (` (1)`, ` (2)`…).
     pub fn pick(&mut self, name: &str) -> PathBuf {
-        let name = fit_name(&self.dir, name).unwrap_or_else(|| name.to_owned());
-        let (stem, ext) = match name.rfind('.') {
-            Some(i) if i > 0 => (&name[..i], &name[i..]),
-            _ => (name.as_str(), ""),
-        };
+        let name = fit_stem(&self.dir, name).unwrap_or_else(|| name.to_owned());
+        let (stem, ext) = stem_and_ext(&name);
         let s = std::iter::once(stem.to_owned())
             .chain((1u32..).map(|n| format!("{stem} ({n})")))
             .find(|s| {
                 !self.taken.contains(&s.to_lowercase())
                     && !is_reserved(&self.dir.join(format!("{s}{ext}")))
+                    && !stem_reserved(&self.dir, s)
             })
             .expect("unbounded search finds a free name");
         self.taken.insert(s.to_lowercase());
@@ -636,12 +801,13 @@ impl Stems {
 }
 
 fn clamp(name: &str) -> String {
-    clamp_to(name, MAX_NAME)
+    clamp_to(name, MAX_NAME, Limits::here())
 }
 
-fn clamp_to(name: &str, max: usize) -> String {
+/// `name` within `max` ([`Limits`]' units), its extension kept, without a trailing dot or space.
+fn clamp_to(name: &str, max: usize, limits: Limits) -> String {
     let name = name.trim_end_matches(['.', ' ']);
-    let len = |s: &str| s.encode_utf16().count();
+    let len = |s: &str| limits.len(s);
     if len(name) <= max {
         return name.to_owned();
     }
@@ -656,26 +822,43 @@ fn clamp_to(name: &str, max: usize) -> String {
         }
         _ => (name, ""),
     };
-    let mut out = String::new();
-    for ch in stem.chars() {
-        if len(&out) + ch.len_utf16() + len(ext) > max {
+    let kept = cut(stem, max.saturating_sub(len(ext)), limits);
+    if kept.is_empty() {
+        return cut(name, max, limits);
+    }
+    format!("{kept}{ext}")
+        .trim_end_matches(['.', ' '])
+        .to_owned()
+}
+
+/// `s` cut to at most `max` ([`Limits`]' units), unchanged when it fits. Cut between two
+/// characters as they show (a letter and its accents, an emoji and its modifiers or a flag's two
+/// letters stay together), so never inside a UTF-8 sequence or a UTF-16 surrogate pair; at the
+/// end of a word when one ends in the last quarter of what is kept (a title in Chinese or Japanese
+/// has no spaces, and is cut at a character); without a trailing dot or space (Windows drops
+/// them).
+fn cut(s: &str, max: usize, limits: Limits) -> String {
+    if limits.len(s) <= max {
+        return s.to_owned();
+    }
+    let mut end = 0;
+    let mut used = 0;
+    for g in s.graphemes(true) {
+        let n = limits.len(g);
+        if used + n > max {
             break;
         }
-        out.push(ch);
+        used += n;
+        end += g.len();
     }
-    let trimmed = out.trim_end_matches(['.', ' ']);
-    if trimmed.is_empty() {
-        let mut plain = String::new();
-        for ch in name.chars() {
-            if len(&plain) + ch.len_utf16() > max {
-                break;
-            }
-            plain.push(ch);
-        }
-        return plain.trim_end_matches(['.', ' ']).to_owned();
-    }
-    format!("{trimmed}{ext}")
-        .trim_end_matches(['.', ' '])
+    let kept = &s[..end];
+    let mid_word =
+        !s[end..].starts_with(char::is_whitespace) && !kept.ends_with(char::is_whitespace);
+    let kept = match kept.rfind(char::is_whitespace) {
+        Some(i) if mid_word && limits.len(&kept[..i]) * 4 >= max * 3 => &kept[..i],
+        _ => kept,
+    };
+    kept.trim_end_matches(|c: char| c == '.' || c.is_whitespace())
         .to_owned()
 }
 
@@ -704,6 +887,19 @@ pub fn unique_path(dir: &Path, name: &str) -> PathBuf {
         .expect("unbounded search finds a free name")
 }
 
+/// `dir/name` for a download that replaces the file there as it completes (the user chose to,
+/// `Options::replace_existing`): a file at that name doesn't count as taken. Another download's
+/// does (its part file, or that name reserved in this process), and a folder there: then the next
+/// free numbered name, as [`unique_path`] gives it.
+pub fn replacing_path(dir: &Path, name: &str) -> PathBuf {
+    let first = dir.join(name);
+    if first.is_dir() || part_path(&first).exists() || is_reserved(&first) {
+        unique_path(dir, name)
+    } else {
+        first
+    }
+}
+
 /// Destinations of downloads running in this process: one destination, one download.
 fn active() -> &'static Mutex<HashSet<PathBuf>> {
     static ACTIVE: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
@@ -712,6 +908,21 @@ fn active() -> &'static Mutex<HashSet<PathBuf>> {
 
 fn is_reserved(p: &Path) -> bool {
     active().lock().unwrap().contains(p)
+}
+
+/// Whether a name held in this process ([`reserve`]) in `dir` is `stem` or starts with it and a
+/// dot, letter case aside: a stem a video must leave alone, as it leaves one a file there has
+/// (a file whose deletion is under way holds its name until it is gone, #1170).
+fn stem_reserved(dir: &Path, stem: &str) -> bool {
+    let stem = stem.to_lowercase();
+    let prefix = format!("{stem}.");
+    active().lock().unwrap().iter().any(|p| {
+        p.parent() == Some(dir)
+            && p.file_name().is_some_and(|n| {
+                let n = n.to_string_lossy().to_lowercase();
+                n == stem || n.starts_with(&prefix)
+            })
+    })
 }
 
 /// Holds a destination for one download; released when dropped.
@@ -731,6 +942,78 @@ pub fn reserve(dest: &Path) -> Option<Reservation> {
         .unwrap()
         .insert(dest.to_owned())
         .then(|| Reservation(dest.to_owned()))
+}
+
+/// Folders where a place's old files are being deleted so that a download starts there afresh
+/// (the app's Redownload, a duplicate overwritten, a restart under the same name): how many
+/// such deletes each has under way, by [`clearing_key`].
+fn clearings() -> &'static (Mutex<std::collections::HashMap<String, usize>>, Condvar) {
+    static CLEARING: OnceLock<(Mutex<std::collections::HashMap<String, usize>>, Condvar)> =
+        OnceLock::new();
+    CLEARING.get_or_init(Default::default)
+}
+
+/// A folder as [`clearings`] knows it: letter case aside (Windows' and macOS' folders; on Linux
+/// two folders that differ only in case wait for each other, which costs only a wait).
+fn clearing_key(dir: &Path) -> String {
+    dir.components()
+        .collect::<PathBuf>()
+        .to_string_lossy()
+        .to_lowercase()
+}
+
+/// A place whose old files are being deleted ([`clear`]): until it is dropped, a download that
+/// starts in its folder waits ([`wait_cleared`]) before it looks at the disk, so it finds none
+/// of them, and takes the name they leave.
+#[derive(Debug)]
+pub struct Clearing(String);
+
+impl Drop for Clearing {
+    fn drop(&mut self) {
+        let (map, done) = clearings();
+        let mut map = map.lock().unwrap();
+        if let Some(n) = map.get_mut(&self.0) {
+            *n -= 1;
+            if *n == 0 {
+                map.remove(&self.0);
+            }
+        }
+        done.notify_all();
+    }
+}
+
+/// `place`'s old files are about to be deleted beside the caller, and a download is to start
+/// there afresh: the downloads that start in its folder meanwhile (the engine's, and the looks
+/// that number a new name there) wait until the returned guard is dropped, after the delete.
+/// Unlike [`reserve`], the name stays free for the download that comes after: nothing is
+/// numbered past it.
+pub fn clear(place: &Path) -> Clearing {
+    let key = clearing_key(place.parent().unwrap_or(Path::new("")));
+    *clearings()
+        .0
+        .lock()
+        .unwrap()
+        .entry(key.clone())
+        .or_default() += 1;
+    Clearing(key)
+}
+
+/// Whether old files are being deleted in `dir` ([`clear`]). Never waits.
+pub fn being_cleared(dir: &Path) -> bool {
+    clearings()
+        .0
+        .lock()
+        .unwrap()
+        .contains_key(&clearing_key(dir))
+}
+
+/// Wait until no old files are being deleted in `dir` ([`clear`]): before looking at a name
+/// there. On a thread that may wait (never a window's): a delete can take as long as its disk.
+pub fn wait_cleared(dir: &Path) {
+    let key = clearing_key(dir);
+    let (map, done) = clearings();
+    let map = map.lock().unwrap();
+    let _unused = done.wait_while(map, |m| m.contains_key(&key)).unwrap();
 }
 
 #[cfg(test)]
@@ -770,6 +1053,74 @@ mod tests {
         );
     }
 
+    /// A video's name before its folder is looked at: what `stem_destination` gives in an empty
+    /// folder (fitted, not numbered), a typed one as typed; the folder isn't read (it isn't there).
+    #[test]
+    fn a_stem_guess_is_the_name_before_the_folder_answers() {
+        let dir = tempfile::tempdir().unwrap();
+        let d = dir.path().join("not there yet");
+        let long = format!("{}.mp4", "t".repeat(400));
+        let none = |_: &str| false;
+        let guessed = stem_guess(&d, &long, false);
+        std::fs::create_dir(&d).unwrap();
+        assert_eq!(guessed, stem_destination(&d, &long, none));
+        assert!(guessed.file_name().unwrap().len() < long.len());
+        assert_eq!(stem_guess(&d, "Talk.mp4", true), d.join("Talk.mp4"));
+        std::fs::write(d.join("Talk.webm"), b"").unwrap();
+        assert_eq!(stem_guess(&d, "Talk.mp4", false), d.join("Talk.mp4"));
+    }
+
+    /// A place being cleared holds up the looks in its folder (letter case aside) until every
+    /// delete there is done, and only there; its name stays free (nothing is numbered past it).
+    #[test]
+    fn a_folder_being_cleared_is_waited_for() {
+        let dir = tempfile::tempdir().unwrap();
+        let d = dir.path().join("Clear");
+        let one = clear(&d.join("a.bin"));
+        let two = clear(&d.join("b.bin"));
+        let upper = PathBuf::from(d.to_string_lossy().to_uppercase());
+        assert!(being_cleared(&d) && being_cleared(&upper));
+        assert!(!being_cleared(dir.path()));
+        assert!(!is_reserved(&d.join("a.bin")));
+        let (tx, rx) = std::sync::mpsc::channel();
+        let waiting = d.clone();
+        std::thread::spawn(move || {
+            wait_cleared(&waiting);
+            let _ = tx.send(());
+        });
+        let wait = std::time::Duration::from_millis(200);
+        assert!(rx.recv_timeout(wait).is_err(), "waits");
+        drop(one);
+        assert!(rx.recv_timeout(wait).is_err(), "for every delete there");
+        drop(two);
+        rx.recv_timeout(std::time::Duration::from_secs(10)).unwrap();
+        assert!(!being_cleared(&d));
+        wait_cleared(&d);
+    }
+
+    /// #1170: a name held in this process (a deleted download's, until its files are gone)
+    /// takes its stem for every extension, as a file there would; only in its own folder.
+    #[test]
+    fn a_held_name_takes_its_stem() {
+        let dir = tempfile::tempdir().unwrap();
+        let d = dir.path();
+        let none = |_: &str| false;
+        let held = reserve(&d.join("Talk.MP4")).unwrap();
+        assert_eq!(
+            stem_destination(d, "talk.webm", none),
+            d.join("talk (1).webm")
+        );
+        let mut stems = Stems::new(d, []);
+        assert_eq!(stems.pick("Talk.mkv"), d.join("Talk (1).mkv"));
+        let elsewhere = tempfile::tempdir().unwrap();
+        assert_eq!(
+            stem_destination(elsewhere.path(), "Talk.webm", none),
+            elsewhere.path().join("Talk.webm")
+        );
+        drop(held);
+        assert_eq!(stem_destination(d, "Talk.webm", none), d.join("Talk.webm"));
+    }
+
     /// #69: a playlist's names, the folder read once: the same rule as `stem_destination`, each
     /// name handed out taken for the next, and thousands quickly.
     #[test]
@@ -793,8 +1144,9 @@ mod tests {
         }
         stems = pick_all((stems, 5000));
         assert_eq!(stems.pick("Video 7.mp4"), d.join("Video 7 (2).mp4"));
-        // 8 times the names cost about 8 times as long (not 64), on any machine.
-        mdm_labserver::growth::assert_linear(1000, |n| (Stems::new(d, []), n), pick_all);
+        // 16 times the names in one folder cost about as much as in 16 folders (a square: 16
+        // times as much), on any machine.
+        mdm_labserver::growth::assert_linear(500, |n| (Stems::new(d, []), n), pick_all);
     }
 
     #[test]
@@ -805,7 +1157,8 @@ mod tests {
         let dest = deep.join(&name);
         assert!(path_fits(&dest));
         // Room for the duplicate's number too.
-        assert!(utf16_len(dest.as_os_str()) + SIDECAR + DUPLICATE <= MAX_PATH_LEN);
+        let limits = Limits::here();
+        assert!(limits.len(&dest.to_string_lossy()) + SIDECAR + DUPLICATE <= limits.path);
         assert_eq!(
             fit_name(Path::new(r"C:\dl"), "a.zip").as_deref(),
             Some("a.zip")
@@ -1325,5 +1678,261 @@ mod tests {
         assert_eq!(unique_path(d.path(), "a.zip"), d.path().join("a (2).zip"));
         std::fs::write(d.path().join("README"), b"").unwrap();
         assert_eq!(unique_path(d.path(), "README"), d.path().join("README (1)"));
+    }
+
+    /// #1088: a file the user chose to replace keeps its name for the download; another
+    /// download's part file, a name reserved by one running, or a folder doesn't.
+    #[test]
+    fn a_file_chosen_to_be_replaced_keeps_its_name() {
+        let d = tempfile::tempdir().unwrap();
+        let file = d.path().join("taken.7z");
+        assert_eq!(replacing_path(d.path(), "taken.7z"), file);
+        std::fs::write(&file, b"old").unwrap();
+        assert_eq!(replacing_path(d.path(), "taken.7z"), file);
+        // Never the file itself: it stays until the download completes.
+        assert_eq!(std::fs::read(&file).unwrap(), b"old");
+        // Another download's part file.
+        std::fs::write(part_path(&file), b"").unwrap();
+        assert_eq!(
+            replacing_path(d.path(), "taken.7z"),
+            d.path().join("taken (1).7z")
+        );
+        std::fs::remove_file(part_path(&file)).unwrap();
+        // A download running in this process.
+        let held = reserve(&file).unwrap();
+        assert_eq!(
+            replacing_path(d.path(), "taken.7z"),
+            d.path().join("taken (1).7z")
+        );
+        drop(held);
+        assert_eq!(replacing_path(d.path(), "taken.7z"), file);
+        // A folder of that name.
+        std::fs::create_dir(d.path().join("box")).unwrap();
+        assert_eq!(replacing_path(d.path(), "box"), d.path().join("box (1)"));
+    }
+
+    /// Windows with long paths off, as #1102's report: 259 UTF-16 units a path, 255 a name.
+    const WINDOWS: Limits = Limits {
+        path: 259,
+        name: 255,
+        bytes: false,
+    };
+    /// Linux: names of 255 UTF-8 bytes (ext4).
+    const LINUX: Limits = Limits {
+        path: 4095,
+        name: 255,
+        bytes: true,
+    };
+
+    /// #1102's post, as MDM named its video: 221 characters, a 250-character temporary file and
+    /// a 269-character path in `D:\Downloads\Video`.
+    const POST: &str = "Kira on X_ _This is f_cking insane. Nvidia CEO Jensen Huang on what he expects from an engineer he pays $500,000 a year_ _If that $500,000 engineer did not consume at least $250,000 worth of tokens_ He'd be deeply alarmed";
+
+    /// Every file MDM's engine and yt-dlp write for a video stem, after the stem (a format id of
+    /// 32 characters, as long as [`HELPER_FILES`] allows; X's sound, #1102's; YouTube's).
+    fn helper_suffixes() -> Vec<String> {
+        let id32 = "x".repeat(32);
+        let mut all = Vec::new();
+        for (id, ext) in [
+            ("audio-128000-Audio", "mp4"),
+            ("137", "mp4"),
+            (id32.as_str(), "mhtml"),
+        ] {
+            let stream = format!(".f{id}.{ext}");
+            for after in [
+                "",
+                ".part",
+                ".ytdl",
+                ".part-Frag123456.part",
+                ".mdm.part",
+                ".mdm.json",
+                ".mdm.pieces",
+                ".mdm.pieces/000123",
+                ".mdm.pieces/000123.mdm.part",
+            ] {
+                all.push(format!("{stream}{after}"));
+            }
+        }
+        all.extend([".mp4", ".temp.mp4", ".en-US.srt", ".live_chat.json"].map(String::from));
+        all
+    }
+
+    /// Whether every file of a video saved as `dir/name` (`<stem>.<ext>`), numbered up to
+    /// ` (999)`, is within `limits`: each path, and each name in it.
+    fn every_file_fits(dir: &Path, name: &str, limits: Limits) -> bool {
+        let (stem, _) = stem_and_ext(name);
+        helper_suffixes().iter().all(|suffix| {
+            let tail = format!("{stem} (999){suffix}");
+            let path = format!("{}/{tail}", dir.to_string_lossy());
+            limits.len(&path) <= limits.path
+                && tail.split('/').all(|part| limits.len(part) <= limits.name)
+        })
+    }
+
+    /// #1102: the report's title in the report's folder: shortened at a word's end so that
+    /// every file of the video, yt-dlp's `.faudio-128000-Audio.mp4.ytdl` among them, stays within
+    /// Windows' 259; the extension kept.
+    #[test]
+    fn a_long_video_title_fits_with_the_helpers_files() {
+        let dir = Path::new(r"D:\Downloads\Video");
+        let name = format!("{POST}.mp4");
+        assert_eq!(
+            WINDOWS.len(&format!(
+                r"D:\Downloads\Video\{POST}.faudio-128000-Audio.mp4.ytdl"
+            )),
+            269,
+            "the report's path"
+        );
+        let fitted = fit_stem_in(dir, &name, WINDOWS).unwrap();
+        assert!(fitted.ends_with(".mp4"), "{fitted}");
+        assert!(every_file_fits(dir, &fitted, WINDOWS), "{fitted}");
+        let (stem, _) = stem_and_ext(&fitted);
+        assert!(POST.starts_with(stem), "{stem}");
+        // At a word's end, not in the middle of one.
+        assert_eq!(POST[stem.len()..].chars().next(), Some(' '), "{stem}");
+        let room = WINDOWS.path - (dir.as_os_str().len() + 1) - DUPLICATE - HELPER_FILES;
+        assert!(
+            stem.len() <= room && stem.len() * 4 >= room * 3,
+            "{stem}: within the room, less a word's few letters"
+        );
+        // The same title through the playlist's way.
+        let nowhere = Path::new("/nonexistent/mdm-1102");
+        assert_eq!(
+            Stems::new(nowhere, []).pick(&name),
+            nowhere.join(fit_stem(nowhere, &name).unwrap())
+        );
+        // On Linux (no path limit to speak of): names of 255 bytes.
+        let home = Path::new("/home/someone/Videos");
+        let linux = fit_stem_in(home, &name, LINUX).unwrap();
+        assert!(every_file_fits(home, &linux, LINUX), "{linux}");
+        assert!(linux.len() - 4 <= 255 - DUPLICATE - HELPER_FILES, "{linux}");
+    }
+
+    /// #1102: each of the helpers' suffixes at the 259 limit: a stem whose longest file ends
+    /// exactly at 259 is kept whole, one character more is shortened by one.
+    #[test]
+    fn the_limit_is_259_with_the_longest_suffix() {
+        let dir = PathBuf::from(format!(r"C:\{}", "d".repeat(97)));
+        let room = 259 - 101 - DUPLICATE - HELPER_FILES;
+        let exact = "a".repeat(room);
+        assert_eq!(
+            fit_stem_in(&dir, &format!("{exact}.mp4"), WINDOWS).as_deref(),
+            Some(format!("{exact}.mp4").as_str())
+        );
+        assert_eq!(
+            fit_stem_in(&dir, &format!("{exact}b.mp4"), WINDOWS).as_deref(),
+            Some(format!("{exact}.mp4").as_str())
+        );
+        // The longest file, numbered ` (999)`, ends at 259 exactly.
+        let longest = format!(
+            "{}\\{exact} (999).f{}.mhtml.mdm.pieces\\000123.mdm.part",
+            dir.display(),
+            "x".repeat(32)
+        );
+        assert_eq!(WINDOWS.len(&longest), 259);
+        // A saved video's stem fits with every suffix, and not one unit more.
+        assert!(WINDOWS.fit(&dir.join(format!("{exact} (999)")), HELPER_FILES));
+        assert!(!WINDOWS.fit(&dir.join(format!("{exact} (9999)")), HELPER_FILES));
+        assert!(every_file_fits(&dir, &format!("{exact}.mp4"), WINDOWS));
+        assert!(!every_file_fits(&dir, &format!("{exact}b.mp4"), WINDOWS));
+        // A file's own download: its part file and a duplicate's number, at 259 too.
+        let room = 259 - 101 - SIDECAR - DUPLICATE;
+        let file = format!("{}.zip", "z".repeat(room - 4));
+        assert_eq!(
+            fit_name_in(&dir, &file, WINDOWS).as_deref(),
+            Some(file.as_str())
+        );
+        let more = format!("{}.zip", "z".repeat(room - 3));
+        assert_eq!(
+            fit_name_in(&dir, &more, WINDOWS).as_deref(),
+            Some(file.as_str())
+        );
+    }
+
+    /// #1102: titles in Chinese, with emoji and accents: cut between characters as they show,
+    /// never inside a UTF-8 sequence or a surrogate pair, counted in UTF-16 units on Windows and
+    /// in bytes on Linux.
+    #[test]
+    fn titles_in_any_script_are_cut_between_characters() {
+        let dir = Path::new(r"C:\Users\someone\Videos");
+        let cjk = format!("{}.mp4", "下载管理器的长标题".repeat(40));
+        let windows = fit_stem_in(dir, &cjk, WINDOWS).unwrap();
+        assert!(every_file_fits(dir, &windows, WINDOWS), "{windows}");
+        let home = Path::new("/home/someone/Videos");
+        let linux = fit_stem_in(home, &cjk, LINUX).unwrap();
+        assert!(every_file_fits(home, &linux, LINUX), "{linux}");
+        // Three bytes each on Linux: a third of a name's room in characters.
+        let (w, l) = (stem_and_ext(&windows).0, stem_and_ext(&linux).0);
+        assert_eq!(l.chars().count(), (255 - DUPLICATE - HELPER_FILES) / 3);
+        assert_eq!(
+            w.chars().count(),
+            259 - (dir.as_os_str().len() + 1) - DUPLICATE - HELPER_FILES
+        );
+        // A thumb with its skin tone (4 UTF-16 units, 8 bytes), a flag (two letters), a letter
+        // and its accent, a woman and a computer joined: kept whole or not at all.
+        for unit in ["👍🏽", "🇹🇳", "e\u{301}", "👩\u{200D}💻"] {
+            let title = format!("{}.mp4", unit.repeat(200));
+            for (d, limits) in [(Path::new(r"C:\v"), WINDOWS), (Path::new("/v"), LINUX)] {
+                let fitted = fit_stem_in(d, &title, limits).unwrap();
+                let stem = stem_and_ext(&fitted).0;
+                assert!(!stem.is_empty());
+                assert!(
+                    stem.graphemes(true).all(|g| g == unit),
+                    "{unit:?} cut inside: {stem:?}"
+                );
+                assert!(every_file_fits(d, &fitted, limits));
+            }
+        }
+        // Sanitize's own most is in the same units: 230 bytes on Linux.
+        let clamped = clamp_to(&format!("{}.mp4", "é".repeat(300)), MAX_NAME, LINUX);
+        assert!(
+            clamped.len() <= MAX_NAME && clamped.ends_with(".mp4"),
+            "{clamped}"
+        );
+        assert_eq!(
+            clamped.chars().filter(|c| *c == 'é').count(),
+            (MAX_NAME - 4) / 2
+        );
+    }
+
+    /// #1102: a folder so deep that no name fits with the helpers' files: none is made up (the
+    /// download says the path is too long); a short folder keeps a short name as it is.
+    #[test]
+    fn a_folder_too_deep_for_a_video_is_said() {
+        let deep = PathBuf::from(format!(r"C:\{}", "d".repeat(190)));
+        assert_eq!(fit_stem_in(&deep, "Talk.mp4", WINDOWS), None);
+        assert!(!WINDOWS.fit(&deep.join("Talk"), HELPER_FILES));
+        assert_eq!(
+            fit_stem_in(Path::new(r"C:\v"), "Talk.mp4", WINDOWS).as_deref(),
+            Some("Talk.mp4")
+        );
+        // With Windows' long paths on, only a name's own 255 counts.
+        let long = Limits {
+            path: LONG_PATH,
+            ..WINDOWS
+        };
+        let fitted = fit_stem_in(&deep, &format!("{POST}.mp4"), long).unwrap();
+        assert!(every_file_fits(&deep, &fitted, long));
+        assert!(stem_and_ext(&fitted).0.len() > 170, "{fitted}");
+    }
+
+    /// #1102: a name the user typed is kept as typed (numbered only when taken), however long;
+    /// one MDM gave is fitted.
+    #[test]
+    fn a_typed_video_name_is_kept() {
+        let d = tempfile::tempdir().unwrap();
+        let typed = format!("{}.mp4", "t".repeat(240));
+        let none = |_: &str| false;
+        assert_eq!(
+            typed_stem_destination(d.path(), &typed, none),
+            d.path().join(&typed)
+        );
+        assert!(!stem_fits(d.path(), stem_and_ext(&typed).0));
+        let given = stem_destination(d.path(), &typed, none);
+        let stem = given.file_stem().unwrap().to_string_lossy();
+        assert!(
+            given != d.path().join(&typed) && stem_fits(d.path(), &stem),
+            "{given:?}"
+        );
     }
 }

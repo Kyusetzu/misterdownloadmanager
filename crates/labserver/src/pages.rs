@@ -14,6 +14,7 @@ use crate::faults::parse_flag;
 
 const PAGE_CSS: &str = include_str!("../assets/page.css");
 const STREAM_JS: &str = include_str!("../assets/stream.js");
+const FEED_JS: &str = include_str!("../assets/feed.js");
 
 /// What `video=1` (and a page that asks for nothing else) plays.
 const DEFAULT_VIDEO: &str = "/gen/1M/clip.mp4?inline=1";
@@ -457,11 +458,66 @@ pub(crate) async fn cookie(RawQuery(q): RawQuery) -> Response {
     resp
 }
 
-/// `/assets/{file}`: the pages' stylesheet and the stream player's script.
+/// What `/feed`'s posts play (#1092): the first post's file and the next post's, MP4 movies of 21 s
+/// and 33 s (their header says so; the rest is the lab's bytes).
+const FEED_FILE_A: &str = "/gen/2M/feed-a.mp4?seed=21&inline=bare&movie=21000";
+const FEED_FILE_B: &str = "/gen/3M/feed-b.mp4?seed=33&inline=bare&movie=33000";
+
+/// `/feed` (#1092): a feed whose page names no video (yt-dlp finds none in it, nor in its posts'
+/// pages), and whose players play from a MediaSource (blob:), as a feed's do: the first post's
+/// fetches its whole MP4 file in ranges (21 s; its post's page, /feed/post/1, has no video), the
+/// second's the HLS stream (/hls/master.m3u8, 12 s), the third's is the next video, whose file
+/// (33 s) is only begun. Each player starts a moment after the last (`/assets/feed.js`), and
+/// `<body data-feed=done>` once all have loaded what they load.
+pub(crate) async fn feed() -> Response {
+    let mut body = head("labserver feed");
+    let posts = [
+        (
+            "feed1",
+            Some("/feed/post/1"),
+            format!("data-file=\"{}\" data-secs=21", esc(FEED_FILE_A)),
+        ),
+        (
+            "feed2",
+            None,
+            "data-hls=/hls/master.m3u8 data-secs=12".to_owned(),
+        ),
+        (
+            "feed3",
+            None,
+            format!(
+                "data-file=\"{}\" data-secs=33 data-preload=1",
+                esc(FEED_FILE_B)
+            ),
+        ),
+    ];
+    body += "<main class=feed>";
+    for (id, post, play) in posts {
+        body += &format!(
+            "<article class=post><video id={id} width=640 height=360 controls {play}></video>"
+        );
+        if let Some(p) = post {
+            body += &format!("<p><a href={p}>the post</a></p>");
+        }
+        body += "</article>";
+    }
+    body += "</main><script src=/assets/feed.js></script>";
+    html(body)
+}
+
+/// `/feed/post/{n}`: a feed's post's own page, without its video (yt-dlp finds none there).
+pub(crate) async fn feed_post(Path(n): Path<u32>) -> Response {
+    let mut body = head(&format!("post {n}"));
+    body += &format!("<p>Post {n}: its video plays in the feed only.</p>");
+    html(body)
+}
+
+/// `/assets/{file}`: the pages' stylesheet and the players' scripts.
 pub(crate) async fn asset(Path(file): Path<String>) -> Response {
     let (ty, text) = match file.as_str() {
         "page.css" => ("text/css; charset=utf-8", PAGE_CSS),
         "stream.js" => ("text/javascript; charset=utf-8", STREAM_JS),
+        "feed.js" => ("text/javascript; charset=utf-8", FEED_JS),
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
     ([(header::CONTENT_TYPE, ty)], text).into_response()
